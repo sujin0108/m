@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9 · 99 · 999 나눗셈 / Division</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1318;--surface:#1a1f2b;--surface2:#232a38;
+  --border:#2e3748;--text:#e8edf5;--muted:#8a94ac;
+  --blue:#4da6ff;--red:#ff5555;--green:#4dff9e;
+  --yellow:#ffd166;--orange:#ffaa44;--dim:#3a4155;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Noto Sans KR',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:24px 16px 40px;
+  overflow-y:auto;
+}
+.header-wrap{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.title-block{display:flex;flex-direction:column;gap:0;}
+.title-main{font-size:1.75rem;font-weight:900;color:#72c4ff;
+  font-family:'JetBrains Mono',monospace;line-height:1.35;
+  text-shadow:0 0 18px rgba(77,166,255,.45);letter-spacing:.01em;}
+.title-sub{font-size:.76rem;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;letter-spacing:.06em;line-height:1.35;
+  display:block;width:100%;text-align:justify;text-align-last:justify;}
+.tabs{display:flex;gap:3px;background:var(--surface);border-radius:12px;
+  padding:4px;margin-bottom:8px;flex-wrap:wrap;justify-content:center;max-width:640px;}
+.tab{padding:8px 15px;border:none;border-radius:8px;background:transparent;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.92rem;
+  font-weight:700;cursor:pointer;transition:all .2s;}
+.tab.active{background:var(--blue);color:#000;}
+.tab:hover:not(.active){background:var(--surface2);color:var(--text);}
+.tab-desc{
+  margin-bottom:14px;padding:10px 20px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  max-width:680px;width:100%;text-align:center;}
+.tab-desc .tdko{
+  font-size:.72rem;color:#c8d4e8;font-weight:600;
+  display:block;line-height:1.65;white-space:normal;word-break:keep-all;
+  letter-spacing:.01em;text-shadow:0 0 1px rgba(200,212,232,.3);}
+.tab-desc .tden{
+  font-size:.63rem;color:#7a8aaa;font-family:'JetBrains Mono',monospace;
+  display:block;line-height:1.55;margin-top:5px;white-space:normal;
+  letter-spacing:.02em;}
+.input-row{display:flex;gap:8px;align-items:flex-start;
+  margin-bottom:10px;width:100%;max-width:640px;}
+.input-block{flex:1;display:flex;flex-direction:column;gap:3px;}
+.input-block input{
+  padding:11px 16px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:10px;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:1.15rem;outline:none;
+  transition:border-color .2s;width:100%;}
+.input-block input:focus{border-color:var(--blue);}
+.input-hint{font-size:.64rem;color:var(--muted);padding-left:2px;line-height:1.5;}
+.btn-run{padding:11px 16px;background:var(--blue);color:#000;border:none;
+  border-radius:10px;font-weight:700;cursor:pointer;white-space:nowrap;
+  display:flex;flex-direction:column;align-items:center;gap:1px;min-width:76px;
+  min-height:48px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+
+.btn-run .bko{font-size:.85rem;}
+.btn-run .ben{font-size:.62rem;opacity:.75;}
+.btn-reset{padding:11px 12px;background:var(--surface2);color:var(--muted);
+  border:1.5px solid var(--border);border-radius:10px;font-weight:700;
+  cursor:pointer;white-space:nowrap;transition:all .2s;
+  display:flex;flex-direction:column;align-items:center;gap:1px;min-width:72px;
+  min-height:48px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.btn-reset .bko{font-size:.82rem;}
+.btn-reset .ben{font-size:.62rem;opacity:.7;}
+.btn-reset:hover{border-color:var(--red);color:var(--red);}
+.spd-row{display:flex;align-items:center;gap:10px;font-size:.75rem;
+  color:var(--muted);margin-bottom:20px;max-width:640px;width:100%;}
+.spd-row input{flex:1;max-width:120px;accent-color:var(--blue);}
+.spd-lbl{color:var(--blue);font-family:'JetBrains Mono',monospace;font-weight:700;min-width:88px;}
+#stage{width:100%;max-width:980px;background:var(--surface);
+  border:1px solid var(--border);border-radius:18px;
+  padding:28px 28px 32px;min-height:320px;
+  overflow-x:auto;overflow-y:visible;}
+.placeholder{text-align:center;color:var(--muted);padding-top:60px;font-size:.9rem;line-height:2.3;}
+.placeholder .pen{font-size:.78rem;color:var(--dim);}
+.svg-wrap{position:relative;}
+#calcSvg{position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+.calc-grid{display:flex;flex-direction:column;align-items:center;}
+.digit-row{display:flex;gap:8px;}
+.row-wrap{display:flex;align-items:center;justify-content:center;margin-bottom:20px;gap:0;width:100%;}
+.row-label{
+  display:flex;flex-direction:column;align-items:flex-start;
+  min-width:64px;padding-right:8px;
+  border-right:2px solid var(--border);margin-right:14px;flex-shrink:0;}
+.row-label .lko{font-size:.72rem;font-weight:700;color:var(--muted);
+  font-family:'Noto Sans KR',sans-serif;line-height:1.4;}
+.row-label .len{font-size:.62rem;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;line-height:1.35;}
+.orig-d{font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;
+  color:var(--dim);display:flex;align-items:center;justify-content:center;transition:color .3s;}
+.orig-d.active{color:var(--text);}
+.cum-c{font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:10px;border:2px solid transparent;background:var(--surface2);
+  position:relative;overflow:visible;transition:border-color .3s,background .3s;}
+.cum-c.active{border-color:var(--blue);background:rgba(77,166,255,.1);}
+.cum-c.carry-flash{border-color:var(--red);background:rgba(255,85,85,.1);}
+.cum-c.done{border-color:var(--border);}
+.cum-val{display:flex;align-items:baseline;}
+.c-tens{color:var(--red);}
+.c-ones,.c-norm{color:var(--text);}
+.quot-c{font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:10px;border:2px solid transparent;background:transparent;
+  position:relative;overflow:visible;transition:all .35s;color:transparent;}
+.quot-c.show{border-color:var(--green);background:rgba(77,255,158,.08);color:var(--green);}
+.quot-c.updated{border-color:var(--orange);background:rgba(255,170,68,.12);color:var(--orange);}
+.quot-c.carry-flash{border-color:var(--red);background:rgba(255,85,85,.1);color:var(--red);}
+.quot-c.rem-cell{border-style:dashed;}
+.quot-c.rem-cell.show{border-color:var(--yellow);background:rgba(255,209,102,.07);color:var(--yellow);}
+.quot-c.rem-cell.updated{border-color:var(--orange);background:rgba(255,170,68,.13);color:var(--orange);}
+.quot-c.rem-cell.carry-flash{border-color:var(--red);background:rgba(255,85,85,.1);color:var(--red);}
+.quot-val{color:inherit;}
+.csup,.qsup{position:absolute;top:-12px;right:-5px;
+  font-size:.74rem;font-weight:900;color:var(--red);
+  opacity:0;transition:opacity .3s;font-family:'JetBrains Mono',monospace;
+  pointer-events:none;white-space:nowrap;z-index:10;
+  text-shadow:0 0 5px rgba(255,85,85,.6);}
+.csup.show,.qsup.show{opacity:1;}
+.rmsup{position:absolute;top:-12px;right:-5px;
+  font-size:.74rem;font-weight:900;color:var(--yellow);
+  opacity:0;transition:opacity .3s;font-family:'JetBrains Mono',monospace;
+  pointer-events:none;white-space:nowrap;z-index:10;
+  text-shadow:0 0 5px rgba(255,209,102,.7);}
+.rmsup.show{opacity:1;}
+.controls{display:flex;gap:10px;justify-content:center;margin-top:18px;}
+.ctrl-btn{padding:9px 15px;border:none;border-radius:10px;font-weight:700;
+  cursor:pointer;transition:all .2s;min-width:80px;min-height:44px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  display:flex;flex-direction:column;align-items:center;gap:1px;}
+.ctrl-btn .bko{font-size:.8rem;font-family:'Noto Sans KR',sans-serif;}
+.ctrl-btn .ben{font-size:.6rem;opacity:.7;font-family:'JetBrains Mono',monospace;}
+.ctrl-btn:disabled{opacity:.3;cursor:default;}
+.btn-prev{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-pause{background:var(--orange);color:#000;}
+.btn-pause.paused{background:var(--green);color:#000;}
+.btn-next{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.result-sec{margin-top:22px;margin-bottom:16px;text-align:center;opacity:0;transform:translateY(8px);transition:all .5s;position:relative;overflow:visible;}
+.result-sec.show{opacity:1;transform:translateY(0);}
+.result-eq{font-family:'JetBrains Mono',monospace;font-size:1.28rem;
+  font-weight:700;color:var(--green);margin-bottom:10px;}
+.result-frac{display:flex;align-items:center;justify-content:center;
+  gap:6px;flex-wrap:wrap;margin-bottom:12px;
+  font-size:.9rem;color:var(--yellow);font-family:'JetBrains Mono',monospace;}
+.frac-therefore{font-size:1.1rem;}
+.frac-inline{display:inline-flex;flex-direction:column;align-items:center;
+  vertical-align:middle;line-height:1.15;}
+.frac-num{border-bottom:1.5px solid var(--yellow);padding-bottom:1px;font-size:.82rem;}
+.frac-den{padding-top:1px;font-size:.82rem;}
+.dr-box{margin-top:8px;background:var(--surface2);
+  border:1.5px solid var(--yellow);border-radius:12px;
+  padding:11px 28px;display:inline-block;
+  opacity:0;transition:opacity .5s;}
+.dr-box.show{opacity:1;}
+.dr-label-en{font-size:.72rem;color:#8a9ab8;line-height:1.8;font-family:'JetBrains Mono',monospace;}
+.dr-label-en strong{color:var(--yellow);font-size:.82rem;}
+.rdot{position:relative;display:inline-block;padding-top:.3em;}
+.rdot::after{content:'•';position:absolute;top:-.26em;left:0;
+  width:100%;text-align:center;font-size:.62em;color:#ffe066;line-height:1;
+  text-shadow:0 0 4px #ffe066,0 0 8px rgba(255,224,102,.4);}
+
+/* ══ 추가 애니메이션 ══ */
+@keyframes cellPop{
+  0%{transform:scale(0.6);opacity:0;}
+  70%{transform:scale(1.12);}
+  100%{transform:scale(1);opacity:1;}
+}
+@keyframes carryPulse{
+  0%{transform:scale(1);}
+  30%{transform:scale(1.18);}
+  60%{transform:scale(0.95);}
+  100%{transform:scale(1);}
+}
+@keyframes glowPulse{
+  0%,100%{text-shadow:0 0 8px currentColor;}
+  50%{text-shadow:0 0 22px currentColor,0 0 40px currentColor;}
+}
+@keyframes resultShine{
+  0%{filter:brightness(1);}
+  40%{filter:brightness(1.6) drop-shadow(0 0 12px #4dff9e);}
+  100%{filter:brightness(1);}
+}
+@keyframes confettiFall{
+  0%{transform:translateY(-10px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(60px) rotate(720deg);opacity:0;}
+}
+.quot-c.pop{animation:cellPop .25s cubic-bezier(.34,1.56,.64,1) forwards;}
+.quot-c.carry-pulse{animation:carryPulse .22s ease forwards;}
+.result-eq.shine{animation:resultShine .8s ease forwards;}
+.result-eq{transition:none;}
+/* 효과음 버튼 */
+.sound-btn{
+  padding:7px 14px;background:var(--surface2);
+  border:1.5px solid var(--border);border-radius:8px;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;
+  font-size:.78rem;font-weight:700;cursor:pointer;
+  transition:all .2s;white-space:nowrap;}
+.sound-btn:hover{border-color:var(--blue);color:var(--text);}
+.sound-btn.muted{border-color:var(--red);color:var(--red);}
+@keyframes logoPulse{
+  0%  {filter:drop-shadow(0 0 4px rgba(77,166,255,.3));}
+  40% {filter:drop-shadow(0 0 18px rgba(77,166,255,.95)) drop-shadow(0 0 36px rgba(77,230,180,.6));}
+  100%{filter:drop-shadow(0 0 4px rgba(77,166,255,.3));}
+}
+#logoSvg.pulse{animation:logoPulse 1.0s ease-in-out;}
+
+/* ══════════════════════════════════════
+   모바일: 600px 이하
+══════════════════════════════════════ */
+@media(max-width:600px){
+  body{padding:14px 10px 32px;}
+  .header-wrap{gap:8px;margin-bottom:10px;}
+  .title-main{font-size:1.2rem;}
+  .title-sub{font-size:.65rem;}
+  .tabs{gap:2px;padding:3px;}
+  .tab{padding:7px 10px;font-size:.78rem;}
+  .input-row{flex-wrap:wrap;gap:6px;}
+  .input-block input{font-size:1rem;padding:10px 12px;}
+  .btn-run,.btn-reset{min-width:64px;padding:10px 10px;}
+  .btn-run .bko,.btn-reset .bko{font-size:.78rem;}
+  .spd-row{flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  #stage{padding:16px 12px 20px;border-radius:12px;}
+  .row-wrap{flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .row-label{min-width:50px;padding-right:6px;margin-right:8px;}
+  .orig-d{font-size:1.1rem;}
+  .cum-c,.quot-c{font-size:.95rem;}
+  .controls{gap:6px;margin-top:12px;}
+  .ctrl-btn{padding:10px 12px;min-width:70px;min-height:44px;}
+  .ctrl-btn .bko{font-size:.75rem;}
+  .result-eq{font-size:1.05rem;}
+  .tab-desc{padding:8px 12px;margin-bottom:10px;}
+  .tab-desc .tdko{font-size:.68rem;}
+  .tab-desc .tden{font-size:.6rem;}
+}
+
+/* ══════════════════════════════════════
+   초소형: 380px 이하
+══════════════════════════════════════ */
+@media(max-width:380px){
+  .title-main{font-size:1rem;}
+  .tab{padding:6px 7px;font-size:.72rem;}
+  .input-block input{font-size:.92rem;}
+  .orig-d{font-size:1rem;}
+  .cum-c,.quot-c{font-size:.85rem;}
+  .ctrl-btn{min-width:58px;padding:9px 8px;}
+}
+
+</style>
+</head>
+<body>
+
+<div class="header-wrap">
+  <div id="logoWrap" style="flex-shrink:0;">
+    <svg id="logoSvg" xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 80 80">
+      <defs>
+        <path id="ta" d="M 14,40 A 26,26 0 0,1 66,40"/>
+        <path id="ba" d="M 9,40 A 31,31 0 0,0 71,40"/>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1e2535"/>
+          <stop offset="100%" stop-color="#161c28"/>
+        </linearGradient>
+      </defs>
+      <circle id="logoBg" cx="40" cy="40" r="37" fill="url(#bgGrad)" stroke="#4da6ff" stroke-width="2"
+        style="filter:drop-shadow(0 0 5px rgba(77,230,180,.7)) drop-shadow(0 0 12px rgba(77,230,180,.35));"/>
+      <circle id="logoRing" cx="40" cy="40" r="30" fill="none" stroke="#2e3748" stroke-width="1" opacity="0"/>
+      <text id="ltop" font-family="Arial,sans-serif" font-size="7.5" font-weight="700"
+            fill="#4da6ff" letter-spacing="0.5" opacity="0">
+        <textPath href="#ta" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+      </text>
+      <text id="lc1" x="40" y="34" font-size="15" text-anchor="middle" fill="#e8edf5"
+            font-family="'Noto Sans KR',sans-serif" font-weight="900" opacity="0">ㅇ</text>
+      <text id="lc2" x="40" y="46" font-size="15" text-anchor="middle" fill="#e8edf5"
+            font-family="'Noto Sans KR',sans-serif" font-weight="900" opacity="0">ㅡ</text>
+      <text id="lc3" x="40" y="58" font-size="15" text-anchor="middle" fill="#e8edf5"
+            font-family="'Noto Sans KR',sans-serif" font-weight="900" opacity="0">ㄴ</text>
+      <text id="lbot" font-family="Arial,sans-serif" font-size="7" font-weight="700"
+            fill="#6a7490" letter-spacing="0.4" opacity="0">
+        <textPath href="#ba" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+      </text>
+    </svg>
+  </div>
+  <div class="title-block">
+    <div class="title-main">9 · 99 · 999 · · · 나눗셈</div>
+    <div class="title-sub">Division by Nines — Repeating Decimal Visualizer</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab9"     onclick="setTab(9)">÷ 9</button>
+  <button class="tab"        id="tab99"    onclick="setTab(99)">÷ 99</button>
+  <button class="tab"        id="tab999"   onclick="setTab(999)">÷ 999</button>
+  <button class="tab"        id="tab9999"  onclick="setTab(9999)" style="font-size:.83rem">÷ 9999</button>
+  <button class="tab"        id="tab99999" onclick="setTab(99999)" style="font-size:.76rem">÷ 99999</button>
+</div>
+
+<div class="tab-desc" id="tabDesc">
+  <span class="tdko" id="tdko">÷9 : 끝자리부터 한 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 한 자리 앞이 소수점 기준이 됩니다.</span>
+  <span class="tden" id="tden">÷9 : Cut from the last digit, one digit at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final digit marks the decimal point.</span>
+</div>
+
+<div class="input-row">
+  <div class="input-block">
+    <input id="numIn" type="text" value="12345" maxlength="20"
+      inputmode="text" placeholder="정수 또는 소수 / Integer or decimal">
+    <div class="input-hint">정수·소수 모두 가능 &nbsp;·&nbsp; Integers and decimals accepted</div>
+  </div>
+  <button class="btn-run" onclick="run()">
+    <span class="bko">▶ 실행</span><span class="ben">Run</span>
+  </button>
+  <button class="btn-reset" onclick="resetAll()">
+    <span class="bko">↺ 초기화</span><span class="ben">Reset</span>
+  </button>
+</div>
+<div class="spd-row">
+  🐢<input type="range" id="spd" min="1" max="10" value="3">🐇
+  <span class="spd-lbl" id="spdLbl"></span>
+  <span style="font-size:.68rem;color:var(--dim)">속도 / Speed</span>
+  <button class="sound-btn" id="soundBtn" onclick="toggleMute()">🔊 효과음 ON</button>
+</div>
+
+<div id="stage">
+  <div class="placeholder">정수 또는 소수를 입력하고 ▶ 실행을 눌러주세요<br><span class="pen">Enter an integer or decimal, then press ▶ Run</span></div>
+</div>
+
+<script>
+let divisor=9, steps=[], stepIdx=0, paused=false, autoTimer=null, runId=0;
+
+const TDKO={
+  9:    '÷9 : 끝자리부터 한 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 한 자리 앞이 소수점 기준이 됩니다.',
+  99:   '÷99 : 끝자리부터 두 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 두 자리 앞이 소수점 기준이 됩니다.',
+  999:  '÷999 : 끝자리부터 세 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 세 자리 앞이 소수점 기준이 됩니다.',
+  9999: '÷9999 : 끝자리부터 네 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 네 자리 앞이 소수점 기준이 됩니다.',
+  99999:'÷99999 : 끝자리부터 다섯 자리씩 잘라 누적합을 구합니다. 받아올림이 몫이 되고, 끝의 다섯 자리 앞이 소수점 기준이 됩니다.',
+};
+const TDEN={
+  9:    '÷9 : Cut from the last digit, one digit at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final digit marks the decimal point.',
+  99:   '÷99 : Cut from the last digit, two digits at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final two digits marks the decimal point.',
+  999:  '÷999 : Cut from the last digit, three digits at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final three digits marks the decimal point.',
+  9999: '÷9999 : Cut from the last digit, four digits at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final four digits marks the decimal point.',
+  99999:'÷99999 : Cut from the last digit, five digits at a time. Accumulate the sum — the carry becomes the quotient, and the boundary before the final five digits marks the decimal point.',
+};
+
+function spMs(){return Math.round(3200/+document.getElementById('spd').value);}
+function updSpd(){
+  const ms=spMs();
+  document.getElementById('spdLbl').textContent=ms>=1000?(ms/1000).toFixed(1)+'s/step':ms+'ms/step';
+}
+document.getElementById('spd').addEventListener('input',updSpd); updSpd();
+
+function setTab(d){
+  divisor=d;
+  [9,99,999,9999,99999].forEach(v=>{
+    const el=document.getElementById('tab'+v); if(el) el.classList.toggle('active',v===d);
+  });
+  const gs=String(d).length;
+  document.getElementById('tdko').textContent=TDKO[d]||`${d}로 나누면 — 끝 ${gs}자리씩 묶어 받아올림→몫, 나머지→순환마디`;
+  document.getElementById('tden').textContent=TDEN[d]||`Divide by ${d} — group by ${gs} digits, carry→quotient, remainder→${gs}-digit repeating cycle`;
+  clearStage();
+  const v=document.getElementById('numIn').value.trim();
+  if(v && /^-?\d*\.?\d+$/.test(v)) run();
+}
+
+function clearStage(){
+  clearTimeout(autoTimer); paused=false; steps=[]; stepIdx=0; runId++;
+  document.getElementById('stage').innerHTML=
+    '<div class="placeholder">정수 또는 소수를 입력하고 ▶ 실행을 눌러주세요<br><span class="pen">Enter an integer or decimal, then press ▶ Run</span></div>';
+}
+function resetAll(){document.getElementById('numIn').value=''; clearStage();}
+
+function scheduleNext(){
+  if(paused||stepIdx>=steps.length) return;
+  const myId=runId;
+  autoTimer=setTimeout(()=>{
+    if(runId!==myId) return;
+    if(stepIdx<steps.length){
+      try{ steps[stepIdx++](); }catch(e){ console.warn('step error:',e); }
+      updBtns();
+      scheduleNext();
+    }
+  },spMs());
+}
+function togglePause(){
+  paused=!paused;
+  const b=document.getElementById('btnPause');
+  if(paused){
+    b.innerHTML='<span class="bko">▶ 계속</span><span class="ben">Resume</span>';
+    b.classList.add('paused');clearTimeout(autoTimer);
+  } else {
+    b.innerHTML='<span class="bko">⏸ 일시정지</span><span class="ben">Pause</span>';
+    b.classList.remove('paused');scheduleNext();
+  }
+}
+function goNext(){
+  clearTimeout(autoTimer);
+  if(stepIdx<steps.length){
+    try{ steps[stepIdx++](); }catch(e){ console.warn('step error:',e); }
+    updBtns(); if(!paused)scheduleNext();
+  }
+}
+function goPrev(){
+  clearTimeout(autoTimer); if(stepIdx<=1) return;
+  const target=stepIdx-2;
+  rebuildCells();
+  for(let i=0;i<target;i++){
+    stepIdx=i+1;
+    steps[i]();
+  }
+  stepIdx=target+1; updBtns();
+}
+function updBtns(){
+  const p=document.getElementById('btnPrev'),n=document.getElementById('btnNext'),pa=document.getElementById('btnPause');
+  if(!p) return;
+  p.disabled=stepIdx<=1; n.disabled=stepIdx>=steps.length; pa.disabled=stepIdx>=steps.length;
+}
+
+function run(){
+  clearTimeout(autoTimer); paused=false; steps=[]; stepIdx=0; runId++;
+  // AudioContext 활성화 (브라우저 정책: 사용자 인터랙션 후 시작)
+  try{ getAC().resume(); }catch(e){}
+  const raw=document.getElementById('numIn').value.trim();
+  if(raw===''){ alert('숫자를 입력해주세요.\nPlease enter a number.'); return; }
+
+  if(!/^-?\d*\.?\d+$/.test(raw) && !/^-?\d+\.?\d*$/.test(raw)){
+    alert('올바른 숫자 형식이 아닙니다.\nInvalid number format.\n예) 12345  /  -0.056789  /  3.14');
+    return;
+  }
+
+  const isNeg = raw.startsWith('-');
+  const absRaw = isNeg ? raw.slice(1) : raw;
+
+  const dotIdx = absRaw.indexOf('.');
+  let intPart, fracPart='', decShift=0;
+  if(dotIdx===-1){
+    intPart = absRaw || '0';
+  } else {
+    intPart  = absRaw.slice(0, dotIdx) || '0';
+    fracPart = absRaw.slice(dotIdx+1).replace(/0+$/,'');
+    decShift = fracPart.length;
+  }
+
+  const intStr = (intPart + fracPart).replace(/^0+/,'') || '0';
+  buildSteps(raw, intStr, String(divisor).length, decShift);
+  updBtns(); scheduleNext();
+}
+
+/* ══════════════════════════════════════════
+   buildSteps
+══════════════════════════════════════════ */
+function buildSteps(numStrOrig, numStr, gs, decShift=0){
+  const isNeg=numStrOrig.startsWith('-');
+  const stage=document.getElementById('stage');
+  const base=Math.pow(10,gs);
+  const d=base-1;
+
+  const numVal=+numStr;
+  const actualQuot=Math.floor(numVal/d);
+  const actualRem =numVal%d;
+
+  /* ★ 핵심: G를 정확히 계산 — 불필요한 앞 빈칸 없음
+     원본 그룹 수와 몫 그룹 수 중 큰 것 + 나머지 셀 1개 */
+  let origPad=numStr;
+  while(origPad.length%gs!==0) origPad='0'+origPad;
+  const Gorig=origPad.length/gs;
+
+  let qp=String(actualQuot);
+  while(qp.length%gs!==0) qp='0'+qp;
+  const Gquot=qp.length/gs;
+
+  const G=Math.max(Gorig, Gquot)+1;  // +1 = 나머지 셀
+
+  /* padded: G*gs 자리에 맞게 앞 0 패딩 */
+  let padded=numStr;
+  while(padded.length<G*gs) padded='0'+padded;
+  /* ★ 수정 끝 */
+
+  const groups=[];
+  for(let i=0;i<G;i++) groups.push(+padded.slice(i*gs,(i+1)*gs));
+  const cums=[];
+  {let r=0; groups.forEach(g=>{r+=g;cums.push(r);});}
+
+  /* finalQ: G-1개 */
+  while(qp.length<(G-1)*gs) qp='0'+qp;
+  const finalQ=[];
+  for(let i=0;i<G-1;i++) finalQ.push(+qp.slice(i*gs,(i+1)*gs));
+
+  const cw=gs<=1?52:gs<=2?68:gs<=3?86:gs<=4?102:118;
+
+  stage.innerHTML=`
+    <div class="svg-wrap" id="svgWrap">
+      <svg id="calcSvg"></svg>
+      <div class="calc-grid" id="cg"></div>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn btn-prev" id="btnPrev" onclick="goPrev()" disabled>
+        <span class="bko">◀ 이전</span><span class="ben">Prev</span>
+      </button>
+      <button class="ctrl-btn btn-pause" id="btnPause" onclick="togglePause()">
+        <span class="bko">⏸ 일시정지</span><span class="ben">Pause</span>
+      </button>
+      <button class="ctrl-btn btn-next" id="btnNext" onclick="goNext()">
+        <span class="bko">다음 ▶</span><span class="ben">Next</span>
+      </button>
+    </div>
+    <div class="result-sec" id="resSec">
+      <div class="result-eq" id="resEq"></div>
+      <div class="result-frac" id="resFrac"></div>
+      <div class="dr-box" id="drBox"></div>
+    </div>`;
+
+  const cg=document.getElementById('cg');
+  const LABELS={orig:{ko:'원본수',en:'Original'},cum:{ko:'누적합',en:'Cum.Sum'},quot:{ko:'몫',en:'Quotient'}};
+
+  function makeRow(kind){
+    const wrap=document.createElement('div'); wrap.className='row-wrap';
+    const lbl=document.createElement('div'); lbl.className='row-label';
+    lbl.innerHTML=`<span class="lko">${LABELS[kind].ko}</span><span class="len">${LABELS[kind].en}</span>`;
+    wrap.appendChild(lbl);
+    const row=document.createElement('div'); row.className='digit-row';
+    for(let i=0;i<G;i++){
+      const el=document.createElement('div');
+      el.style.width=el.style.minWidth=el.style.height=cw+'px';
+      if(kind==='orig'){
+        el.className='orig-d'; el.id=`orig-${i}`;
+        el.textContent=fmt(groups[i],gs);
+      } else if(kind==='cum'){
+        el.className='cum-c'; el.id=`cum-${i}`;
+        const cs=document.createElement('span'); cs.className='csup'; cs.id=`csup-${i}`; el.appendChild(cs);
+        const cv=document.createElement('div'); cv.className='cum-val'; cv.id=`cval-${i}`; el.appendChild(cv);
+      } else {
+        const isRem=i===G-1;
+        el.className='quot-c'+(isRem?' rem-cell':''); el.id=`quot-${i}`;
+        const qs=document.createElement('span');
+        qs.className=isRem?'rmsup':'qsup'; qs.id=`qsup-${i}`; el.appendChild(qs);
+        const qv=document.createElement('span'); qv.className='quot-val'; qv.id=`qval-${i}`; el.appendChild(qv);
+      }
+      row.appendChild(el);
+    }
+    wrap.appendChild(row); return wrap;
+  }
+  cg.appendChild(makeRow('orig'));
+  cg.appendChild(makeRow('cum'));
+  cg.appendChild(makeRow('quot'));
+
+  setTimeout(()=>{
+    const w=document.getElementById('svgWrap');
+    if(w) w.style.height=w.querySelector('.calc-grid').offsetHeight+'px';
+  },50);
+
+  const quotTrack=new Array(G).fill(0);
+
+  function rebuildCells(){
+    document.querySelectorAll('.cum-c').forEach(el=>{
+      el.className='cum-c';
+      const cv=el.querySelector('.cum-val'); if(cv) cv.innerHTML='';
+      const cs=el.querySelector('.csup'); if(cs){cs.textContent='';cs.classList.remove('show');}
+    });
+    document.querySelectorAll('.quot-c').forEach((el,i)=>{
+      el.className='quot-c'+(i===G-1?' rem-cell':'');
+      const qv=el.querySelector('.quot-val'); if(qv) qv.textContent='';
+      const qs=el.querySelector('[class*="sup"]'); if(qs){qs.textContent='';qs.classList.remove('show');}
+    });
+    document.querySelectorAll('.orig-d').forEach(e=>e.classList.remove('active'));
+    const svg=document.getElementById('calcSvg'); if(svg) svg.innerHTML='';
+    quotTrack.fill(0);
+  }
+  window.rebuildCells=rebuildCells;
+
+  function showCum(col,val){
+    const cv=document.getElementById(`cval-${col}`); if(!cv) return;
+    if(val>=base){
+      const s=String(val),t=s.slice(0,s.length-gs),o=s.slice(s.length-gs);
+      cv.innerHTML=`<span class="c-tens">${t}</span><span class="c-ones">${o}</span>`;
+    } else cv.innerHTML=`<span class="c-norm">${fmt(val,gs)}</span>`;
+    playTick();
+  }
+  function showCsup(col,v){
+    const el=document.getElementById(`csup-${col}`); if(!el) return;
+    if(v>0){el.textContent='+'+v;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');}
+  }
+  function showQsup(col,v){
+    const el=document.getElementById(`qsup-${col}`); if(!el) return;
+    if(v>0){el.textContent='+'+v;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');}
+  }
+  function setQuot(col,val,cls){
+    const el=document.getElementById(`quot-${col}`); if(!el) return;
+    const isRem=col===G-1;
+    el.className='quot-c'+(isRem?' rem-cell':'')+(cls?' '+cls:'');
+    const qv=document.getElementById(`qval-${col}`);
+    if(qv) qv.textContent=(val!==null&&val!==undefined)?(val<base?fmt(val,gs):String(val)):'';
+    // ── 사운드 + 팝 애니메이션 ──
+    if(cls && cls.includes('carry-flash')){
+      carryPulseCell(`quot-${col}`);
+      playTick();
+    } else if(cls && cls.includes('show')){
+      popCell(`quot-${col}`);
+      if(isRem) playRemDing();
+      else playDing();
+    }
+  }
+
+  let arrowSerial=0;
+  function cellRect(id){
+    const el=document.getElementById(id),svg=document.getElementById('calcSvg');
+    if(!el||!svg) return null;
+    const sr=svg.getBoundingClientRect(),r=el.getBoundingClientRect();
+    return{cx:r.left-sr.left+r.width/2,cy:r.top-sr.top+r.height/2,
+           top:r.top-sr.top,bottom:r.bottom-sr.top,w:r.width,h:r.height};
+  }
+  function drawArr(type,fromId,toId){
+    const svg=document.getElementById('calcSvg'); if(!svg) return null;
+    const A=cellRect(fromId),B=toId?cellRect(toId):null; if(!A) return null;
+    const isRed=(type==='carry'||type==='carry-quot');
+    const isYellow=(type==='carry-rem'||type==='carry-back');
+    const stroke=isYellow?'#ffd166':isRed?'#ff5555':'#4da6ff';
+    const sw=isRed||isYellow?'1.8':'1.9';
+    const mid='mk'+(++arrowSerial);
+    let defs=svg.querySelector('defs');
+    if(!defs){defs=document.createElementNS('http://www.w3.org/2000/svg','defs');svg.appendChild(defs);}
+    const mk=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    mk.setAttribute('id',mid);mk.setAttribute('markerWidth','7');mk.setAttribute('markerHeight','7');
+    mk.setAttribute('refX','4');mk.setAttribute('refY','3.5');mk.setAttribute('orient','auto');
+    const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points','0 0,5 3.5,0 7');poly.setAttribute('fill',stroke);
+    mk.appendChild(poly);defs.appendChild(mk);
+    const pid='ar'+arrowSerial;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('id',pid);path.setAttribute('stroke',stroke);
+    path.setAttribute('stroke-width',sw);path.setAttribute('fill','none');
+    path.setAttribute('marker-end',`url(#${mid})`);
+    let dStr;
+    if(type==='down'){
+      const gap=A.h*.2;
+      dStr=`M ${A.cx} ${A.bottom-gap} L ${B.cx} ${B.top+gap}`;
+    } else if(type==='diag-up'){
+      const gA=A.h*.2,gB=B.h*.2;
+      const x1=A.cx,y1=A.top+gA,x2=B.cx,y2=B.bottom-gB;
+      const mx=(x1+x2)/2,my=(y1+y2)/2,r=9,ang=Math.atan2(y2-y1,x2-x1);
+      dStr=`M ${x1} ${y1} L ${mx-r*Math.cos(ang)} ${my-r*Math.sin(ang)} M ${mx+r*Math.cos(ang)} ${my+r*Math.sin(ang)} L ${x2} ${y2}`;
+      path._plus={mx,my,r,stroke};
+    } else if(type==='carry'){
+      const x1=A.cx+A.w*.28,y1=A.top-5,x2=B.cx+B.w*.28,y2=B.top-5;
+      const bend=Math.abs(x1-x2)*.34+12;
+      dStr=`M ${x1} ${y1} C ${x1} ${y1-bend},${x2} ${y2-bend},${x2} ${y2}`;
+    } else if(type==='carry-quot'){
+      const x1=A.cx,y1=A.bottom+4,x2=B.cx,y2=B.bottom+4;
+      const bend=Math.abs(x1-x2)*.34+12;
+      dStr=`M ${x1} ${y1} C ${x1} ${y1+bend},${x2} ${y2+bend},${x2} ${y2}`;
+    } else if(type==='carry-rem'){
+      const gap=A.h*.15;
+      dStr=`M ${A.cx} ${A.bottom-gap} L ${B.cx} ${B.top+gap}`;
+    } else if(type==='carry-back'){
+      const x1=A.cx,y1=A.bottom+4,x2=B.cx,y2=B.bottom+4;
+      const bend=Math.abs(x2-x1)*.34+16;
+      dStr=`M ${x1} ${y1} C ${x1} ${y1+bend},${x2} ${y2+bend},${x2} ${y2}`;
+    }
+    path.setAttribute('d',dStr);
+    path.setAttribute('stroke-dasharray','400');
+    path.setAttribute('stroke-dashoffset','400');
+    path.style.transition='stroke-dashoffset .4s ease,opacity .3s';
+    svg.appendChild(path);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      path.setAttribute('stroke-dashoffset','0');
+      if(path._plus){
+        const {mx,my,r,stroke}=path._plus;
+        const svg2=document.getElementById('calcSvg'); if(!svg2) return;
+        const gEl=document.createElementNS('http://www.w3.org/2000/svg','g');
+        gEl.id='circ'+arrowSerial;gEl.style.opacity='0';gEl.style.transition='opacity .36s';
+        const circ=document.createElementNS('http://www.w3.org/2000/svg','circle');
+        circ.setAttribute('cx',mx);circ.setAttribute('cy',my);circ.setAttribute('r',r);
+        circ.setAttribute('fill','#0f1318');circ.setAttribute('stroke',stroke);circ.setAttribute('stroke-width','1.5');
+        const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+        txt.setAttribute('x',mx);txt.setAttribute('y',my);
+        txt.setAttribute('text-anchor','middle');txt.setAttribute('dominant-baseline','central');
+        txt.setAttribute('fill','#ffd166');txt.setAttribute('font-size','11');
+        txt.setAttribute('font-weight','900');txt.setAttribute('font-family','JetBrains Mono,monospace');
+        txt.textContent='+';
+        gEl.appendChild(circ);gEl.appendChild(txt);svg2.appendChild(gEl);
+        path._circId='circ'+arrowSerial;
+        requestAnimationFrame(()=>requestAnimationFrame(()=>gEl.style.opacity='1'));
+      }
+    }));
+    return pid;
+  }
+  function fadeArr(pid){
+    const el=document.getElementById(pid); if(!el) return;
+    el.style.opacity='0';setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},360);
+    if(el._circId){
+      const c=document.getElementById(el._circId);
+      if(c){c.style.opacity='0';setTimeout(()=>{if(c.parentNode)c.parentNode.removeChild(c);},360);}
+    }
+  }
+  function clearAllArr(){
+    const svg=document.getElementById('calcSvg'); if(!svg) return;
+    svg.querySelectorAll('path,g[id^="circ"]').forEach(p=>{
+      p.style.opacity='0';setTimeout(()=>{if(p.parentNode)p.parentNode.removeChild(p);},400);
+    });
+  }
+
+  function push(fn){steps.push(fn);}
+  let lastArr=null;
+
+  function pushChainQuot(from){
+    push(()=>{
+      const val=quotTrack[from];
+      if(val<base||from<=0) return;
+      const qc=Math.floor(val/base);
+      const qones=val%base;
+      const to=from-1;
+      quotTrack[from]=qones;
+      quotTrack[to]+=qc;
+      setQuot(from,val,'carry-flash');
+      steps.splice(stepIdx,0,
+        ()=>{ lastArr=drawArr('carry-quot',`quot-${from}`,`quot-${to}`); },
+        ()=>{
+          if(lastArr){fadeArr(lastArr);lastArr=null;}
+          setQuot(from,qones,'show');
+          showQsup(to,qc);
+          setQuot(to,quotTrack[to],'updated');
+        },
+        ()=>{
+          showQsup(to,0);
+          setQuot(to,quotTrack[to],'show');
+          if(quotTrack[to]>=base&&to>0) pushChainQuot(to);
+        }
+      );
+    });
+  }
+
+  function pushChainRem(remCol){
+    push(()=>{
+      const val=quotTrack[remCol];
+      if(val<base) return;
+      const qc=Math.floor(val/base);
+      const qones=val%base;
+      const leftCol=remCol-1;
+      quotTrack[remCol]=qones;
+      quotTrack[leftCol]+=qc;
+      setQuot(remCol,val,'rem-cell carry-flash');
+      steps.splice(stepIdx,0,
+        ()=>{ lastArr=drawArr('carry-quot',`quot-${remCol}`,`quot-${leftCol}`); },
+        ()=>{
+          if(lastArr){fadeArr(lastArr);lastArr=null;}
+          setQuot(remCol,qones,'rem-cell show');
+          showQsup(leftCol,qc);
+          setQuot(leftCol,quotTrack[leftCol],'updated');
+        },
+        ()=>{
+          showQsup(leftCol,0);
+          setQuot(leftCol,quotTrack[leftCol],'show');
+          if(quotTrack[leftCol]>=base&&leftCol>0) pushChainQuot(leftCol);
+          steps.splice(stepIdx,0,
+            ()=>{ setQuot(remCol,quotTrack[remCol],'rem-cell carry-flash'); },
+            ()=>{ lastArr=drawArr('carry-back',`quot-${leftCol}`,`quot-${remCol}`); },
+            ()=>{
+              if(lastArr){fadeArr(lastArr);lastArr=null;}
+              quotTrack[remCol]+=qc;
+              showQsup(remCol,qc);
+              setQuot(remCol,quotTrack[remCol],'rem-cell updated');
+            },
+            ()=>{
+              showQsup(remCol,0);
+              setQuot(remCol,quotTrack[remCol],'rem-cell show');
+              if(quotTrack[remCol]>=base) pushChainRem(remCol);
+            }
+          );
+        }
+      );
+    });
+  }
+
+  for(let i=0;i<G;i++){
+    const col=i, cumNow=cums[col], isLast=(col===G-1);
+
+    push(()=>{
+      document.querySelectorAll('.orig-d').forEach(e=>e.classList.remove('active'));
+      document.getElementById(`orig-${col}`).classList.add('active');
+    });
+    push(()=>{
+      if(lastArr){fadeArr(lastArr);lastArr=null;}
+      lastArr=drawArr('down',`orig-${col}`,`cum-${col}`);
+      document.getElementById(`cum-${col}`).classList.add('active');
+      showCum(col,cumNow);
+    });
+    push(()=>{
+      if(lastArr){fadeArr(lastArr);lastArr=null;}
+      document.getElementById(`cum-${col}`).classList.remove('active');
+      document.getElementById(`cum-${col}`).classList.add('done');
+    });
+
+    if(cumNow>=base){
+      const carry=Math.floor(cumNow/base);
+      const cumOnes=cumNow%base;
+      const trueRem=cumOnes+carry;
+
+      push(()=>{
+        showCum(col,cumNow);
+        document.getElementById(`cum-${col}`).classList.remove('done');
+        document.getElementById(`cum-${col}`).classList.add('carry-flash');
+      });
+      push(()=>{ if(col>0) lastArr=drawArr('carry',`cum-${col}`,`cum-${col-1}`); });
+      push(()=>{
+        if(lastArr){fadeArr(lastArr);lastArr=null;}
+        document.getElementById(`cum-${col}`).classList.remove('carry-flash');
+        document.getElementById(`cum-${col}`).classList.add('done');
+        quotTrack[col]=cumOnes;
+        setQuot(col,cumOnes,isLast?'rem-cell show':'show');
+        if(col>0){
+          quotTrack[col-1]+=carry;
+          showCsup(col-1,carry);
+          setQuot(col-1,quotTrack[col-1],'updated');
+        }
+      });
+      push(()=>{
+        if(col>0){ showCsup(col-1,0); setQuot(col-1,quotTrack[col-1],'show'); }
+      });
+
+      if(!isLast){
+        if(col>0) pushChainQuot(col-1);
+      } else {
+        if(col>0) pushChainQuot(col-1);
+        push(()=>{ setQuot(col,cumOnes,'rem-cell carry-flash'); });
+        push(()=>{ lastArr=drawArr('carry-rem',`cum-${col}`,`quot-${col}`); });
+        push(()=>{
+          if(lastArr){fadeArr(lastArr);lastArr=null;}
+          quotTrack[col]=trueRem;
+          showQsup(col,carry);
+          setQuot(col,trueRem,'rem-cell updated');
+        });
+        push(()=>{ showQsup(col,0); setQuot(col,trueRem,'rem-cell show'); });
+        pushChainRem(col);
+      }
+    } else {
+      push(()=>{
+        quotTrack[col]=cumNow;
+        setQuot(col,cumNow,isLast?'rem-cell show':'show');
+        document.getElementById(`orig-${col}`).classList.remove('active');
+      });
+    }
+
+    if(col<G-1){
+      push(()=>{
+        document.getElementById(`orig-${col}`).classList.remove('active');
+        lastArr=drawArr('diag-up',`cum-${col}`,`orig-${col+1}`);
+      });
+    }
+  }
+
+  /* 최종 확정 */
+  push(()=>{
+    if(lastArr){fadeArr(lastArr);lastArr=null;}
+    clearAllArr();
+    document.querySelectorAll('.orig-d').forEach(e=>e.classList.remove('active'));
+    for(let i=0;i<G-1;i++){
+      quotTrack[i]=finalQ[i]??0;
+      setQuot(i,finalQ[i]??0,'show');
+    }
+    quotTrack[G-1]=actualRem;
+    setQuot(G-1,actualRem,'rem-cell show');
+  });
+
+  /* 결과 표시 */
+  push(()=>{
+    document.getElementById('resSec').classList.add('show');
+    const myRunId=runId;
+    setTimeout(()=>{
+      if(runId!==myRunId) return; // 재실행되었으면 무시
+      playComplete(); shineResult();
+    }, 300);
+    let eq=`${numStrOrig} ÷ ${d} = <span style="color:var(--green)">`;
+
+    /* ★ 통합된 순환소수 표현 (정수/소수 입력 모두) */
+    eq += buildRepeatingEqHTML(actualQuot, actualRem, gs, decShift, isNeg);
+    eq+='</span>';
+    document.getElementById('resEq').innerHTML=eq;
+
+    if(decShift===0&&actualRem>0){
+      const g2=gcd(actualRem,d),sn=actualRem/g2,sd=d/g2;
+      const ff=(n,dn)=>`<span class="frac-inline"><span class="frac-num">${n}</span><span class="frac-den">${dn}</span></span>`;
+      const sign2=isNeg?'-':'';
+      let fh=`<span class="frac-therefore">∴</span>`;
+      if(actualQuot===0){
+        fh+=`<span>${sign2}${ff(actualRem,d)}</span>`;
+        if(g2>1) fh+=`<span>=</span><span>${sign2}${ff(sn,sd)}</span>`;
+      } else {
+        fh+=`<span>${sign2}${actualQuot} ${ff(actualRem,d)}</span>`;
+        if(g2>1) fh+=`<span>=</span><span>${sign2}${actualQuot} ${ff(sn,sd)}</span>`;
+        // 음수 대분수 부호 설명
+        if(isNeg){
+          const ww=actualQuot, rr=sn, dd2=sd;
+          const fs=(n,dn)=>`<span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15;font-size:.78rem;"><span style="border-bottom:1.5px solid var(--yellow);padding-bottom:1px;">${n}</span><span>${dn}</span></span>`;
+          fh+=`<div style="margin-top:10px;padding:8px 14px;background:rgba(255,170,68,.09);
+            border-radius:7px;
+            font-size:.85rem;line-height:2.2;color:var(--yellow);font-family:'JetBrains Mono',monospace;">
+            <b style="color:var(--orange);">∵</b>&nbsp;&minus;${ww}&thinsp;${fs(rr,dd2)}&nbsp;=&nbsp;&minus;(${ww}&nbsp;+&nbsp;${fs(rr,dd2)})
+          </div>`;
+        }
+      }
+      document.getElementById('resFrac').innerHTML=fh;
+    } else if(decShift>0&&actualRem>0){
+      const scale2=Math.pow(10,decShift);
+      const totalNum=actualQuot*d+actualRem,totalDen=d*scale2;
+      const g2f=gcd(totalNum,totalDen),fn=totalNum/g2f,fd=totalDen/g2f;
+      const ff=(n,dn)=>`<span class="frac-inline"><span class="frac-num">${n}</span><span class="frac-den">${dn}</span></span>`;
+      const sign2=isNeg?'-':'';
+      const whole=Math.floor(fn/fd),rem2=fn%fd;
+      let fh=`<span class="frac-therefore">∴</span>`;
+      if(whole===0) fh+=`<span>${sign2}${ff(fn,fd)}</span>`;
+      else if(rem2===0) fh+=`<span>${sign2}${whole}</span>`;
+      else fh+=`<span>${sign2}${whole} ${ff(rem2,fd)}</span>`;
+      document.getElementById('resFrac').innerHTML=fh;
+    }
+
+    const dr=digitalRoot(+numStr);
+    const db=document.getElementById('drBox');
+    if(db){
+      db.classList.add('show');
+      db.innerHTML=`<div class="dr-label-en">Digital root of ${numStr} = <strong>${dr}</strong>`+
+        ` &nbsp;·&nbsp; ${numStr} mod ${d} = <strong>${actualRem}</strong></div>`;
+    }
+  });
+}
+
+function fmt(n,gs){return gs===1?String(n):String(n).padStart(gs,'0');}
+function digitalRoot(n){return n===0?0:n<10?n:digitalRoot([...String(n)].reduce((a,c)=>a+(+c),0));}
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function fracHTML(n,d,col='var(--yellow)'){
+  return `<span class="frac-inline" style="color:${col}"><span class="frac-num">${n}</span><span class="frac-den">${d}</span></span>`;
+}
+
+/* ★ 통합 순환소수 표현 HTML 생성
+   정수/소수 입력 모두 처리:
+   quotStr + remStr(반복) 문자열에서 decShift만큼 소수점을 왼쪽으로 이동 */
+function buildRepeatingEqHTML(actualQuot, actualRem, gs, decShift, isNeg){
+  const sign = isNeg ? '-' : '';
+  const quotStr = String(actualQuot);
+  const remStr  = String(actualRem).padStart(gs, '0');
+  const newIntLen = quotStr.length - decShift;  // 정수부 자릿수
+
+  /* 순환마디 HTML 감싸기 */
+  function wrapRepeat(s){
+    if(!s || +s===0) return '';
+    if(s.length===1) return `<span class="rdot">${s}</span>`;
+    return `<span class="rdot">${s[0]}</span>${s.slice(1,-1)}<span class="rdot">${s[s.length-1]}</span>`;
+  }
+
+  if(actualRem===0){
+    /* 순환 없음 */
+    if(newIntLen<=0){
+      return sign+'0.'+'0'.repeat(-newIntLen)+quotStr;
+    }
+    const intP=quotStr.slice(0,newIntLen);
+    const fracP=quotStr.slice(newIntLen);
+    return sign+intP+(fracP?'.'+fracP:'');
+  }
+
+  /* 순환 있음 */
+  let intDisplay, fracBefore;
+  if(newIntLen<=0){
+    intDisplay='0';
+    fracBefore='0'.repeat(-newIntLen)+quotStr;
+  } else if(newIntLen>=quotStr.length){
+    intDisplay=quotStr+'0'.repeat(newIntLen-quotStr.length);
+    fracBefore='';
+  } else {
+    intDisplay=quotStr.slice(0,newIntLen);
+    fracBefore=quotStr.slice(newIntLen);
+  }
+  return sign+intDisplay+'.'+fracBefore+wrapRepeat(remStr);
+}
+
+
+/* ══ Web Audio API 효과음 ══ */
+let audioCtx = null;
+let muted = false;
+
+function getAC(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function toggleMute(){
+  muted = !muted;
+  const btn = document.getElementById('soundBtn');
+  if(btn){
+    btn.textContent = muted ? '🔇 효과음 OFF' : '🔊 효과음 ON';
+    btn.classList.toggle('muted', muted);
+  }
+}
+
+function playTick(){
+  if(muted) return;
+  try{
+    const ac=getAC(), t=ac.currentTime;
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(500, t+0.06);
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.09);
+    o.start(t); o.stop(t+0.09);
+  }catch(e){}
+}
+
+function playDing(){
+  if(muted) return;
+  try{
+    const ac=getAC(), t=ac.currentTime;
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type='sine'; o.connect(g); g.connect(ac.destination);
+    o.frequency.setValueAtTime(700, t);
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+    o.start(t); o.stop(t+0.28);
+  }catch(e){}
+}
+
+function playRemDing(){
+  if(muted) return;
+  try{
+    const ac=getAC(), t=ac.currentTime;
+    // 나머지 셀 - 노란 느낌의 음
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type='triangle'; o.connect(g); g.connect(ac.destination);
+    o.frequency.setValueAtTime(520, t);
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.35);
+    o.start(t); o.stop(t+0.35);
+  }catch(e){}
+}
+
+function playComplete(){
+  if(muted) return;
+  try{
+    const ac=getAC(), t=ac.currentTime;
+    // 상승 4화음
+    [523, 659, 784, 1047].forEach((freq, i)=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.connect(g); g.connect(ac.destination);
+      o.frequency.value=freq;
+      const st=t+i*0.09;
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(0.22, st+0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, st+0.55);
+      o.start(st); o.stop(st+0.6);
+    });
+  }catch(e){}
+}
+
+/* ══ 셀 팝 애니메이션 헬퍼 ══ */
+function popCell(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.classList.remove('pop');
+  void el.offsetWidth; // reflow
+  el.classList.add('pop');
+}
+function carryPulseCell(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.classList.remove('carry-pulse');
+  void el.offsetWidth;
+  el.classList.add('carry-pulse');
+}
+
+/* ══ 결과 반짝임 ══ */
+function shineResult(){
+  const el=document.getElementById('resEq'); if(!el) return;
+  el.classList.remove('shine');
+  void el.offsetWidth;
+  el.classList.add('shine');
+  // confetti
+  spawnConfetti();
+  // 로고 펄스
+  const logo=document.getElementById('logoSvg'); if(logo){
+    logo.classList.remove('pulse'); void logo.offsetWidth; logo.classList.add('pulse');
+    logo.addEventListener('animationend',()=>logo.classList.remove('pulse'),{once:true});
+  }
+}
+
+function spawnConfetti(){
+  const stage=document.getElementById('resSec'); if(!stage) return;
+  const colors=['#4dff9e','#4da6ff','#ffd166','#ff5555','#ffaa44'];
+  for(let i=0;i<18;i++){
+    const d=document.createElement('div');
+    d.style.cssText=`
+      position:absolute;width:7px;height:7px;border-radius:2px;
+      background:${colors[i%colors.length]};
+      left:${20+Math.random()*60}%;top:${Math.random()*30}%;
+      animation:confettiFall ${0.7+Math.random()*0.6}s ease ${Math.random()*0.3}s forwards;
+      pointer-events:none;z-index:50;
+    `;
+    stage.appendChild(d);
+    setTimeout(()=>{ if(d.parentNode) d.parentNode.removeChild(d); }, 1400);
+  }
+}
+
+/* ══ 로고 애니메이션 ══ */
+(function animateLogo(){
+  const bg=document.getElementById('logoBg');
+  const ring=document.getElementById('logoRing');
+  if(!bg) return;
+  const circ=2*Math.PI*37;
+  bg.style.strokeDasharray=circ;
+  bg.style.strokeDashoffset=circ;
+  bg.style.transition='stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ bg.style.strokeDashoffset='0'; }));
+  setTimeout(()=>{ ring.style.transition='opacity 0.4s'; ring.style.opacity='1'; },200);
+  [{id:'ltop',delay:400},{id:'lc1',delay:750},{id:'lc2',delay:1000},
+   {id:'lc3',delay:1250},{id:'lbot',delay:1550}].forEach(({id,delay})=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.transition='opacity 0.5s';
+    setTimeout(()=>{ el.style.opacity='1'; }, delay);
+  });
+})();
+
+// Enter키로 실행
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('numIn').addEventListener('keydown',e=>{
+    if(e.key==='Enter') run();
+  });
+  // 화면 회전 시 stage 가로 스크롤 리셋
+  window.addEventListener('resize',()=>{
+    const s=document.getElementById('stage');
+    if(s) s.scrollLeft=0;
+  });
+});
+</script>
+
+</body>
+</html>

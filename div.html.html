@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나눗셈 · Korea Long Division</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ══ CSS 변수 (v16 dark 팔레트) ══ */
+:root{
+  --bg:#0f1318; --surface:#1a1f2b; --surface2:#232a38; --surface3:#2a3145;
+  --border:#2e3748; --text:#e8edf5; --muted:#8a94ac; --dim:#3a4155;
+  --blue:#4da6ff; --red:#ff5555; --green:#4dff9e;
+  --yellow:#ffd166; --orange:#ffaa44; --purple:#b48eff;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Noto Sans KR',sans-serif;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  padding:28px 16px 80px;
+}
+
+/* ══ 헤더 ══ */
+.header-wrap{
+  display:flex; align-items:center; gap:14px;
+  margin-bottom:22px; width:100%; max-width:1100px;
+}
+.title-block{display:flex; flex-direction:column; gap:4px; align-items:center;}
+.title-main{
+  font-size:1.8rem; font-weight:900; color:#72c4ff;
+  font-family:'JetBrains Mono',monospace; line-height:1.1;
+  text-shadow:0 0 20px rgba(77,166,255,.5); letter-spacing:.01em;
+}
+.title-sub{
+  font-size:.75rem; color:var(--muted);
+  font-family:'JetBrains Mono',monospace; letter-spacing:.08em;
+}
+
+/* ══ 메인 레이아웃 ══ */
+.main-grid{
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:24px;
+  width:100%; max-width:1100px;
+}
+@media(max-width:780px){
+  .main-grid{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  body{padding:14px 10px 32px;}
+  .header-wrap{gap:8px;margin-bottom:10px;}
+  .panel-card{padding:14px;}
+  .btn-calc{font-size:.88rem;padding:12px;}
+  .input-field,.select-field{font-size:1rem;padding:10px 12px;}
+}
+@media(max-width:380px){
+  .input-field,.select-field{font-size:.92rem;}
+  .btn-calc{font-size:.82rem;}
+}
+
+/* ══ 왼쪽 패널 ══ */
+.left-panel{
+  display:flex; flex-direction:column; gap:14px;
+}
+.panel-card{
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:16px; padding:20px;
+}
+
+/* ══ 입력 섹션 ══ */
+.input-label{
+  display:block; font-size:.72rem; font-weight:700;
+  color:var(--muted); letter-spacing:.06em; margin-bottom:6px;
+  font-family:'JetBrains Mono',monospace; text-transform:uppercase;
+}
+.input-field{
+  width:100%; padding:11px 14px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; color:var(--text);
+  font-family:'JetBrains Mono',monospace; font-size:1.1rem;
+  outline:none; transition:border-color .2s;
+}
+.input-field:focus{border-color:var(--blue);}
+.input-group{margin-bottom:12px;}
+
+.select-field{
+  width:100%; padding:11px 14px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; color:var(--text);
+  font-family:'Noto Sans KR',sans-serif; font-size:.82rem;
+  outline:none; cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%234da6ff' d='M4 6l4 4 4-4z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+  padding-right:36px; transition:border-color .2s;
+}
+.select-field:focus{border-color:var(--blue);}
+.select-field option{background:var(--surface2); color:var(--text);}
+
+.btn-calc{
+  width:100%; padding:13px;
+  background:linear-gradient(135deg, var(--blue) 0%, #7b5ea7 100%);
+  color:#fff; border:none; border-radius:10px;
+  font-size:.95rem; font-weight:700; cursor:pointer;
+  transition:opacity .2s, transform .1s;
+  font-family:'Noto Sans KR',sans-serif; letter-spacing:.02em;
+  min-height:48px; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+.btn-calc:hover{opacity:.9;}
+.btn-calc:active{transform:scale(.98);}
+
+/* ══ 에러 ══ */
+.error-box{
+  display:none; background:rgba(255,85,85,.1);
+  border:1.5px solid var(--red); border-radius:10px;
+  padding:10px 14px; font-size:.8rem; color:#ffaaaa;
+  line-height:1.8; margin-top:8px;
+}
+.error-box.show{display:block;}
+
+/* ══ 음수 규칙 패널 ══ */
+.neg-panel{
+  display:none; background:rgba(255,170,68,.07);
+  border:1.5px solid var(--orange); border-radius:12px;
+  padding:14px 16px; margin-top:4px;
+}
+.neg-panel.show{display:block;}
+.neg-panel-title{
+  font-size:.82rem; font-weight:800; color:var(--orange);
+  margin-bottom:8px; display:flex; align-items:center; gap:6px;
+}
+.neg-row{
+  display:flex; align-items:center; gap:10px;
+  padding:3px 0; font-size:.8rem;
+}
+.neg-sign{color:var(--muted); min-width:120px; font-family:'JetBrains Mono',monospace;}
+.neg-eq{color:var(--muted);}
+.neg-res-pos{color:var(--green); font-weight:700;}
+.neg-res-neg{color:var(--red); font-weight:700;}
+
+/* ══ 토글 버튼 (입력 접기) ══ */
+.toggle-btn{
+  display:none; width:100%; padding:10px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; color:var(--blue); font-weight:700;
+  cursor:pointer; font-size:.85rem; transition:border-color .2s;
+}
+.toggle-btn:hover{border-color:var(--blue);}
+
+/* ══ 애니메이션 컨트롤 ══ */
+.anim-card{
+  display:none; background:var(--surface);
+  border:1.5px solid var(--border); border-radius:16px; padding:16px;
+}
+.ctrl-row{display:flex; gap:8px; margin-bottom:8px;}
+.ctrl-btn{
+  flex:1; padding:10px 8px; border:none; border-radius:8px;
+  font-weight:700; cursor:pointer; transition:all .2s;
+  font-family:'Noto Sans KR',sans-serif; font-size:.82rem;
+}
+.ctrl-btn:disabled{opacity:.3; cursor:default;}
+.btn-play{background:var(--green); color:#000;}
+.btn-pause{background:var(--orange); color:#000; display:none;}
+.btn-prev{background:var(--surface2); color:var(--text); border:1px solid var(--border);}
+.btn-next{background:var(--surface2); color:var(--text); border:1px solid var(--border);}
+.btn-reset{background:var(--surface2); color:var(--red); border:1px solid var(--border);}
+.speed-row{display:flex; gap:6px;}
+.speed-btn{
+  flex:1; padding:7px 4px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  color:var(--muted); border-radius:7px; font-size:.75rem;
+  font-weight:700; cursor:pointer; transition:all .18s;
+}
+.speed-btn.active{background:var(--blue); border-color:var(--blue); color:#000;}
+.sound-btn{
+  width:100%; padding:9px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:8px; color:var(--blue); font-weight:700;
+  cursor:pointer; font-size:.82rem; transition:all .18s;
+  margin-top:8px;
+}
+.sound-btn:hover{border-color:var(--blue);}
+.sound-btn.muted{color:var(--muted); border-color:var(--dim);}
+
+/* ══ 결과 요약 (소수/분수) ══ */
+.result-summary{
+  display:none; background:var(--surface);
+  border:1.5px solid var(--border); border-radius:16px;
+  padding:16px 20px; margin-top:0;
+}
+.result-summary.show{display:block;}
+.rl-row{margin:10px 0;}
+.rl-label{
+  font-size:.7rem; font-weight:700; color:var(--blue);
+  font-family:'JetBrains Mono',monospace; letter-spacing:.04em;
+  text-transform:uppercase; display:block; margin-bottom:3px;
+}
+.rl-value{
+  font-size:.95rem; line-height:1.7; word-break:break-all;
+  font-family:'JetBrains Mono',monospace; color:var(--text);
+}
+.fraction{
+  display:inline-flex; flex-direction:column;
+  text-align:center; vertical-align:middle;
+  line-height:1.2; margin:0 3px;
+}
+.fraction-num{border-bottom:1.5px solid var(--yellow); padding-bottom:1px; color:var(--yellow);}
+.fraction-den{padding-top:1px; color:var(--yellow);}
+.neg-result-note{
+  background:rgba(255,85,85,.08); border-left:3px solid var(--red);
+  border-radius:6px; padding:8px 12px; margin-top:10px;
+  font-size:.78rem; line-height:1.9; color:#ffaaaa;
+}
+.repeating-dot{position:relative; display:inline-block;}
+.repeating-dot::after{
+  content:'·'; position:absolute; top:-.65em; left:50%; transform:translateX(-50%);
+  text-align:center; font-size:1.2em;
+  color:var(--yellow);
+}
+
+/* ══ 오른쪽 패널 (세로셈) ══ */
+.right-panel{
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:16px; padding:28px; min-height:320px;
+  overflow-x:auto;
+}
+.placeholder{
+  text-align:center; color:var(--muted);
+  padding-top:80px; font-size:.9rem; line-height:2.5;
+}
+.placeholder .ph-en{font-size:.75rem; color:var(--dim); font-family:'JetBrains Mono',monospace;}
+
+/* ══ 세로셈 레이아웃 ══ */
+.result{opacity:0; transition:opacity .4s;}
+.result.show{opacity:1;}
+.division-scaler{display:inline-block; transform-origin:top left; width:max-content;}
+.division-layout{
+  font-family:'Courier New',Courier,monospace;
+  font-size:15px; padding:6px 16px;
+  background:var(--surface2); border-radius:10px;
+  letter-spacing:0; color:var(--text);
+}
+.division-layout > div{
+  display:block; white-space:pre;
+  height:1.15em; line-height:1.15em; overflow:visible;
+}
+
+/* ══ 애니메이션 클래스 ══ */
+@keyframes slideInLeft{
+  from{opacity:0; transform:translateX(-18px);}
+  to{opacity:1; transform:translateX(0);}
+}
+@keyframes slideInDown{
+  from{opacity:0; transform:translateY(-10px);}
+  to{opacity:1; transform:translateY(0);}
+}
+@keyframes quotientPop{
+  0%  {color:var(--orange); transform:scale(1.55) translateY(-3px); text-shadow:0 0 14px rgba(255,170,68,.8);}
+  55% {color:var(--blue); transform:scale(1.10) translateY(0);}
+  100%{color:inherit; transform:scale(1); text-shadow:none;}
+}
+@keyframes subtractGlow{
+  0%  {background:rgba(77,166,255,.15); box-shadow:0 0 0 3px rgba(77,166,255,.2);}
+  100%{background:transparent; box-shadow:none;}
+}
+@keyframes remainderPulse{
+  0%  {color:var(--red); transform:scale(1.15);}
+  60% {color:var(--purple); transform:scale(1.04);}
+  100%{color:inherit; transform:scale(1);}
+}
+@keyframes confettiFall{
+  0%  {transform:translateY(0) rotate(0deg); opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg); opacity:0;}
+}
+@keyframes bannerBounce{
+  0%  {transform:translateX(-50%) scale(.6) translateY(-20px); opacity:0;}
+  55% {transform:translateX(-50%) scale(1.08) translateY(0); opacity:1;}
+  75% {transform:translateX(-50%) scale(.97);}
+  100%{transform:translateX(-50%) scale(1); opacity:1;}
+}
+@keyframes resultFadeUp{
+  from{opacity:0; transform:translateY(10px);}
+  to  {opacity:1; transform:translateY(0);}
+}
+
+.anim-slide     {animation:slideInLeft .32s cubic-bezier(.4,0,.2,1) both;}
+.anim-slide-down{animation:slideInDown .28s ease both;}
+.anim-subtract  {animation:subtractGlow .7s ease-out both;}
+.anim-remainder {animation:remainderPulse .5s ease-out both;}
+.digit-pop      {display:inline-block; animation:quotientPop .5s cubic-bezier(.4,0,.2,1) forwards;}
+
+/* ══ 컨페티 ══ */
+.confetti-particle{
+  position:fixed; width:9px; height:9px;
+  border-radius:2px; pointer-events:none; z-index:9999;
+  animation:confettiFall linear forwards;
+}
+
+/* ══ 완료 배너 ══ */
+#completeBanner{
+  display:none; position:fixed;
+  top:28px; left:50%;
+  transform:translateX(-50%) scale(.8);
+  background:linear-gradient(135deg, var(--orange) 0%, var(--red) 50%, var(--purple) 100%);
+  color:#fff; padding:16px 42px; border-radius:40px;
+  font-size:20px; font-weight:800;
+  box-shadow:0 10px 40px rgba(255,170,68,.45), 0 0 0 4px rgba(255,255,255,.2);
+  z-index:10000; opacity:0; letter-spacing:.5px;
+}
+#completeBanner.show{
+  display:block;
+  animation:bannerBounce .5s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+/* ══ 로고 애니메이션 ══ */
+@keyframes logoReveal {
+  0%   { opacity:0; filter:blur(12px) brightness(2); transform:scale(0.7); }
+  60%  { opacity:1; filter:blur(0)    brightness(1.4); transform:scale(1.05); }
+  100% { opacity:1; filter:blur(0)    brightness(1);   transform:scale(1); }
+}
+@keyframes logoPulse {
+  0%,100% { filter:drop-shadow(0 0 4px rgba(77,166,255,.3)); }
+  50%     { filter:drop-shadow(0 0 18px rgba(77,166,255,.9)) drop-shadow(0 0 32px rgba(77,166,255,.5)); }
+}
+#logoSvg {
+  animation: logoReveal 1.2s cubic-bezier(.4,0,.2,1) forwards;
+  transform-origin: center;
+}
+#logoSvg.pulse {
+  animation: logoPulse 1.0s ease-in-out;
+}
+/* 타이틀도 함께 나타남 */
+@keyframes titleReveal {
+  0%   { opacity:0; transform:translateY(-8px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+.title-block {
+  animation: titleReveal .9s .4s cubic-bezier(.4,0,.2,1) both;
+}
+</style>
+</head>
+<body>
+
+<!-- 완료 배너 -->
+<div id="completeBanner">🎊 완료! · Perfect! 🎊</div>
+
+<!-- 헤더 -->
+<div class="header-wrap">
+  <svg id="logoSvg" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 80 80" style="flex-shrink:0;">
+    <defs>
+      <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4da6ff"/>
+        <stop offset="100%" style="stop-color:#764ba2"/>
+      </linearGradient>
+      <path id="topArcInner" d="M 13,40 A 27,27 0 0,1 67,40"/>
+      <path id="bottomArcOuter" d="M 8,40 A 32,32 0 0,0 72,40"/>
+    </defs>
+    <circle cx="40" cy="40" r="38" fill="url(#logoGrad)" stroke="#5a4fcf" stroke-width="2"/>
+    <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.3">
+      <textPath href="#topArcInner" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+    </text>
+    <text x="40" y="36" font-size="18" text-anchor="middle" fill="white"
+      font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅇ</text>
+    <text x="40" y="47" font-size="18" text-anchor="middle" fill="white"
+      font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅡ</text>
+    <text x="40" y="58" font-size="18" text-anchor="middle" fill="white"
+      font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㄴ</text>
+    <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.5">
+      <textPath href="#bottomArcOuter" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+    </text>
+  </svg>
+  <div class="title-block">
+    <span class="title-main">나눗셈</span>
+    <span class="title-sub">Korea Long Division</span>
+  </div>
+</div>
+
+<!-- 메인 그리드 -->
+<div class="main-grid">
+
+  <!-- 왼쪽 패널 -->
+  <div class="left-panel">
+
+    <!-- 입력 토글 버튼 (계산 후 노출) -->
+    <button class="toggle-btn" id="toggleBtn" onclick="toggleInput()">
+      입력 설정 (Input) <span id="toggleIcon">▼</span>
+    </button>
+
+    <!-- 입력 카드 -->
+    <div class="panel-card" id="inputSection">
+      <div class="input-group">
+        <label class="input-label" for="dividend">나뉘는 수 · Dividend</label>
+        <input class="input-field" type="text" id="dividend" value="1"
+          placeholder="예: 3, -1.5, 0.25" oninput="blockNegative(this)">
+      </div>
+      <div class="input-group">
+        <label class="input-label" for="divisor">나누는 수 · Divisor</label>
+        <input class="input-field" type="text" id="divisor" value="7"
+          placeholder="예: 7, -0.5, 1.25" oninput="blockNegative(this)">
+      </div>
+      <div class="input-group">
+        <label class="input-label" for="decimal">소수점 자리수 · Decimal Places</label>
+        <select class="select-field" id="decimal">
+          <option value="-1" selected>끝까지 · All digits / Until repeating</option>
+          <option value="0">정수만 · Integer only</option>
+          <option value="1">1자리 · 1st Decimal Place</option>
+          <option value="2">2자리 · 2nd Decimal Place</option>
+          <option value="3">3자리 · 3rd Decimal Place</option>
+          <option value="4">4자리 · 4th Decimal Place</option>
+          <option value="5">5자리 · 5th Decimal Place</option>
+          <option value="6">6자리 · 6th Decimal Place</option>
+          <option value="7">7자리 · 7th Decimal Place</option>
+        </select>
+      </div>
+      <button class="btn-calc" onclick="calculate()">계산하기 · Calculate</button>
+      <div class="error-box" id="error"></div>
+      <!-- 음수 규칙 패널 -->
+      <div class="neg-panel" id="negRulePanel">
+        <div class="neg-panel-title">⚠️ 음수 나눗셈 규칙 · Sign Rules</div>
+        <div class="neg-row"><span class="neg-sign">(+) ÷ (+)</span><span class="neg-eq">=</span><span class="neg-res-pos">양수 (+) Positive</span></div>
+        <div class="neg-row"><span class="neg-sign">(−) ÷ (−)</span><span class="neg-eq">=</span><span class="neg-res-pos">양수 (+) Positive</span></div>
+        <div class="neg-row"><span class="neg-sign">(+) ÷ (−)</span><span class="neg-eq">=</span><span class="neg-res-neg">음수 (−) Negative</span></div>
+        <div class="neg-row"><span class="neg-sign">(−) ÷ (+)</span><span class="neg-eq">=</span><span class="neg-res-neg">음수 (−) Negative</span></div>
+      </div>
+    </div>
+
+    <!-- 애니메이션 컨트롤 카드 -->
+    <div class="anim-card" id="animControls">
+      <div class="ctrl-row">
+        <button class="ctrl-btn btn-play"  id="playBtn"  onclick="playAnim()">▶ 재생 · Play</button>
+        <button class="ctrl-btn btn-pause" id="pauseBtn" onclick="pauseAnim()">⏸ 정지 · Pause</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn btn-prev" id="prevBtn" onclick="prevAnim()">⏮ 이전 Prev</button>
+        <button class="ctrl-btn btn-next"              onclick="nextAnim()">⏭ 다음 Next</button>
+        <button class="ctrl-btn btn-reset"             onclick="resetAnim()">⏹ 처음 Reset</button>
+      </div>
+      <div class="speed-row">
+        <button class="speed-btn"        onclick="setAnimSpeed(1500)">느리게 Slow</button>
+        <button class="speed-btn active" onclick="setAnimSpeed(800)" >보통 Normal</button>
+        <button class="speed-btn"        onclick="setAnimSpeed(300)" >빠르게 Fast</button>
+      </div>
+      <button class="sound-btn" id="soundToggle" onclick="toggleSound()">🔊 효과음 ON</button>
+    </div>
+
+    <!-- 결과 요약 (소수 / 분수) -->
+    <div class="result-summary" id="resultFixed"></div>
+
+  </div><!-- /left-panel -->
+
+  <!-- 오른쪽 패널 -->
+  <div class="right-panel" id="rightPanel">
+    <div class="placeholder" id="placeholder">
+      <div>수식을 입력하고 계산하기를 눌러주세요</div>
+      <div class="ph-en">Enter a dividend &amp; divisor, then press Calculate</div>
+    </div>
+    <div id="result" class="result"></div>
+  </div>
+
+</div><!-- /main-grid -->
+
+<script>
+/* ══════════════════════════════════════
+   전역 상태
+══════════════════════════════════════ */
+let allLines = [], fullQuotientText = '', currentLineIndex = 1, quotientStepCount = 0;
+let animationTimer = null, isAnimating = false, animSpeed = 800;
+let quotientPositions = [], animHistory = [];
+let quotientDigitPositions = [];
+
+/* ══════════════════════════════════════
+   입력 검증
+══════════════════════════════════════ */
+function blockNegative(input) {
+    let v = input.value;
+    const isNeg = v.startsWith('-');
+    // 숫자와 소수점만 허용 (맨앞 - 제외)
+    let clean = v.replace(/-/g, '').replace(/[^0-9.]/g, '');
+    // 소수점 1개만 허용
+    const dotIdx = clean.indexOf('.');
+    if (dotIdx !== -1) {
+        clean = clean.slice(0, dotIdx + 1) + clean.slice(dotIdx + 1).replace(/\./g, '');
+    }
+    v = (isNeg ? '-' : '') + clean;
+    if (v !== input.value) input.value = v;
+    // 음수 있으면 규칙 패널 표시
+    const dv = document.getElementById('dividend').value;
+    const ds = document.getElementById('divisor').value;
+    const hasNeg = dv.startsWith('-') || ds.startsWith('-');
+    const panel = document.getElementById('negRulePanel');
+    if (panel) {
+        if (hasNeg) panel.classList.add('show');
+        else panel.classList.remove('show');
+    }
+}
+
+/* ══════════════════════════════════════
+   효과음 (Web Audio API)
+══════════════════════════════════════ */
+let audioCtx = null, soundEnabled = true;
+
+function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+}
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundToggle');
+    btn.textContent = soundEnabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
+    btn.classList.toggle('muted', !soundEnabled);
+}
+function playTone(freq, type, duration, gainVal, delay = 0) {
+    if (!soundEnabled) return;
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+        gain.gain.linearRampToValueAtTime(gainVal, ctx.currentTime + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + duration + 0.05);
+    } catch(e) {}
+}
+function sfxLine()          { playTone(520,'sine',0.13,0.18); }
+function sfxQuotientDigit() { playTone(880,'sine',0.12,0.22); playTone(1100,'sine',0.09,0.12,0.06); }
+function sfxSubtract()      { playTone(280,'triangle',0.15,0.20); }
+function sfxHorizLine()     { playTone(660,'sawtooth',0.08,0.10); }
+function sfxRemainder()     { playTone(420,'sine',0.14,0.18); playTone(320,'sine',0.10,0.10,0.07); }
+function sfxComplete() {
+    const notes = [523,659,784,1047,784,1047,1319,1047];
+    const delays = [0,.07,.14,.21,.28,.33,.40,.47];
+    notes.forEach((f,i) => playTone(f,'sine',0.18,0.22,delays[i]));
+    playTone(523,'sine',0.55,0.18,0.58); playTone(659,'sine',0.55,0.16,0.58);
+    playTone(784,'sine',0.55,0.16,0.58); playTone(1047,'sine',0.55,0.20,0.58);
+    playTone(2093,'sine',0.18,0.10,0.62); playTone(2637,'sine',0.22,0.12,0.72);
+}
+
+/* ══════════════════════════════════════
+   컨페티 + 완료 배너
+══════════════════════════════════════ */
+function launchConfetti() {
+    const colors = ['#4da6ff','#764ba2','#ffd166','#4dff9e','#ff5555','#ffaa44','#b48eff','#fbbf24'];
+    for (let i = 0; i < 90; i++) {
+        const el = document.createElement('div');
+        el.className = 'confetti-particle';
+        el.style.cssText = `
+            left:${Math.random()*100}vw; top:-10px;
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            width:${5+Math.random()*10}px; height:${5+Math.random()*10}px;
+            border-radius:${Math.random()>.4?'50%':'2px'};
+            animation-duration:${1.0+Math.random()*1.6}s;
+            animation-delay:${Math.random()*.6}s;
+        `;
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+    }
+}
+function showCompleteBanner() {
+    const banner = document.getElementById('completeBanner');
+    banner.classList.add('show');
+    setTimeout(() => {
+        banner.style.transition = 'opacity .5s ease, transform .5s ease';
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateX(-50%) scale(.85) translateY(-10px)';
+        setTimeout(() => {
+            banner.classList.remove('show');
+            banner.style.transition = '';
+            banner.style.opacity = '';
+            banner.style.transform = '';
+        }, 550);
+    }, 2500);
+}
+
+/* ══════════════════════════════════════
+   속도 / 입력 토글
+══════════════════════════════════════ */
+function setAnimSpeed(speed) {
+    animSpeed = speed;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    if (event) event.target.classList.add('active');
+    if (isAnimating) { pauseAnim(); playAnim(); }
+}
+function toggleInput() {
+    const s = document.getElementById('inputSection');
+    const i = document.getElementById('toggleIcon');
+    if (s.style.display === 'none') { s.style.display = 'block'; i.textContent = '▼'; }
+    else { s.style.display = 'none'; i.textContent = '▶'; }
+}
+
+/* ══════════════════════════════════════
+   재생 / 정지 / 이전 / 다음 / 처음
+══════════════════════════════════════ */
+function playAnim() {
+    if (currentLineIndex >= allLines.length) return;
+    try { getAudioCtx().resume(); } catch(e) {}
+    isAnimating = true;
+    document.getElementById('playBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'block';
+    animationTimer = setInterval(() => {
+        if (currentLineIndex < allLines.length) {
+            showLineStep();
+            if (currentLineIndex >= allLines.length) {
+                pauseAnim();
+                triggerComplete();
+            }
+        }
+    }, animSpeed);
+}
+function pauseAnim() {
+    isAnimating = false;
+    clearInterval(animationTimer);
+    document.getElementById('playBtn').style.display = 'block';
+    document.getElementById('pauseBtn').style.display = 'none';
+}
+function nextAnim() { pauseAnim(); if (currentLineIndex < allLines.length) showLineStep(); }
+function prevAnim() {
+    pauseAnim();
+    if (animHistory.length > 0) {
+        animHistory.pop();
+        currentLineIndex = 1; quotientStepCount = 0;
+        const q = document.querySelector('.line-quotient');
+        if (q) q.innerHTML = '';
+        for (let i = 1; i < allLines.length; i++) {
+            const l = document.querySelector('.line-' + i);
+            if (l) { l.style.opacity = '0'; l.classList.remove('anim-slide','anim-slide-down','anim-subtract','anim-remainder'); }
+        }
+        const t = animHistory.length; animHistory = [];
+        const _saved = soundEnabled; soundEnabled = false;
+        for (let i = 0; i < t - 1; i++) showLineStep(true);
+        soundEnabled = _saved;
+        if (t > 0) showLineStep(false);
+    }
+    updatePrevButton();
+}
+function resetAnim() {
+    pauseAnim();
+    currentLineIndex = 1; quotientStepCount = 0; animHistory = [];
+    const q = document.querySelector('.line-quotient');
+    if (q) q.innerHTML = '';
+    for (let i = 1; i < allLines.length; i++) {
+        const l = document.querySelector('.line-' + i);
+        if (l) { l.style.opacity = '0'; l.classList.remove('anim-slide','anim-slide-down','anim-subtract','anim-remainder'); }
+    }
+    const rf = document.getElementById('resultFixed');
+    if (rf) { rf.innerHTML = ''; rf.classList.remove('show'); }
+    const np = document.getElementById('negRulePanel');
+    if (np) np.classList.remove('show');
+    updatePrevButton();
+}
+function updatePrevButton() {
+    const p = document.getElementById('prevBtn');
+    if (p) p.disabled = animHistory.length === 0;
+}
+function triggerComplete() {
+    sfxComplete();
+    // 로고 펄스
+    const logo = document.getElementById('logoSvg');
+    if (logo) {
+        logo.classList.remove('pulse');
+        void logo.offsetWidth;
+        logo.classList.add('pulse');
+        logo.addEventListener('animationend', () => logo.classList.remove('pulse'), { once: true });
+    }
+    setTimeout(() => { launchConfetti(); showCompleteBanner(); }, 400);
+    setTimeout(() => {
+        const rf = document.getElementById('resultFixed');
+        if (rf && window._summaryHTML) {
+            rf.innerHTML = window._summaryHTML;
+            rf.classList.add('show');
+            rf.style.animation = 'resultFadeUp .5s ease both';
+        }
+    }, 620);
+}
+
+/* ══════════════════════════════════════
+   몫 표시 헬퍼
+══════════════════════════════════════ */
+function buildQuotientCharPositions() {
+    quotientDigitPositions = [];
+    for (let i = 0; i < fullQuotientText.length; i++) {
+        if (fullQuotientText[i] >= '0' && fullQuotientText[i] <= '9')
+            quotientDigitPositions.push(i);
+    }
+}
+function toQuotientHTML(text) {
+    return text.replace('.', '<span style="margin:0 -2px">.</span>');
+}
+function renderQuotientWithNewChar(visible) {
+    if (!visible) return '';
+    const last = visible[visible.length - 1];
+    const rest = visible.slice(0, -1);
+    const restHTML = rest.replace('.', '<span style="margin:0 -2px">.</span>');
+    const newCharHTML = last === '.'
+        ? '<span style="margin:0 -2px">.</span>'
+        : `<span class="digit-pop">${last}</span>`;
+    return restHTML + newCharHTML;
+}
+
+/* ══════════════════════════════════════
+   줄 효과음 / 줄 표시
+══════════════════════════════════════ */
+function playSfxForLine(lineIndex, isQuotientStep) {
+    if (isQuotientStep) { sfxQuotientDigit(); return; }
+    const lineText = allLines[lineIndex] || '';
+    if (lineText.includes('─') && !lineText.includes('┌')) sfxHorizLine();
+    else if (lineText.includes('┌') || lineText.includes('│')) sfxLine();
+    else {
+        const stepInCycle = lineIndex - 3;
+        const isSub = stepInCycle >= 0 && stepInCycle % 4 === 0;
+        if (isSub) sfxSubtract(); else sfxRemainder();
+    }
+}
+function showLineStep(skipAnim = false) {
+    animHistory.push({ lineIndex: currentLineIndex, quotientCount: quotientStepCount });
+    const q = document.querySelector('.line-quotient');
+    const l = document.querySelector('.line-' + currentLineIndex);
+    let isQuotientStep = false;
+
+    if (quotientPositions.includes(currentLineIndex)) {
+        if (quotientStepCount < quotientDigitPositions.length) {
+            const revealUpTo = quotientDigitPositions[quotientStepCount];
+            const visible = fullQuotientText.substring(0, revealUpTo + 1);
+            if (q) {
+                if (skipAnim) q.innerHTML = toQuotientHTML(visible);
+                else {
+                    q.innerHTML = renderQuotientWithNewChar(visible);
+                    const popSpan = q.querySelector('.digit-pop');
+                    if (popSpan) { popSpan.classList.remove('digit-pop'); void popSpan.offsetWidth; popSpan.classList.add('digit-pop'); }
+                }
+            }
+            isQuotientStep = true; quotientStepCount++;
+        }
+    }
+    if (l) {
+        const lineText = allLines[currentLineIndex] || '';
+        l.classList.remove('anim-slide','anim-slide-down','anim-subtract','anim-remainder');
+        if (skipAnim) {
+            l.style.opacity = '1';
+        } else {
+            void l.offsetWidth;
+            if (lineText.includes('─') && !lineText.includes('┌')) { l.classList.add('anim-slide-down'); l.style.opacity = '1'; }
+            else if (lineText.includes('┌') || lineText.includes('│')) { l.classList.add('anim-slide'); l.style.opacity = '1'; }
+            else {
+                const stepInCycle = currentLineIndex - 3;
+                const isSub = stepInCycle >= 0 && stepInCycle % 4 === 0;
+                l.classList.add(isSub ? 'anim-subtract' : 'anim-remainder');
+                l.style.opacity = '1';
+            }
+        }
+    }
+    playSfxForLine(currentLineIndex, isQuotientStep);
+    currentLineIndex++;
+    if (currentLineIndex >= allLines.length && q) q.innerHTML = toQuotientHTML(fullQuotientText);
+    updatePrevButton();
+}
+
+/* ══════════════════════════════════════
+   GCD / 순환소수 표시
+══════════════════════════════════════ */
+function gcd(a, b) { while (b !== 0) { let t = b; b = a % b; a = t; } return a; }
+
+function formatRepeatingDecimal(info) {
+    if (!info) return '';
+    let r = info.nonRepeating || '';
+    if (info.repeating) {
+        const rp = info.repeating;
+        if (rp.length === 1) r += `<span class="repeating-dot">${rp}</span>`;
+        else {
+            r += `<span class="repeating-dot">${rp[0]}</span>`;
+            r += rp.substring(1, rp.length - 1);
+            r += `<span class="repeating-dot">${rp[rp.length-1]}</span>`;
+        }
+    }
+    return r;
+}
+
+/* ══════════════════════════════════════
+   계산 메인
+══════════════════════════════════════ */
+function calculate() {
+    const dividendRaw = document.getElementById('dividend').value.trim();
+    const divisorRaw  = document.getElementById('divisor').value.trim();
+    const decimalPlaces = parseInt(document.getElementById('decimal').value);
+    const errorDiv  = document.getElementById('error');
+    const resultDiv = document.getElementById('result');
+
+    errorDiv.classList.remove('show');
+    resultDiv.classList.remove('show');
+
+    const dividendFloat = parseFloat(dividendRaw);
+    const divisorFloat  = parseFloat(divisorRaw);
+
+    if (dividendRaw.includes('/') || divisorRaw.includes('/')) {
+        errorDiv.innerHTML = '분수는 입력할 수 없습니다. 소수로 변환해주세요.<br>Fractions not allowed. Please enter as a decimal.<br>e.g. 1/2 → 0.5, 1/4 → 0.25';
+        errorDiv.classList.add('show'); return;
+    }
+    if (isNaN(dividendFloat) || isNaN(divisorFloat)) {
+        errorDiv.innerHTML = '올바른 숫자를 입력해주세요.<br>Please enter a valid number.<br>e.g. 3, 1.5, -0.25';
+        errorDiv.classList.add('show'); return;
+    }
+    if (divisorFloat === 0) {
+        errorDiv.innerHTML = '0으로 나눌 수 없습니다.<br>Cannot divide by zero.';
+        errorDiv.classList.add('show'); return;
+    }
+
+    // 부호 처리
+    const isNegResult = (dividendFloat < 0) !== (divisorFloat < 0);
+    const absDividendFloat = Math.abs(dividendFloat);
+    const absDivisorFloat  = Math.abs(divisorFloat);
+    const absDividendRaw   = dividendRaw.replace('-','');
+    const absDivisorRaw    = divisorRaw.replace('-','');
+
+    // 소수 → 정수 변환
+    const dividendDecimals = absDividendRaw.includes('.') ? absDividendRaw.split('.')[1].length : 0;
+    const divisorDecimals  = absDivisorRaw.includes('.')  ? absDivisorRaw.split('.')[1].length  : 0;
+    const maxDecimals = Math.max(dividendDecimals, divisorDecimals);
+    const multiplier  = Math.pow(10, maxDecimals);
+    const dividend = Math.round(absDividendFloat * multiplier);
+    const divisor  = Math.round(absDivisorFloat  * multiplier);
+
+    const divResult = longDivision(dividend, divisor, decimalPlaces, isNegResult,
+        dividendFloat < 0, divisorFloat < 0, dividendRaw, divisorRaw);
+
+    allLines = divResult.lines.split('\n');
+    window._summaryHTML = divResult.summary;
+
+    // 몫 파싱
+    const _qParts = allLines[0].split('|');
+    fullQuotientText = _qParts[2] || allLines[0];
+    buildQuotientCharPositions();
+    currentLineIndex = 1; quotientStepCount = 0; animHistory = [];
+
+    // 세로셈 HTML 생성
+    const quotientData = allLines[0].split('|');
+    const qIndent = parseInt(quotientData[1]);
+    let html = '';
+
+    // 음수 입력 시 배너
+    if (dividendFloat < 0 || divisorFloat < 0) {
+        const signA = dividendFloat < 0  ? '−' : '+';
+        const signB = divisorFloat < 0 ? '−' : '+';
+        const ruleSign  = isNegResult ? '음수 (−)' : '양수 (+)';
+        const ruleColor = isNegResult ? 'var(--red)' : 'var(--green)';
+        html += `<div style="
+            margin-bottom:10px; padding:10px 14px;
+            background:rgba(255,170,68,.10); border-left:3px solid var(--orange);
+            border-radius:8px; font-size:.82rem; line-height:1.9;
+            font-family:'Noto Sans KR',sans-serif; color:var(--yellow);">
+            <b style="color:var(--orange);">⚠ 음수 포함 — 절댓값으로 세로셈 후 부호 규칙 적용</b><br>
+            <span style="color:var(--muted);">(${signA}) ÷ (${signB}) → 결과 부호:</span>
+            <span style="color:${ruleColor}; font-weight:700;"> ${ruleSign}</span>
+        </div>`;
+    }
+    html += '<div class="division-scaler"><div class="division-layout">';
+    html += `<div class="line-quotient" style="opacity:1;padding-left:${qIndent}ch;display:block;white-space:pre;height:1.3em;line-height:1.3em;"></div>`;
+    for (let i = 1; i < allLines.length; i++) {
+        const isEllipsis = allLines[i].includes('⋮');
+        const rh = isEllipsis ? '3.9em' : '1.3em';
+        html += `<div class="line-${i}" style="opacity:0;transition:opacity .4s;display:block;white-space:pre;height:${rh};line-height:${rh};">${allLines[i]}</div>`;
+    }
+    html += '</div></div>';
+
+    resultDiv.innerHTML = html;
+    resultDiv.classList.add('show');
+    document.getElementById('placeholder').style.display = 'none';
+
+    // 컨트롤 표시
+    document.getElementById('animControls').style.display = 'block';
+    document.getElementById('inputSection').style.display = 'none';
+    document.getElementById('toggleBtn').style.display = 'block';
+
+    // 결과 요약 초기화
+    const rf = document.getElementById('resultFixed');
+    if (rf) { rf.innerHTML = ''; rf.classList.remove('show'); rf.style.animation = ''; }
+    const np = document.getElementById('negRulePanel');
+    if (np) np.classList.remove('show');
+
+    // 몫 줄 비우기
+    const q = document.querySelector('.line-quotient');
+    if (q) q.textContent = '';
+
+    // 자동 스케일
+    function autoScaleDivision() {
+        const scaler = document.querySelector('.division-scaler');
+        const panel  = document.querySelector('#rightPanel');
+        if (!scaler || !panel) return;
+        scaler.style.transform = 'none';
+        scaler.style.transformOrigin = 'top left';
+        const naturalW = scaler.scrollWidth;
+        if (naturalW === 0) return;
+        const available = panel.clientWidth - 56;
+        const ratio = Math.min(available / naturalW, 1.5);
+        scaler.style.transform = `scale(${ratio})`;
+        scaler.style.height = (scaler.scrollHeight * ratio) + 'px';
+    }
+    setTimeout(autoScaleDivision, 80);
+    setTimeout(autoScaleDivision, 300);
+
+    updatePrevButton();
+    try { getAudioCtx().resume(); } catch(e) {}
+    setTimeout(() => playAnim(), 300);
+}
+
+/* ══════════════════════════════════════
+   longDivision 핵심 알고리즘
+══════════════════════════════════════ */
+function longDivision(dividend, divisor, decimalPlaces, isNegResult, dividendNeg, divisorNeg, dividendRaw, divisorRaw) {
+    const output = [];
+    if (isNegResult === undefined) isNegResult = false;
+    if (dividendNeg === undefined) dividendNeg = false;
+    if (divisorNeg  === undefined) divisorNeg  = false;
+    let quotient  = Math.floor(dividend / divisor);
+    let remainder = dividend % divisor;
+    const integerQuotient = quotient, integerRemainder = remainder;
+
+    const dividendStr = dividend.toString();
+
+    // 순환소수 여부
+    let isRepeating = false, repeatingInfo = null;
+    if (remainder > 0) {
+        let tr = remainder, seen = new Map(), pos = 0;
+        while (tr !== 0 && pos < 100) {
+            if (seen.has(tr)) { isRepeating = true; break; }
+            seen.set(tr, pos); tr = (tr * 10) % divisor; pos++;
+        }
+    }
+
+    // 소수 자릿수 결정
+    let actualDecimalPlaces = 0;
+    if (decimalPlaces === -1) {
+        if (isRepeating) {
+            let tr = integerRemainder, seen = new Map();
+            while (tr !== 0 && actualDecimalPlaces < 100) {
+                if (seen.has(tr)) break;
+                seen.set(tr, actualDecimalPlaces); tr = (tr * 10) % divisor; actualDecimalPlaces++;
+            }
+        } else {
+            let tr = integerRemainder;
+            while (tr !== 0 && actualDecimalPlaces < 100) { tr = (tr * 10) % divisor; actualDecimalPlaces++; }
+        }
+    } else actualDecimalPlaces = decimalPlaces;
+
+    // 몫 소수부 계산 (표시용)
+    let decimalPart = '', currentRemainder = integerRemainder;
+    if (actualDecimalPlaces > 0) {
+        decimalPart = '.';
+        let dd = [];
+        for (let i = 0; i < actualDecimalPlaces; i++) {
+            currentRemainder *= 10;
+            dd.push(Math.floor(currentRemainder / divisor));
+            currentRemainder %= divisor;
+        }
+        decimalPart += dd.join('');
+    }
+
+    // ── 핵심 정렬 기준 ──
+    // pipeLine = ' ' + divisorStr + ' │ ' + displayDividendStr
+    // 피제수 i번째 자리(0-based)의 문자열 인덱스 = digitIndent + i
+    // (digitIndent = 1 + divisorStr.length + 3, │는 1글자)
+    // ── 절대값 세로셈: 부호 없이 양수로만 표시 ──
+    const absDivisorStr  = divisor.toString();   // 부호 없는 제수
+    const absDivDisplayStr = dividendStr;         // 부호 없는 피제수
+
+    const digitIndent = 1 + absDivisorStr.length + 3;
+
+    // 몫: 정수부 마지막 자리가 피제수 마지막 자리 위
+    const quotIntStr    = quotient.toString();
+    const qPad          = digitIndent + dividendStr.length - quotIntStr.length;
+    const displayQuotient = quotient.toString() + decimalPart;
+
+    output.push('|' + qPad + '|' + displayQuotient);
+
+    const quotientRightEdge = (qPad - digitIndent) + displayQuotient.length;
+    const topLineLen = Math.max(dividendStr.length, quotientRightEdge) + 1;
+    output.push(' '.repeat(1 + absDivisorStr.length) + ' \u250c' + '\u2500'.repeat(topLineLen));
+    output.push(' ' + absDivisorStr + ' \u2502 ' + absDivDisplayStr);
+
+    quotientPositions = [];
+    let cr = 0, hasStarted = false;
+
+    // ── 정수부 ──
+    for (let i = 0; i < dividendStr.length; i++) {
+        cr = cr * 10 + parseInt(dividendStr[i]);
+        if (cr >= divisor) {
+            hasStarted = true;
+            const sv  = Math.floor(cr / divisor) * divisor, nr = cr - sv;
+            // 현재 수 오른쪽 끝 열 인덱스 = digitIndent + i
+            const col = digitIndent + i;
+            const svLen  = sv.toString().length;
+            const lineLen = Math.max(cr.toString().length, svLen);
+            quotientPositions.push(output.length - 1);
+            output.push(' '.repeat(col - svLen) + '-' + sv);
+            output.push(' '.repeat(col - lineLen) + '\u2500'.repeat(lineLen + 1));
+            if (i < dividendStr.length - 1) {
+                const nns = nr.toString() + dividendStr[i + 1];
+                output.push(' '.repeat(digitIndent + i + 1 - nns.length + 1) + nns);
+            } else {
+                output.push(' '.repeat(col - nr.toString().length + 1) + nr);
+            }
+            cr = nr;
+        } else if (hasStarted && i < dividendStr.length - 1) {
+            const nns = cr.toString() + dividendStr[i + 1];
+            output.push(' '.repeat(digitIndent + i + 1 - nns.length + 1) + nns);
+        }
+    }
+
+    // ── 소수부 ──
+    if (actualDecimalPlaces > 0 && cr > 0) {
+        // 소수점 첫 자리 몫 등록 (빈 줄 전, 파이프라인 행 기준)
+        quotientPositions.push(output.length - 1);
+        output.push('');  // 빈 줄 (소수점 내림 구분선)
+        // 첫 내림: 마지막 나머지×10 → col은 dividendStr 끝 다음 열
+        const firstCol = digitIndent + dividendStr.length;
+        const dss = cr.toString() + '0';
+        // 오른쪽 끝이 firstCol에 맞도록
+        output.push(' '.repeat(firstCol - dss.length + 1) + dss);
+
+        for (let i = 0; i < actualDecimalPlaces && cr > 0; i++) {
+            cr *= 10;
+            const sv  = Math.floor(cr / divisor) * divisor, nr = cr - sv;
+            const col = firstCol + i;
+            const svLen   = sv.toString().length;
+            const lineLen = Math.max(cr.toString().length, svLen);
+            output.push(' '.repeat(col - svLen) + '-' + sv);
+            output.push(' '.repeat(col - lineLen) + '\u2500'.repeat(lineLen + 1));
+            if (nr === 0) {
+                output.push(' '.repeat(col) + '0');
+                cr = 0; break;
+            } else if (i < actualDecimalPlaces - 1) {
+                const nns = nr.toString() + '0';
+                quotientPositions.push(output.length - 3);
+                output.push(' '.repeat(col + 1 - nns.length + 1) + nns);
+            } else {
+                quotientPositions.push(output.length - 3);
+                output.push(' '.repeat(col - nr.toString().length + 1) + nr);
+                if (isRepeating) output.push(' '.repeat(col - nr.toString().length + 1) + '\u22ee');
+            }
+            cr = nr;
+        }
+    }
+
+    output.push('');
+
+    // 순환마디
+    if (isRepeating && decimalPlaces === -1) {
+        let tr = integerRemainder, seen = new Map(), dd = [], pos = 0;
+        while (pos < 100) {
+            if (seen.has(tr)) {
+                repeatingInfo = { nonRepeating: dd.slice(0, seen.get(tr)).join(''), repeating: dd.slice(seen.get(tr)).join('') };
+                break;
+            }
+            seen.set(tr, pos); tr *= 10; dd.push(Math.floor(tr / divisor)); tr %= divisor; pos++;
+        }
+    }
+
+    // 결과 부호 표시 (절대값 세로셈 후 부호 적용)
+    const negSignHTML = isNegResult ? '<span style="color:var(--red);font-weight:700;letter-spacing:.5px;margin-right:2px;">−</span>' : '';
+    const dispNeg     = isNegResult ? '<span style="letter-spacing:.5px;margin-right:3px;">-</span>' : '';
+
+    let decimalValue;
+    if (isRepeating && decimalPlaces === -1)
+        decimalValue = negSignHTML + quotient + '.' + formatRepeatingDecimal(repeatingInfo);
+    else
+        decimalValue = negSignHTML + quotient + decimalPart;
+
+    let rt = '';
+
+    // 음수 나눗셈 시 부호 규칙 설명을 맨 위에 표시
+    if (isNegResult !== undefined && (dividendNeg || divisorNeg)) {
+        const sa = dividendNeg ? '(−)' : '(+)';
+        const sb = divisorNeg  ? '(−)' : '(+)';
+        const rc = isNegResult ? '#ff5555' : '#4dff9e';
+        const rs = isNegResult ? '음수 (−)' : '양수 (+)';
+        rt += `<div style="padding:8px 12px;margin-bottom:8px;background:rgba(255,170,68,.09);border-left:3px solid var(--orange);border-radius:7px;font-size:.82rem;line-height:1.9;color:var(--yellow);">
+            <b style="color:var(--orange);">부호 규칙 적용</b><br>
+            ${sa} ÷ ${sb} = <span style="color:${rc};font-weight:700;">${rs}</span><br>
+            세로셈은 절댓값, 최종 결과에 부호 적용
+        </div>`;
+    }
+
+    if (integerRemainder === 0) {
+        rt += `<div class="rl-row"><span class="rl-label">정수  Integer</span><span class="rl-value">${negSignHTML}${integerQuotient}</span></div>`;
+    } else {
+        rt += `<div class="rl-row"><span class="rl-label">소수  Decimal</span><span class="rl-value">${decimalValue}</span></div>`;
+        const tn = integerQuotient * divisor + integerRemainder;
+        const g  = gcd(tn, divisor);
+        const sn = tn / g, sd = divisor / g;
+        const fracSpan = (num, den) => `<span class="fraction"><span class="fraction-num">${num}</span><span class="fraction-den">${den}</span></span>`;
+        let fracHTML = '';
+        if (sn >= sd) {
+            const w = Math.floor(sn / sd), rp = sn % sd;
+            if (rp === 0) { fracHTML = negSignHTML + w; }
+            else {
+                fracHTML = negSignHTML + integerQuotient + fracSpan(integerRemainder, divisor);
+                if (integerRemainder !== rp || divisor !== sd) fracHTML += '&nbsp;=&nbsp;' + negSignHTML + w + fracSpan(rp, sd);
+                if (isNegResult && w > 0 && rp > 0) {
+                    fracHTML += `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,170,68,.08);border-left:3px solid var(--orange);border-radius:6px;font-size:.85rem;line-height:2.2;color:var(--yellow);">
+                        <b style="color:var(--orange);">∵</b>&nbsp; &minus;${w}${fracSpan(rp,sd)} &nbsp;=&nbsp; &minus;(${w} &plus; ${fracSpan(rp,sd)})
+                    </div>`;
+                }
+            }
+        } else {
+            if (tn !== sn || divisor !== sd) fracHTML = negSignHTML + fracSpan(tn, divisor) + '&nbsp;=&nbsp;';
+            fracHTML += negSignHTML + fracSpan(sn, sd);
+        }
+        rt += `<div class="rl-row"><span class="rl-label">분수  Fraction</span><span class="rl-value">${fracHTML}</span></div>`;
+    }
+    return { lines: output.join('\n'), summary: rt };
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  ['dividend','divisor'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter') calculate(); });
+  });
+  window.addEventListener('resize',()=>{
+    const s=document.getElementById('stageWrap')||document.getElementById('stage');
+    if(s) s.scrollLeft=0;
+  });
+});
+</script>
+</body>
+</html>
