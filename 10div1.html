@@ -1,0 +1,1891 @@
+<html lang="ko"><head>
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      (function() {
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        let requestId = 0;
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = requestId++;
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream
+                resolve(new Response(stream, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                }));
+              },
+              reject,
+              channelId
+            });
+            
+            window.parent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'takeScreenshot') {
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              window.parent.postMessage({
+                type: 'screenshotError',
+                error: new Error('Root element not found'),
+              }, '*');
+            }
+            const screenshot = await htmlToImage.toPng(rootElement, {
+              imagePlaceholder:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+            });
+            window.parent.postMessage({
+              type: 'screenshotData',
+              data: screenshot,
+            }, '*');
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (linkEl.href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(linkEl.href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              window.parent.postMessage({
+                type: "downloadFile",
+                filename: linkEl.download,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (linkEl.href.startsWith("data:")) {
+            const [header, base64Data] = linkEl.href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            window.parent.postMessage({
+              type: "downloadFile",
+              filename: linkEl.download,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(linkEl.href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            window.parent.postMessage({
+              type: 'openExternal',
+              href: linkEl.href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          window.parent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>10단 분해 나눗셈 v9.5</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&amp;family=Pretendard:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+/* ── CSS Variables (Dark Mode) ─────────────────── */
+:root{
+  --bg:#0f1729;
+  --surface:#1a2332;
+  --surface2:#1e2a3a;
+  --border:#2a3a52;
+  --navy:#7eb8ff;
+  --blue:#60a5fa;
+  --red:#f87171;
+  --green:#4ade80;
+  --orange:#fb923c;
+  --amber:#fbbf24;
+  --text:#e8edf5;
+  --text2:#94a3c0;
+  --text3:#5a6d8a;
+  --shadow:0 2px 12px rgba(0,0,0,.3);
+  --shadow-lg:0 4px 24px rgba(0,0,0,.4);
+  --radius:14px;
+  --radius-sm:9px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  padding:24px 16px 64px;
+  font-family:'Pretendard',sans-serif;
+}
+
+
+/* ── 복사 버튼 툴바 ─────────────────────────────*/
+.toolbar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 14px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:var(--radius);
+  margin-bottom:10px;box-shadow:var(--shadow);
+  flex-wrap:wrap;gap:8px;
+}
+.toolbar-left{display:flex;gap:6px;}
+.toolbar-right{display:flex;gap:6px;}
+.tbtn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;border:1.5px solid var(--border);border-radius:7px;
+  font-size:.74rem;font-weight:700;cursor:pointer;
+  font-family:'Pretendard',sans-serif;
+  background:var(--surface2);color:var(--text);
+  transition:background .15s,transform .1s;white-space:nowrap;
+}
+.tbtn:hover{background:var(--border);}
+.tbtn:active{transform:scale(.96);}
+.tbtn.primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:#667eea;}
+.tbtn.primary:hover{background:linear-gradient(135deg,#7b93ff,#8b5fbf);border-color:#7b93ff;}
+.tbtn-copied{background:#dcfce7!important;color:#15803d!important;border-color:#86efac!important;}
+
+/* ── Layout ──────────────────────────────────────*/
+.app{width:100%;max-width:980px;}
+
+/* ── Header ──────────────────────────────────────*/
+.hdr{text-align:center;margin-bottom:20px;padding:28px 20px 24px;}
+.hdr-inner{display:inline-flex;align-items:center;gap:20px;}
+.hdr-text-group{display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+.badge{
+  display:inline-block;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;
+  font-size:.62rem;font-weight:800;padding:3px 14px;
+  border-radius:20px;letter-spacing:.15em;
+}
+.hdr h1{font-size:1.6rem;font-weight:900;color:var(--text);line-height:1.2;}
+.hdr h1 span{color:var(--blue);}
+.hdr p{font-size:.72rem;color:var(--text3);margin-top:2px;}
+
+/* ── Tabs ─────────────────────────────────────── */
+.tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:var(--radius);padding:5px;}
+.tab{flex:1;padding:9px 10px;border:none;border-radius:10px;
+  font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:700;
+  cursor:pointer;background:transparent;color:var(--text3);transition:all .18s;}
+.tab.on{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 2px 8px rgba(102,126,234,.3);}
+.tab:hover:not(.on){background:var(--surface2);color:var(--text);}
+
+/* ── Cards ───────────────────────────────────────*/
+.card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:16px 20px;
+  margin-bottom:12px;box-shadow:var(--shadow);
+}
+.card-title{font-size:.72rem;font-weight:700;color:var(--text3);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+
+/* ── Input Section ───────────────────────────────*/
+.input-row{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;}
+.input-group{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.input-label{font-size:.65rem;font-weight:700;color:var(--text3);letter-spacing:.06em;}
+.num-input{
+  width:90px;text-align:center;font-size:1.2rem;padding:9px 6px;
+  border:2px solid var(--border);border-radius:var(--radius-sm);
+  outline:none;background:var(--surface2);color:var(--text);
+  font-family:'Nanum Gothic Coding',monospace;font-weight:700;
+  transition:border-color .2s,background .2s;
+}
+.num-input:focus{border-color:#667eea;background:var(--surface);}
+.op-sym{font-size:1.6rem;font-weight:900;color:var(--text3);padding-top:18px;}
+.btn-calc{
+  padding:10px 28px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;
+  border-radius:var(--radius-sm);font-weight:800;cursor:pointer;
+  font-size:.9rem;font-family:'Pretendard',sans-serif;
+  transition:background .2s,transform .1s;margin-top:18px;
+}
+.btn-calc:hover{background:linear-gradient(135deg,#7b93ff,#8b5fbf);}
+.btn-calc:active{transform:scale(.97);}
+
+/* ── Quiz Mode ───────────────────────────────────*/
+#quizPanel{display:none;}
+.quiz-gen-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+.quiz-range{display:flex;gap:6px;align-items:center;}
+.quiz-range label{font-size:.75rem;color:var(--text2);font-weight:600;}
+.quiz-range input{width:70px;padding:6px 8px;border:1.5px solid var(--border);
+  border-radius:7px;font-size:.85rem;font-family:'Nanum Gothic Coding',monospace;
+  font-weight:700;color:var(--text);background:var(--surface2);outline:none;}
+.quiz-range input:focus{border-color:#667eea;}
+.btn-gen{padding:8px 18px;background:var(--blue);color:#fff;border:none;
+  border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:'Pretendard',sans-serif;}
+.btn-gen:hover{background:#1d4ed8;}
+.quiz-problem{
+  background:var(--surface2);border:2px solid var(--border);border-radius:12px;
+  padding:16px 20px;text-align:center;margin-bottom:12px;
+}
+.quiz-problem .qnum{font-size:.65rem;font-weight:700;color:var(--text3);margin-bottom:6px;}
+.quiz-problem .qexpr{font-size:1.8rem;font-weight:900;color:var(--text);
+  font-family:'Nanum Gothic Coding',monospace;}
+.quiz-problem .qexpr span{color:var(--blue);}
+.quiz-answer-row{display:flex;gap:8px;align-items:center;justify-content:center;}
+.quiz-input{
+  width:100px;padding:9px;text-align:center;border:2px solid var(--border);
+  border-radius:9px;font-size:1.1rem;font-family:'Nanum Gothic Coding',monospace;
+  font-weight:700;color:var(--text);background:var(--surface2);outline:none;
+}
+.quiz-input:focus{border-color:#667eea;background:var(--surface);}
+.quiz-sep{font-size:1.1rem;color:var(--text3);font-weight:700;}
+.btn-check{padding:9px 22px;background:var(--green);color:#fff;border:none;
+  border-radius:9px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'Pretendard',sans-serif;}
+.btn-check:hover{background:#15803d;}
+.quiz-result{
+  margin-top:10px;padding:10px 16px;border-radius:10px;text-align:center;
+  font-weight:700;font-size:.9rem;display:none;
+}
+.quiz-result.correct{background:rgba(74,222,128,.12);color:#4ade80;border:1.5px solid rgba(74,222,128,.3);}
+.quiz-result.wrong{background:rgba(248,113,113,.12);color:#f87171;border:1.5px solid rgba(248,113,113,.3);}
+.quiz-stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.stat-box{flex:1;min-width:70px;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:9px;padding:8px 10px;text-align:center;}
+.stat-box .s-lbl{font-size:.62rem;color:var(--text3);font-weight:700;}
+.stat-box .s-val{font-size:1.1rem;font-weight:900;color:var(--blue);margin-top:2px;
+  font-family:'Nanum Gothic Coding',monospace;}
+.btn-quiz-viz{padding:8px 18px;background:var(--navy);color:#fff;border:none;
+  border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer;font-family:'Pretendard',sans-serif;
+  display:none;margin-top:8px;}
+.btn-quiz-viz:hover{background:var(--blue);}
+
+/* ── History Panel ───────────────────────────────*/
+#histPanel{display:none;}
+.hist-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.hist-item{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:10px;cursor:pointer;transition:background .15s;
+}
+.hist-item:hover{background:#eef1fb;}
+.hist-expr{font-family:'Nanum Gothic Coding',monospace;font-weight:700;
+  font-size:.95rem;color:var(--text);flex:1;}
+.hist-ans{font-size:.78rem;color:var(--text3);font-weight:600;}
+.hist-time{font-size:.62rem;color:var(--text3);}
+.hist-empty{text-align:center;color:var(--text3);font-size:.8rem;padding:20px;}
+.btn-hist-clear{padding:6px 14px;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:7px;font-size:.72rem;font-weight:700;color:var(--red);cursor:pointer;
+  margin-top:8px;font-family:'Pretendard',sans-serif;}
+
+/* ── Controls ────────────────────────────────────*/
+.ctrl-wrap{display:none;}
+.ctrl-main{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-bottom:9px;}
+.cb{
+  padding:8px 16px;border:none;border-radius:8px;
+  font-weight:700;cursor:pointer;font-size:.8rem;
+  font-family:'Pretendard',sans-serif;transition:background .15s,transform .1s;
+}
+.cb:active{transform:scale(.96);}
+.cb-play{background:var(--green);color:#fff;min-width:96px;}
+.cb-pause{background:var(--orange);color:#fff;min-width:96px;display:none;}
+.cb-sm{
+  padding:7px 12px;background:var(--surface2);color:var(--navy);
+  border:1.5px solid var(--border);border-radius:8px;
+  font-weight:700;cursor:pointer;font-size:.76rem;
+  font-family:'Pretendard',sans-serif;transition:background .15s;
+}
+.cb-sm:hover:not(:disabled){background:var(--border);}
+.cb-sm:disabled{opacity:.3;cursor:default;}
+.spd-row{display:flex;gap:5px;justify-content:center;margin-bottom:7px;}
+.sb{
+  padding:4px 13px;background:var(--surface2);border:1.5px solid var(--border);
+  color:var(--text3);border-radius:6px;font-size:.71rem;font-weight:700;cursor:pointer;
+  font-family:'Pretendard',sans-serif;transition:all .15s;
+}
+.sb.on{background:linear-gradient(135deg,#667eea,#764ba2);border-color:#667eea;color:#fff;}
+.snd-row{display:flex;justify-content:center;gap:8px;}
+.snd-btn{
+  padding:4px 18px;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:20px;color:var(--blue);font-weight:700;cursor:pointer;font-size:.74rem;
+  font-family:'Pretendard',sans-serif;
+}
+
+/* ── Visualization Area ──────────────────────────*/
+.div-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:22px 24px;
+  box-shadow:0 2px 14px rgba(0,0,0,.15);
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#pre19{
+  font-family:'Nanum Gothic Coding',monospace;
+  font-size:15px;font-weight:700;color:var(--text);
+  white-space:pre;line-height:1;
+  display:block;text-align:left;
+  margin:0 auto;
+  width:fit-content;
+}
+/* 행 기본 */
+.R{display:block;padding:3px 0;line-height:1.7;opacity:0;transition:opacity .28s;color:var(--text);}
+.R.show{opacity:1;}
+.HR{display:block;padding:1px 0;line-height:1.5;opacity:0;transition:opacity .18s;}
+.HR.show{opacity:1;}
+.HR.top{color:var(--text);}
+.HR.mid{color:var(--text3);}
+.QR{display:block;padding:3px 0;line-height:1.7;color:var(--text);min-height:1.7em;}
+.pipe-bar{color:#2dd4bf;font-weight:900;font-size:1em;font-family:'Nanum Gothic Coding',monospace;text-shadow:0 0 6px rgba(45,212,191,.5);}
+/* 색상 클래스 */
+.Qq{color:#e8edf5;font-weight:900;letter-spacing:0;word-spacing:0;}
+.Qi{color:#fbbf24;font-weight:900;letter-spacing:0;word-spacing:0;
+  text-shadow:0 0 6px rgba(251,191,36,.6),0 0 12px rgba(251,191,36,.3);
+  animation:supPop .9s cubic-bezier(.4,0,.2,1) both, supGlow 1.5s ease-in-out .9s infinite alternate;
+  display:inline-block;
+}
+@keyframes supPop{
+  0%{opacity:0;transform:scale(4);text-shadow:0 0 30px rgba(251,191,36,1),0 0 60px rgba(251,191,36,.8);}
+  40%{opacity:1;transform:scale(2);text-shadow:0 0 20px rgba(251,191,36,.9),0 0 40px rgba(251,191,36,.6);}
+  70%{transform:scale(1.3);text-shadow:0 0 12px rgba(251,191,36,.7),0 0 24px rgba(251,191,36,.4);}
+  100%{transform:scale(1);text-shadow:0 0 6px rgba(251,191,36,.6),0 0 12px rgba(251,191,36,.3);}
+}
+@keyframes supGlow{
+  0%{text-shadow:0 0 4px rgba(251,191,36,.4),0 0 8px rgba(251,191,36,.2);opacity:.85}
+  100%{text-shadow:0 0 8px rgba(251,191,36,.8),0 0 16px rgba(251,191,36,.4);opacity:1}
+}
+.Qi sup{font-size:.62em;line-height:0;vertical-align:.55em;letter-spacing:0;}
+/* 위첨자 래퍼: 너비 0으로 열 정렬 유지 */
+.Qi-wrap{display:inline-block;width:0;overflow:visible;vertical-align:baseline;}
+.Qi-wrap>sup.Qi{font-size:.62em;line-height:0;vertical-align:.55em;}
+/* ── 사선 취소 예비몫 (Qx) ── */
+.Qx{
+  position:relative;display:inline-block;
+  color:#e8edf5;font-weight:900;letter-spacing:0;word-spacing:0;
+}
+.Qx::after{
+  content:'';position:absolute;
+  left:0;top:10%;right:0;bottom:10%;
+  background:linear-gradient(
+    to top right,
+    transparent calc(50% - 0.8px),
+    var(--red) calc(50% - 0.8px),
+    var(--red) calc(50% + 0.8px),
+    transparent calc(50% + 0.8px)
+  );
+  opacity:0.55;
+  pointer-events:none;
+}
+.q{color:var(--blue);font-weight:700;}
+.i{color:var(--red);font-weight:700;}
+.c{color:var(--blue);font-weight:700;}
+.g{color:var(--green);font-weight:700;}
+.cm{color:var(--text2);font-size:13px;font-weight:400;font-family:'Pretendard',sans-serif;}
+
+/* ── Answer Card ─────────────────────────────────*/
+.ans-card{
+  display:none;margin-top:12px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;box-shadow:var(--shadow);
+}
+.ans-card-title{font-size:.68rem;font-weight:700;color:var(--text3);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;text-align:center;}
+.ans-row{display:flex;justify-content:center;align-items:stretch;gap:10px;flex-wrap:wrap;}
+.ans-box{
+  flex:1;min-width:110px;background:var(--surface2);
+  border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 14px;text-align:center;
+}
+.ans-box .lbl{font-size:.68rem;color:var(--text3);margin-bottom:6px;font-weight:600;}
+.ans-box .val{
+  font-family:'Nanum Gothic Coding',monospace;font-size:.95rem;
+  font-weight:900;color:var(--blue);word-break:break-all;letter-spacing:0;
+}
+/* 대분수 */
+.mixed{display:inline-flex;align-items:center;gap:3px;}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:.8em;line-height:1.2;vertical-align:middle;}
+.frac-n{border-bottom:2px solid var(--blue);padding:0 3px;min-width:14px;text-align:center;}
+.frac-d{padding:0 3px;min-width:14px;text-align:center;}
+
+/* ── Algorithm Explanation ───────────────────────*/
+#explPanel{display:none;}
+.expl-section{margin-bottom:16px;}
+.expl-section h3{font-size:.85rem;font-weight:800;color:var(--blue);
+  margin-bottom:8px;padding-left:10px;border-left:3px solid var(--blue);}
+.expl-section p{font-size:.8rem;color:var(--text2);line-height:1.7;margin-bottom:6px;}
+.expl-formula{
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;
+  padding:10px 14px;font-family:'Nanum Gothic Coding',monospace;
+  font-size:.82rem;color:var(--blue);font-weight:700;margin:6px 0;
+  white-space:pre-wrap;word-break:break-all;
+}
+.expl-step{
+  display:flex;gap:10px;align-items:flex-start;
+  background:var(--surface2);border-radius:9px;
+  padding:9px 12px;margin-bottom:6px;
+  border-left:3px solid transparent;
+}
+.expl-step.s-blue{border-color:var(--blue);}
+.expl-step.s-green{border-color:var(--green);}
+.expl-step.s-red{border-color:var(--red);}
+.expl-step.s-amber{border-color:var(--amber);}
+.expl-num{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;
+  background:var(--navy);color:#fff;font-size:.7rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+.expl-txt{font-size:.78rem;color:var(--text2);line-height:1.6;}
+.expl-txt strong{color:var(--text);font-weight:700;}
+
+/* ── Animations ──────────────────────────────────*/
+@keyframes nIn{0%{color:var(--amber);transform:scale(1.07)}50%{color:var(--blue)}100%{color:inherit;transform:scale(1)}}
+@keyframes rIn{0%{color:var(--green)}100%{color:inherit}}
+@keyframes hIn{from{opacity:0}to{opacity:1}}
+@keyframes qIn{0%{opacity:0;transform:scale(1.35);color:var(--amber)}50%{color:#e8edf5}100%{opacity:1;transform:scale(1);color:#e8edf5}}
+@keyframes qiIn{0%{opacity:0;transform:scale(1.35);color:var(--amber)}50%{color:var(--red)}100%{opacity:1;transform:scale(1);color:var(--red)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.aN{animation:nIn .32s ease both;}
+.aR{animation:rIn .4s ease both;}
+.aH{animation:hIn .18s ease both;}
+.dp{display:inline-block;animation:qIn .38s cubic-bezier(.4,0,.2,1) forwards;}
+.dpi{display:inline-block;animation:qiIn .38s cubic-bezier(.4,0,.2,1) forwards;}
+.slide-up{animation:slideUp .3s ease both;}
+
+/* ── Progress bar ────────────────────────────────*/
+.progress-wrap{height:4px;background:var(--border);border-radius:2px;
+  margin-bottom:10px;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);
+  border-radius:2px;width:0%;transition:width .3s ease;}
+
+/* ── Logo Glow ───────────────────────────────────*/
+.logo-wrap{margin-bottom:6px;}
+.logo-glow{
+  filter:drop-shadow(0 0 6px rgba(102,126,234,.3)) drop-shadow(0 0 12px rgba(118,75,162,.15));
+  animation:logoFloat 3s ease-in-out infinite;
+}
+.logo-glow.flash{
+  animation:logoFloat 3s ease-in-out infinite, logoFlashOnce 1.2s ease-in-out both;
+}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes logoFlashOnce{
+  0%{filter:drop-shadow(0 0 6px rgba(102,126,234,.3)) drop-shadow(0 0 12px rgba(118,75,162,.15));}
+  40%{filter:drop-shadow(0 0 32px rgba(102,126,234,1)) drop-shadow(0 0 64px rgba(118,75,162,.8)) drop-shadow(0 0 90px rgba(255,255,255,.3));}
+  100%{filter:drop-shadow(0 0 6px rgba(102,126,234,.3)) drop-shadow(0 0 12px rgba(118,75,162,.15));}
+}
+
+/* ── Fanfare / Confetti ─────────────────────────*/
+.fanfare-overlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:9999;overflow:hidden;
+}
+.confetti{
+  position:absolute;width:8px;height:8px;border-radius:2px;
+  animation:confettiFall linear forwards;opacity:0.9;
+}
+@keyframes confettiFall{
+  0%{transform:translateY(-10vh) rotate(0deg);opacity:1}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0}
+}
+.fanfare-text{
+  position:fixed;top:38%;left:50%;transform:translate(-50%,-50%);
+  font-size:2.2rem;font-weight:900;color:#fff;
+  text-shadow:0 0 20px rgba(102,126,234,.8),0 0 40px rgba(118,75,162,.5);
+  animation:fanfareIn .6s cubic-bezier(.4,0,.2,1) both;
+  z-index:10000;pointer-events:none;
+  font-family:'Pretendard',sans-serif;
+}
+@keyframes fanfareIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}60%{transform:translate(-50%,-50%) scale(1.1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+/* ── Responsive ──────────────────────────────────*/
+@media(max-width:600px){
+  body{padding:12px 6px 48px;}
+  .hdr h1{font-size:1.15rem;}
+  .hdr-inner{gap:12px;}
+  .hdr-inner svg{width:48px;height:48px;}
+  .num-input{width:72px;font-size:1rem;}
+  #pre19{font-size:11px;}
+  .div-card{padding:10px 8px;}
+  .ans-box{min-width:80px;}
+  .tab{font-size:.7rem;padding:7px 4px;}
+  .cm{font-size:11px;}
+  .toolbar{flex-direction:column;gap:4px;}
+}
+</style>
+</head>
+<body id="artifacts-component-root-html">
+<div class="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-inner">
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 80 80" class="logo-glow">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#667eea"/>
+            <stop offset="100%" style="stop-color:#764ba2"/>
+          </linearGradient>
+          <path id="topArcInner" d="M 13,40 A 27,27 0 0,1 67,40"/>
+          <path id="bottomArcOuter" d="M 8,40 A 32,32 0 0,0 72,40"/>
+        </defs>
+        <circle cx="40" cy="40" r="38" fill="url(#logoGrad)" stroke="#5a4fcf" stroke-width="2"/>
+        <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.3">
+          <textPath href="#topArcInner" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+        </text>
+        <text x="40" y="36" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅇ</text>
+        <text x="40" y="47" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅡ</text>
+        <text x="40" y="58" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㄴ</text>
+        <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.5">
+          <textPath href="#bottomArcOuter" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+        </text>
+      </svg>
+      <div class="hdr-text-group">
+        <div class="badge">MATH VISUALIZATION</div>
+        <h1>10단 분해 <span>나눗셈</span></h1>
+        <p>Base-10 Decomposition Division &nbsp;·&nbsp; v9.5</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── 툴바 ── -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="tbtn primary" onclick="openNewTab()">🚀 새 탭 New Tab</button>
+      <button class="tbtn primary" onclick="downloadApp()">💾 저장 Save</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="tbtn" onclick="copyCode(this)">🗒 코드 복사 Copy Code</button>
+      <button class="tbtn" onclick="copyScreen(this)">🖼 화면 복사 Copy Screen</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('viz',this)">📐 시각화 Visualization</button>
+    <button class="tab" onclick="switchTab('quiz',this)">📝 문제 풀기 Quiz</button>
+    <button class="tab" onclick="switchTab('hist',this)">📋 기록 History</button>
+    <button class="tab" onclick="switchTab('expl',this)">📖 원리 설명 Principle</button>
+  </div>
+
+  <!-- ══ Tab: 시각화 ════════════════════════════ -->
+  <div id="vizPanel">
+    <div class="card">
+      <div class="card-title">나눗셈 입력 · Division Input</div>
+      <div class="input-row">
+        <div class="input-group">
+          <span class="input-label">나뉘는 수 (Dividend)</span>
+          <input type="number" id="dd" class="num-input" min="1" max="99999">
+        </div>
+        <span class="op-sym">÷</span>
+        <div class="input-group">
+          <span class="input-label">나누는 수 (Divisor)</span>
+          <input type="number" id="dv" class="num-input" min="2">
+        </div>
+        <button class="btn-calc" onclick="calc()">계산 · Calc →</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card ctrl-wrap" id="cw" style="display: none;">
+      <div class="progress-wrap"><div class="progress-bar" id="prog" style="width: 0%;"></div></div>
+      <div class="ctrl-main">
+        <button class="cb-sm" id="bPrev" onclick="doPrev()">⏮ 이전 Prev</button>
+        <button class="cb cb-play" id="bPlay" onclick="doPlay()" style="display: block;">▶ 재생 Play</button>
+        <button class="cb cb-pause" id="bPause" onclick="doPause()" style="display: none;">⏸ 정지 Pause</button>
+        <button class="cb-sm" onclick="doNext()">다음 Next ⏭</button>
+        <button class="cb-sm" onclick="doReset()">처음 Reset ⏹</button>
+        <button class="cb-sm" onclick="doSkipAll()">전체 All ⏩</button>
+      </div>
+      <div class="spd-row">
+        <button class="sb" onclick="spd(1600,this)">🐢 느리게 Slow</button>
+        <button class="sb" onclick="spd(900,this)">🚶 보통 Normal</button>
+        <button class="sb on" onclick="spd(320,this)">🐇 빠르게 Fast</button>
+      </div>
+      <div class="snd-row">
+        <button class="snd-btn" id="sBtn" onclick="togSnd()">🔊 효과음 Sound ON</button>
+      </div>
+    </div>
+
+    <!-- Visualization -->
+    <div class="div-card">
+      <pre id="pre19"></pre>
+    </div>
+
+    <!-- Answer -->
+    <div class="ans-card" id="aC" style="display: none;">
+      <div class="ans-card-title">계산 결과 · Result</div>
+      <div class="ans-row">
+        <div class="ans-box"><div class="lbl">몫 · 나머지 (Quotient · Remainder)</div><div class="val" id="aVMain"></div></div>
+        <div class="ans-box"><div class="lbl">대분수 (Mixed Number)</div><div class="val" id="aVMixed"></div></div>
+        <div class="ans-box"><div class="lbl">소수 (Decimal, 4자리)</div><div class="val" id="aVDec"></div></div>
+        <div class="ans-box"><div class="lbl">검산 (Verification)</div><div class="val" id="aVCheck"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Tab: 문제 풀기 ════════════════════════ -->
+  <div id="quizPanel" class="card" style="display: none;">
+    <div class="card-title">문제 출제 모드 · Quiz Mode</div>
+    <div class="quiz-gen-row">
+      <div class="quiz-range">
+        <label>나뉘는 수 (Dividend)</label>
+        <input type="number" id="qMinD" value="20" min="2">
+        <span style="color:var(--text3)">~</span>
+        <input type="number" id="qMaxD" value="999" min="2">
+      </div>
+      <div class="quiz-range">
+        <label>나누는 수 (Divisor)</label>
+        <input type="number" id="qMinV" value="7" min="2">
+        <span style="color:var(--text3)">~</span>
+        <input type="number" id="qMaxV" value="50" min="2">
+      </div>
+      <button class="btn-gen" onclick="genQuiz()">🎲 새 문제 New</button>
+    </div>
+
+    <div class="quiz-problem" id="quizProb">
+      <div class="qnum" id="quizNum">문제 #1</div>
+      <div class="qexpr" id="quizExpr"><span>369</span> ÷ <span>45</span> = ?</div>
+    </div>
+
+    <div class="quiz-answer-row">
+      <input type="number" class="quiz-input" id="qAnsQ" placeholder="몫 Quotient" min="0" onkeydown="if(event.key==='Enter')checkQuiz()">
+      <span class="quiz-sep">···</span>
+      <input type="number" class="quiz-input" id="qAnsR" placeholder="나머지 Remainder" min="0" onkeydown="if(event.key==='Enter')checkQuiz()">
+      <button class="btn-check" onclick="checkQuiz()">확인 Check ✓</button>
+    </div>
+
+    <div class="quiz-result" id="quizResult" style="display: none;"></div>
+    <div style="text-align:center">
+      <button class="btn-quiz-viz" id="btnQuizViz" onclick="quizToViz()" style="display: none;">📐 풀이 시각화 보기 · Show Solution</button>
+    </div>
+
+    <div class="quiz-stats">
+      <div class="stat-box"><div class="s-lbl">총 문제 Total</div><div class="s-val" id="stTotal">0</div></div>
+      <div class="stat-box"><div class="s-lbl">정답 Correct</div><div class="s-val" id="stCorrect" style="color:var(--green)">0</div></div>
+      <div class="stat-box"><div class="s-lbl">오답 Wrong</div><div class="s-val" id="stWrong" style="color:var(--red)">0</div></div>
+      <div class="stat-box"><div class="s-lbl">정답률 Rate</div><div class="s-val" id="stRate">—</div></div>
+    </div>
+  </div>
+
+  <!-- ══ Tab: 기록 ═════════════════════════════ -->
+  <div id="histPanel" class="card" style="display: none;">
+    <div class="card-title">계산 기록 · History</div>
+    <div class="hist-list" id="histList">
+      <div class="hist-empty">아직 계산 기록이 없습니다 · No history yet</div>
+    </div>
+    <button class="btn-hist-clear" onclick="clearHist()">🗑 기록 지우기 · Clear</button>
+  </div>
+
+  <!-- ══ Tab: 원리 설명 ════════════════════════ -->
+  <div id="explPanel" class="card" style="display: none;">
+    <div class="expl-section">
+      <h3>10단 분해 나눗셈이란? · What is Base-10 Decomposition Division?</h3>
+      <p>나누는 수(Divisor)를 <strong>가장 가까운 10의 배수(base)</strong>로 올림/내림하여 나누기 쉽게 만든 뒤, 그 차이(diff)만큼 보정을 더해 정확한 몫을 구하는 방법입니다.</p>
+      <p>곱셈구구를 모르더라도 <strong>10의 배수로만 나눌 수 있으면</strong> 임의의 나눗셈을 단계적으로 풀 수 있습니다.</p>
+    </div>
+    <div class="expl-section">
+      <h3>알고리즘 단계 · Algorithm Steps</h3>
+      <div class="expl-step s-blue">
+        <div class="expl-num">1</div>
+        <div class="expl-txt"><strong>base 설정 · Set base:</strong> 나누는 수(Divisor)를 반올림하여 가장 가까운 10의 배수를 구합니다.<br><code style="font-family:monospace">base = round(dv / 10) × 10</code></div>
+      </div>
+      <div class="expl-step s-amber">
+        <div class="expl-num">2</div>
+        <div class="expl-txt"><strong>예비몫(q) 계산 · Preliminary Quotient:</strong> 현재 나머지를 base로 나눈 임시 몫을 구합니다. 이것은 아직 최종 몫이 아닙니다.<br><code style="font-family:monospace">q = floor(rem / base)</code></div>
+      </div>
+      <div class="expl-step s-green">
+        <div class="expl-num">3</div>
+        <div class="expl-txt"><strong>보정(corr) 계산 · Correction:</strong> base와 실제 나누는 수의 차이(diff = base - dv)에 예비몫 q를 곱해 보정값을 구합니다.<br><code style="font-family:monospace">corr = diff × q</code></div>
+      </div>
+      <div class="expl-step s-red">
+        <div class="expl-num">4</div>
+        <div class="expl-txt"><strong>새 나머지(fr) 계산 및 조정 · New Remainder:</strong> 빼기 후 보정을 더합니다. fr이 음수가 되면 dv를 더해 양수로 만들고, 그 횟수(borrow)만큼 예비몫에서 뺍니다.<br><code style="font-family:monospace">fr = (rem - base×q) + corr<br>실제기여몫(aQ) = q - borrow</code></div>
+      </div>
+      <div class="expl-step s-blue">
+        <div class="expl-num">5</div>
+        <div class="expl-txt"><strong>반복 · Repeat:</strong> fr ≥ dv이면 2번으로 돌아가 반복합니다. fr &lt; dv가 되면 최종 나머지입니다.</div>
+      </div>
+    </div>
+    <div class="expl-section">
+      <h3>예시 · Example: 87 ÷ 28</h3>
+      <div class="expl-formula">base = 30 (28을 반올림 · round up)
+diff = 30 - 28 = +2
+
+step 1: q = floor(87/30) = 2
+  87 - 30×2 = 27
+  +2×2 = +4 (보정 · correction)
+  fr = 27 + 4 = 31  → 아직 ≥ 28
+
+step 2: q = floor(31/30) = 1
+  31 - 30×1 = 1
+  +2×1 = +2 (보정 · correction)
+  fr = 1 + 2 = 3  → 3 &lt; 28 ✓
+
+최종 몫 · Quotient = 2 + 1 = 3,  나머지 · Remainder = 3</div>
+    </div>
+    <div class="expl-section">
+      <h3>왜 정확한가? · Why is it accurate?</h3>
+      <p>각 단계에서 <strong>base로 나눈 오류</strong>를 diff×q로 정확히 상쇄합니다. 수식으로 보면:</p>
+      <div class="expl-formula">rem = base×q + mid
+     = (dv + diff)×q + mid
+     = dv×q + diff×q + mid
+→ fr = mid + diff×q = rem - dv×q</div>
+      <p>즉 fr은 rem을 dv로 q번 나눈 나머지와 수학적으로 동일합니다.<br>i.e. fr is mathematically identical to rem mod dv×q.</p>
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<script>
+/* ════════════════════════════════════════════════
+   유틸
+════════════════════════════════════════════════ */
+function gcd(a,b){return b?gcd(b,a%b):a;}
+function toSup(n){return `<sup style="font-size:.65em;line-height:0;vertical-align:.5em;letter-spacing:0;">${n}</sup>`;}
+function nowStr(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ════════════════════════════════════════════════
+   탭 전환
+════════════════════════════════════════════════ */
+const PANELS={viz:'vizPanel',quiz:'quizPanel',hist:'histPanel',expl:'explPanel'};
+function switchTab(name,btn){
+  Object.values(PANELS).forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  const panel=document.getElementById(PANELS[name]);
+  if(panel){panel.style.display='block';panel.classList.add('slide-up');}
+  btn.classList.add('on');
+  if(name==='hist') renderHist();
+}
+// 초기: 시각화만 보이고 나머지 숨김
+(function initTabs(){
+  ['quizPanel','histPanel','explPanel'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+})();
+
+/* ════════════════════════════════════════════════
+   계산 핵심 (v9.5 - 10단 분해 반복)
+   fr ≥ dv일 때 while로 빼는 대신,
+   다시 base로 나누고 보정하는 10단 분해를 반복
+   → 첨자몫(isSup) 스텝으로 시각화
+════════════════════════════════════════════════ */
+function compute(dd,dv){
+  let base=Math.round(dv/10)*10;
+  if(base===0) base=10;
+  if(base===dv && dv<10) base=10;
+  const diff=base-dv;
+  const ddStr=String(dd);
+  const steps=[];
+  let tQ=0, cur=0;
+
+  for(let i=0;i<ddStr.length;i++){
+    cur=cur*10+parseInt(ddStr[i]);
+    if(cur<dv && steps.length===0) continue;
+    if(cur<dv && steps.length>0){
+      steps.push({q:0,borrow:0,aQ:0,rem:cur,sub:0,corr:0,mid:cur,nr:cur,fr:cur,ddIdx:i,isSup:false});
+      tQ=tQ*10+0;
+      continue;
+    }
+
+    let digitQ=0, firstStep=true;
+    while(cur>=dv){
+      const q=Math.min(9,Math.floor(cur/base));
+      if(q===0 && cur<base){
+        // base보다 작지만 dv 이상 → 직접 나눗셈
+        const dQ=Math.floor(cur/dv), dR=cur%dv;
+        steps.push({q:dQ,borrow:0,aQ:dQ,rem:cur,sub:dv*dQ,corr:0,mid:dR,nr:dR,fr:dR,ddIdx:i,isSup:!firstStep,isDirect:true});
+        digitQ+=dQ; cur=dR; break;
+      }
+      const sub=base*q, corr=diff*q, mid=cur-sub, nr=mid+corr;
+      let borrow=0, fr=nr;
+      if(nr<0){borrow=Math.ceil(-nr/dv); fr=nr+dv*borrow;}
+      const aQ=Math.max(0,q-borrow);
+      steps.push({q,borrow,aQ,rem:cur,sub,corr,mid,nr,fr,ddIdx:i,isSup:!firstStep});
+      digitQ+=aQ; cur=fr; firstStep=false;
+      if(fr<dv) break;
+    }
+    tQ=tQ*10+digitQ;
+  }
+  return{steps,rem:cur,tQ,base,diff,dd,dv};
+}
+
+/* ════════════════════════════════════════════════
+   숫자 정렬 (monospace 정렬)
+════════════════════════════════════════════════ */
+function spaceNum(n,maxDigits){
+  const s=String(Math.abs(n));
+  const spaced=s.split('').join(' ');
+  const targetW=2*maxDigits-1;
+  return spaced.padStart(targetW);
+}
+
+/* ════════════════════════════════════════════════
+   열(column) 기반 정렬 함수
+   - 피제수의 각 자리에 고정 열 할당 (인덱스 i → 열 i*2)
+   - 숫자 n의 마지막 자리를 alignIdx 열에 맞춤
+   - 반환: 고정 너비 문자열 (총 길이 = ddLen*2-1)
+════════════════════════════════════════════════ */
+function colAlign(n, alignIdx, ddLen){
+  const s=String(Math.abs(n));
+  const totalW=ddLen*2-1;
+  const lastCol=alignIdx*2;
+  const spaced=s.split('').join(' ');
+  const spacedLen=spaced.length;
+  const startCol=lastCol-spacedLen+1;
+  const padLeft=Math.max(0,startCol);
+  const padRight=Math.max(0,totalW-padLeft-spacedLen);
+  return ' '.repeat(padLeft)+spaced+' '.repeat(padRight);
+}
+
+/* 최소 자릿수 보장 colAlign (내림 행에서 앞의 0 표시용) */
+function colAlignPad(n, alignIdx, ddLen, minDigits){
+  let s=String(Math.abs(n));
+  if(s.length<minDigits) s=s.padStart(minDigits,'0');
+  const totalW=ddLen*2-1;
+  const lastCol=alignIdx*2;
+  const spaced=s.split('').join(' ');
+  const spacedLen=spaced.length;
+  const startCol=lastCol-spacedLen+1;
+  const padLeft=Math.max(0,startCol);
+  const padRight=Math.max(0,totalW-padLeft-spacedLen);
+  return ' '.repeat(padLeft)+spaced+' '.repeat(padRight);
+}
+
+/* ════════════════════════════════════════════════
+   행(row) 빌드 - 열 기반 정렬
+════════════════════════════════════════════════ */
+function buildRows(res){
+  const{steps,rem:finalRem,tQ,base,diff,dd,dv}=res;
+  const dAbs=Math.abs(diff);
+  const dSign=diff>0?'+':diff<0?'-':'';
+  const baseStr=String(base);
+  const ddLen=String(dd).length;
+  const nW=ddLen*2-1; // 피제수 열 너비
+
+  // 왼쪽 레이블 영역 (base, diff 표시)
+  const diffLbl=diff!==0?(dSign+spaceNum(dAbs,String(dAbs).length)):'';
+  const lW=Math.max(2*baseStr.length-1,(diffLbl||'').length,2*2-1);
+  const PIPE=' | ';
+  const ind=lW+PIPE.length;
+  const sp=n=>' '.repeat(n);
+  const LEFT=2;
+
+  // 열 기반 정렬 헬퍼: 숫자 n의 마지막 자리를 alignIdx에 맞추고, 접두사(+,-)와 함께 전체 너비 반환
+  const ca=(n,idx)=>colAlign(n,idx,ddLen);
+
+  // ddLastPos: 몫 행의 마지막 열 위치 (makeQuotLine에서 사용)
+  const ddLastPos=LEFT+ind+nW;
+
+  // 주석 샘플 (최대 길이 계산용)
+  const cmtSamples=[];
+  steps.forEach((s,i)=>{
+    if(s.aQ===0 && s.sub===0 && i>0 && !s.isSup){
+      cmtSamples.push(`내린다 → ${s.rem} < ${dv} → 몫 0`);
+      return;
+    }
+    if(s.isSup){
+      cmtSamples.push(`${s.rem} ≥ ${dv} → 추가 나눗셈`);
+    }
+    const label=s.isSup?'첨':'몫';
+    if(i===0) cmtSamples.push(`${s.isDirect?dv:base}×${s.q}=${s.sub}`);
+    else if(!s.isSup){
+      cmtSamples.push(`↓${s.rem}`);
+      cmtSamples.push(`${s.isDirect?dv:base}×${s.q}=${s.sub}`);
+    } else {
+      cmtSamples.push(`${s.isDirect?dv:base}×${s.q}=${s.sub}`);
+    }
+    cmtSamples.push(`${s.rem}-${s.sub}=${s.mid}`);
+    if(diff!==0 && !s.isDirect){
+      const cs=s.corr>=0?'+':'-';
+      cmtSamples.push(`(${dSign}${dAbs})×${s.q}=${cs}${Math.abs(s.corr)}`);
+    }
+    if(s.borrow>0){
+      cmtSamples.push(`→ 조정 aQ=${s.aQ}`);
+    }
+  });
+  cmtSamples.push(`나머지: ${finalRem}`);
+  const maxCmt=Math.max(...cmtSamples.map(c=>c.length),0);
+  const GAP=24;
+  const LL=LEFT+ind+nW+1;
+  const TOTAL=LL+GAP+maxCmt;
+  const HT='━'.repeat(TOTAL);
+  const HM='─'.repeat(TOTAL);
+  const g=sp(GAP);
+
+  const rows=[];
+  rows.push({num:sp(LL),tp:'quot',isQuot:false,cmt:''});
+  rows.push({num:HT,tp:'hr-top',isQuot:false,cmt:''});
+
+  let _qpartIdx=0;
+
+  for(let i=0;i<steps.length;i++){
+    const s=steps[i];
+    const pfx=sp(LEFT);
+    const numPfx=pfx+sp(ind);
+    const supLabel=s.isSup?'첨자':'몫';
+
+    // 몫 0 스텝: 내림만 표시
+    if(s.aQ===0 && s.sub===0 && i>0 && !s.isSup){
+      const prevFr=steps[i-1].fr;
+      const broughtDigit=String(s.rem).slice(-1);
+      const prevDdIdx=steps[i-1].ddIdx;
+      const minD=s.ddIdx-prevDdIdx+1;
+      rows.push({
+        num:numPfx+' '+colAlignPad(s.rem,s.ddIdx,ddLen,minD),tp:'num',isQuot:true,
+        cmt:`<span class="cm">↓<span class="i">${broughtDigit}</span> → <span class="q">${String(s.rem).padStart(minD,'0')}</span> &lt; <span class="q">${dv}</span> → 몫<span class="i">0</span></span>`
+      });
+      _qpartIdx++;
+      continue;
+    }
+
+    // 첨자 스텝: rem 행 (이전 보정 결과)
+    if(s.isSup){
+      rows.push({
+        num:numPfx+' '+ca(s.rem,s.ddIdx),tp:'num',isQuot:false,
+        cmt:`<span class="cm"><span class="q">${s.rem}</span> ≥ <span class="q">${dv}</span> → 추가</span>`
+      });
+      if(s.isDirect){
+        rows.push({
+          num:numPfx+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:false,supTrigger:_qpartIdx-1,
+          cmt:`<span class="cm"><span class="q">${dv}</span> × <span class="i">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      } else {
+        rows.push({
+          num:numPfx+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:false,supTrigger:_qpartIdx-1,
+          cmt:`<span class="cm"><span class="q">${base}</span> × <span class="i">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      }
+      rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+      rows.push({
+        num:numPfx+' '+ca(s.mid,s.ddIdx),tp:'num',isQuot:false,
+        cmt:`<span class="cm"><span class="q">${s.rem}</span> - <span class="q">${s.sub}</span> = <span class="q">${s.mid}</span></span>`
+      });
+      if(diff!==0 && !s.isDirect){
+        const cs=s.corr>=0?'+':'-';
+        rows.push({
+          num:numPfx+cs+ca(Math.abs(s.corr),s.ddIdx),tp:'corr',isQuot:false,
+          cmt:`<span class="cm">(<span class="c">${dSign}${dAbs}</span>)×<span class="i">${s.q}</span> = <span class="c">${cs}${Math.abs(s.corr)}</span> Corr.</span>`
+        });
+      }
+      if(s.borrow>0){
+        rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+        rows.push({
+          num:numPfx+(s.nr<0?'-':' ')+ca(Math.abs(s.nr),s.ddIdx),tp:'warn',isQuot:false,
+          cmt:`<span class="cm">${s.nr} &lt; 0 → 조정 필요</span>`
+        });
+        rows.push({
+          num:numPfx+'+'+ca(dv*s.borrow,s.ddIdx),tp:'borrow',isQuot:false,
+          cmt:`<span class="cm">몫 조정 → 실제기여몫 <span class="g">${s.aQ}</span></span>`
+        });
+      }
+      rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+      continue;
+    }
+
+    // 일반 스텝 (첫 번째 또는 내림 후)
+    if(i===0){
+      rows.push({num:pfx+spaceNum(base,baseStr.length).padStart(lW)+PIPE+' '+ca(dd,ddLen-1),tp:'pipe',isQuot:false,cmt:''});
+      if(s.isDirect){
+        rows.push({
+          num:pfx+(diffLbl||sp(lW)).padStart(lW)+PIPE+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:true,
+          cmt:`<span class="cm"><span class="q">${dv}</span> × <span class="q">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      } else {
+        rows.push({
+          num:pfx+(diffLbl||sp(lW)).padStart(lW)+PIPE+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:true,
+          cmt:`<span class="cm"><span class="q">${base}</span> × <span class="q">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      }
+    } else {
+      const prevFr=steps[i-1].fr;
+      const broughtDigit=String(s.rem).slice(-1);
+      const prevDdIdx=steps[i-1].ddIdx;
+      const minD=s.ddIdx-prevDdIdx+1;
+      rows.push({
+        num:numPfx+' '+colAlignPad(s.rem,s.ddIdx,ddLen,minD),tp:'num',isQuot:false,
+        cmt:`<span class="cm">↓<span class="i">${broughtDigit}</span> → <span class="q">${String(s.rem).padStart(minD,'0')}</span></span>`
+      });
+      if(s.isDirect){
+        rows.push({
+          num:numPfx+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:true,
+          cmt:`<span class="cm"><span class="q">${dv}</span> × <span class="i">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      } else {
+        rows.push({
+          num:numPfx+'-'+ca(s.sub,s.ddIdx),tp:'sub',isQuot:true,
+          cmt:`<span class="cm"><span class="q">${base}</span> × <span class="i">${s.q}</span> = <span class="q">${s.sub}</span></span>`
+        });
+      }
+    }
+
+    rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+    const fV=i===0?dd:s.rem;
+    rows.push({
+      num:numPfx+' '+ca(s.mid,s.ddIdx),tp:'num',isQuot:false,
+      cmt:`<span class="cm"><span class="q">${fV}</span> - <span class="q">${s.sub}</span> = <span class="q">${s.mid}</span></span>`
+    });
+
+    if(diff!==0 && !s.isDirect){
+      const cs=s.corr>=0?'+':'-';
+      rows.push({
+        num:numPfx+cs+ca(Math.abs(s.corr),s.ddIdx),tp:'corr',isQuot:false,
+        cmt:`<span class="cm">(<span class="c">${dSign}${dAbs}</span>)×<span class="i">${s.q}</span> = <span class="c">${cs}${Math.abs(s.corr)}</span> Corr.</span>`
+      });
+    }
+
+    if(s.borrow>0){
+      rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+      rows.push({
+        num:numPfx+(s.nr<0?'-':' ')+ca(Math.abs(s.nr),s.ddIdx),tp:'warn',isQuot:false,
+        cmt:`<span class="cm"><span class="i">${s.nr}</span> &lt; 0 → 조정 필요</span>`
+      });
+      rows.push({
+        num:numPfx+'+'+ca(dv*s.borrow,s.ddIdx),tp:'borrow',isQuot:false,
+        cmt:`<span class="cm">몫 <span class="q">${s.q}</span>에서 <span class="i">${s.borrow}</span> 받아내림 → 실제몫 <span class="g">${s.aQ}</span></span>`
+      });
+      rows.push({num:'',tp:'quot-update',isQuot:false,cmt:'',partIdx:_qpartIdx});
+    }
+    _qpartIdx++;
+    rows.push({num:HM,tp:'hr-mid',isQuot:false,cmt:''});
+  }
+
+  // 최종 나머지
+  const lastIdx=steps.length>0?steps[steps.length-1].ddIdx:(ddLen-1);
+  rows.push({
+    num:sp(LEFT)+sp(ind)+' '+ca(finalRem,lastIdx),tp:'rem',isQuot:false,
+    cmt:`<span class="cm">R = <span class="g">${finalRem}</span> (<span class="g">${finalRem}</span>&lt;<span class="q">${dv}</span> ✓)</span>`
+  });
+
+  // 몫 파트: 각 스텝의 ddIdx를 사용하여 열 위치 결정
+  // 같은 ddIdx의 일반+첨자 스텝을 합산
+  // borrow와 첨자 모두 위첨자로 통일 표시
+  const tQStr=String(tQ);
+  const qParts=[];
+  const digitGroups=new Map();
+  steps.forEach(s=>{
+    const idx=s.ddIdx;
+    if(!digitGroups.has(idx)){
+      digitGroups.set(idx,{mainQ:0,supQ:0,totalQ:0,borrow:0,mainStepQ:0});
+    }
+    const g2=digitGroups.get(idx);
+    if(s.isSup){
+      g2.supQ+=s.aQ;
+    } else {
+      g2.mainQ=s.aQ;
+      g2.mainStepQ=s.q;
+      g2.borrow+=s.borrow;
+    }
+    g2.totalQ=g2.mainQ+g2.supQ;
+  });
+
+  const sortedIdxs=[...digitGroups.keys()].sort((a,b)=>a-b);
+  sortedIdxs.forEach(idx=>{
+    const g2=digitGroups.get(idx);
+    const hasBorrow=g2.borrow>0;
+    const hasSup=g2.supQ>0;
+    // val: 표시할 큰 숫자 (borrow면 예비몫q, 아니면 mainQ)
+    // supVal: 위첨자 (borrow면 실제몫aQ, 첨자몫이면 supQ)
+    if(hasBorrow){
+      qParts.push({
+        val:String(g2.mainStepQ),    // 예비몫(q) - 사선 취소될 숫자
+        supVal:String(g2.mainQ),     // 실제몫(aQ) - 위첨자로 표시
+        hasBorrow:true,
+        hasSup:false,
+        ddIdx:idx
+      });
+    } else {
+      qParts.push({
+        val:String(g2.mainQ),        // 기본 몫
+        supVal:hasSup?String(g2.supQ):'0',  // 첨자몫
+        hasBorrow:false,
+        hasSup,
+        ddIdx:idx
+      });
+    }
+  });
+  let qHTML='';
+
+  const hasExp=false;
+  const expStr='';
+
+  return{rows,qHTML,qParts,ddLastPos,LL,g,finalRem,tQ,expStr,hasExp,ddLen};
+}
+
+/* ════════════════════════════════════════════════
+   상태
+════════════════════════════════════════════════ */
+let S={
+  rows:[],qHTML:'',qParts:[],ddLastPos:0,LL:0,g:'',
+  cur:0,hist:[],playing:false,
+  timer:null,speed:320,sound:true,
+  qvisLen:0,borrowDone:-1,supDone:-1,
+  tQ:0,finalRem:0,dd:0,dv:0,
+  expStr:'',hasExp:false,ddLen:0,
+  totalSteps:0
+};
+
+/* ════════════════════════════════════════════════
+   오디오
+════════════════════════════════════════════════ */
+let ax=null;
+const ga=()=>{if(!ax)ax=new(window.AudioContext||window.webkitAudioContext)();return ax;};
+function tn(f,t,d,gv,dl=0){
+  if(!S.sound)return;
+  try{
+    const c=ga(),o=c.createOscillator(),gn=c.createGain();
+    o.connect(gn);gn.connect(c.destination);
+    o.type=t;o.frequency.value=f;
+    gn.gain.setValueAtTime(0,c.currentTime+dl);
+    gn.gain.linearRampToValueAtTime(gv,c.currentTime+dl+.02);
+    gn.gain.exponentialRampToValueAtTime(.001,c.currentTime+dl+d);
+    o.start(c.currentTime+dl);
+    o.stop(c.currentTime+dl+d+.05);
+  }catch(e){}
+}
+function sfx(tp){
+  if(tp==='hr-top'||tp==='hr-mid') tn(500,'sawtooth',.05,.09);
+  else if(tp==='pipe') tn(520,'sine',.12,.18);
+  else if(tp==='sub') tn(360,'triangle',.11,.18);
+  else if(tp==='rem') {tn(440,'sine',.14,.18);tn(330,'sine',.09,.11,.07);}
+  else if(tp==='quot') {tn(1047,'sine',.13,.22);tn(1319,'sine',.11,.18,.07);}
+  else tn(880,'sine',.09,.15);
+}
+function togSnd(){
+  S.sound=!S.sound;
+  document.getElementById('sBtn').textContent=S.sound?'🔊 효과음 Sound ON':'🔇 효과음 Sound OFF';
+}
+function spd(s,btn){
+  S.speed=s;
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(S.playing){doPause();doPlay();}
+}
+
+/* ════════════════════════════════════════════════
+   몫 행 렌더 (열 기반 정렬)
+   각 몫 자릿수를 피제수의 해당 ddIdx 열에 맞춤
+════════════════════════════════════════════════ */
+function digitSpaced(s){ return String(s).split('').join(' '); }
+
+function makeQuotLine(visLen, isNew, borrowDone=-1, supDone=-1){
+  const parts=S.qParts;
+  if(!parts||!parts.length) return '';
+  const maxVis=parts.length;
+  const vLen=Math.min(visLen, maxVis);
+  if(vLen<=0) return ' '.repeat(S.LL||1);
+
+  const ddLen=S.ddLen||1;
+  const totalW=ddLen*2-1;
+  const pad=Math.max(0, S.ddLastPos-totalW+1);
+
+  let htmlParts=new Array(totalW).fill(null);
+
+  for(let i=0;i<parts.length;i++){
+    const p=parts[i];
+    const col=p.ddIdx*2;
+    if(col>=0 && col<totalW){
+      if(i<vLen){
+        const anim=(isNew&&i===vLen-1);
+        const showBorrow=(p.hasBorrow && i<=borrowDone);
+        const showSup=(p.hasSup && i<=supDone);
+        htmlParts[col]={val:p.val, supVal:p.supVal, hasBorrow:p.hasBorrow, showBorrow, hasSup:p.hasSup, showSup, anim};
+      } else {
+        htmlParts[col]=null;
+      }
+    }
+  }
+
+  let htmlStr=' '.repeat(pad);
+  for(let c=0;c<totalW;c++){
+    const hp=htmlParts[c];
+    if(!hp){
+      htmlStr+=' ';
+    } else {
+      const animCls=hp.anim?' dp':'';
+      if(hp.showBorrow){
+        htmlStr+=`<span class="Qx">${hp.val}</span>`;
+        htmlStr+=`<span class="Qi-wrap"><sup class="Qi">${hp.supVal}</sup></span>`;
+      } else if(hp.hasBorrow){
+        htmlStr+=`<span class="Qq${animCls}">${hp.val}</span>`;
+      } else {
+        htmlStr+=`<span class="Qq${animCls}">${hp.val}</span>`;
+        if(hp.showSup) htmlStr+=`<span class="Qi-wrap"><sup class="Qi">${hp.supVal}</sup></span>`;
+      }
+    }
+  }
+  return htmlStr;
+}
+
+/* ════════════════════════════════════════════════
+   레이아웃 렌더
+════════════════════════════════════════════════ */
+function renderLayout(res){
+  const{rows,qHTML,qParts,ddLastPos,LL,g,finalRem,tQ,expStr,hasExp,ddLen}=buildRows(res);
+  Object.assign(S,{
+    rows,qHTML,qParts,ddLastPos,LL,g,
+    cur:0,hist:[],playing:false,
+    qvisLen:0,borrowDone:-1,supDone:-1,tQ,finalRem,dd:res.dd,dv:res.dv,
+    timer:null,expStr,hasExp,ddLen,
+    totalSteps:rows.length
+  });
+  let html='';
+  rows.forEach((r,i)=>{
+    // ── num 이스케이프 후 LL 길이로 패딩 → 설명이 항상 같은 열에서 시작 ──
+    const ne=r.num.replace(/&(?!amp;|lt;|gt;)/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // 패딩은 원본(r.num) 길이 기준으로 계산 (이스케이프로 길이 변하는 문제 방지)
+    const padLen=Math.max(0, S.LL - r.num.length);
+    const nePadded=(r.cmt && padLen>0) ? ne+' '.repeat(padLen) : ne;
+    const cmtPart=r.cmt?g+r.cmt:'';
+    if(r.tp==='quot')
+      html+=`<span class="QR" id="r${i}">${ne}</span>`;
+    else if(r.tp==='quot-update')
+      html+=`<span style="display:none" id="r${i}"></span>`;
+    else if(r.tp==='hr-top')
+      html+=`<span class="HR top" id="r${i}">${ne}</span>`;
+    else if(r.tp==='hr-mid')
+      html+=`<span class="HR mid" id="r${i}">${ne}</span>`;
+    else if(r.tp==='pipe')
+      html+=`<span class="R" id="r${i}">${nePadded.replace(/\|/g,'<span class="pipe-bar">|</span>')}${cmtPart}</span>`;
+    else
+      html+=`<span class="R" id="r${i}">${nePadded.replace(/\|/g,'<span class="pipe-bar">|</span>')}${cmtPart}</span>`;
+  });
+  document.getElementById('pre19').innerHTML=html;
+
+  // ── 세로 가이드선 생성 (pre19 background로) ──
+  requestAnimationFrame(()=>{
+    const pre=document.getElementById('pre19');
+    if(!pre) return;
+    // monospace 문자 너비 측정
+    const measure=document.createElement('span');
+    measure.style.cssText='font-family:"Nanum Gothic Coding",monospace;font-size:'+window.getComputedStyle(pre).fontSize+';font-weight:700;white-space:pre;visibility:hidden;position:absolute;';
+    measure.textContent='M';
+    pre.appendChild(measure);
+    const charW=measure.getBoundingClientRect().width;
+    pre.removeChild(measure);
+    // 피제수 영역 시작 위치 (문자 수)
+    const numStart=S.ddLastPos - (S.ddLen*2-1) + 1;
+    // 각 자릿수 사이(공백 열 중앙)에 가이드선
+    const stops=[];
+    for(let d=0;d<=S.ddLen;d++){
+      const col=numStart+d*2;
+      const x=col*charW-charW*0.5;
+      stops.push(`transparent ${x-0.5}px`);
+      stops.push(`rgba(102,126,234,.18) ${x-0.5}px`);
+      stops.push(`rgba(102,126,234,.18) ${x+0.5}px`);
+      stops.push(`transparent ${x+0.5}px`);
+    }
+    if(stops.length>0){
+      pre.style.backgroundImage=`linear-gradient(to right,${stops.join(',')})`;
+      pre.style.backgroundRepeat='repeat-y';
+    }
+  });
+
+  updateProgress();
+}
+
+/* ════════════════════════════════════════════════
+   진행 바
+════════════════════════════════════════════════ */
+function updateProgress(){
+  const pct=S.totalSteps>0?Math.round(S.cur/S.totalSteps*100):0;
+  const bar=document.getElementById('prog');
+  if(bar) bar.style.width=pct+'%';
+}
+
+/* ════════════════════════════════════════════════
+   계산 (v8 수정: 입력 검증 강화)
+════════════════════════════════════════════════ */
+function calc(){
+  doPause();
+  const dd=parseInt(document.getElementById('dd').value)||0;
+  const dv=parseInt(document.getElementById('dv').value)||0;
+  // ── v8: 상한 99999 추가, 정수 검사 유지 ──
+  if(dd<1||dv<2||dd<dv){
+    alert('조건: 나뉘는 수 ≥ 나누는 수 ≥ 2\n(Dividend ≥ Divisor ≥ 2)');
+    return;
+  }
+  if(dd>99999){
+    alert('나뉘는 수(Dividend)는 99999 이하로 입력해 주세요.\n(너무 크면 시각화 단계가 지나치게 많아집니다)');
+    return;
+  }
+  const res=compute(dd,dv); res.dv=dv;
+  renderLayout(res);
+  document.getElementById('aC').style.display='none';
+  document.getElementById('cw').style.display='block';
+  upBtn();
+  try{ga().resume();}catch(e){}
+  setTimeout(()=>doPlay(),300);
+}
+
+/* ════════════════════════════════════════════════
+   단계 제어
+════════════════════════════════════════════════ */
+function addQ(skip=false){
+  S.qvisLen++;
+  const r0=document.getElementById('r0');if(!r0)return;
+  r0.innerHTML=makeQuotLine(S.qvisLen,!skip,S.borrowDone,S.supDone);
+  if(!skip) sfx('quot');
+}
+
+// borrow 확정 후 몫 행을 사선+첨자로 업데이트
+function updateBorrow(partIdx,skip=false){
+  S.borrowDone=partIdx;
+  const r0=document.getElementById('r0');if(!r0)return;
+  r0.innerHTML=makeQuotLine(S.qvisLen,!skip,S.borrowDone,S.supDone);
+  if(!skip) sfx('quot');
+}
+
+// 첨자몫 확정 후 몫 행에 위첨자 표시
+function updateSup(partIdx,skip=false){
+  S.supDone=partIdx;
+  const r0=document.getElementById('r0');if(!r0)return;
+  r0.innerHTML=makeQuotLine(S.qvisLen,!skip,S.borrowDone,S.supDone);
+  if(!skip) sfx('quot');
+}
+
+function showRow(idx,skip=false){
+  if(idx<=0||idx>=S.rows.length)return;
+  const el=document.getElementById('r'+idx);if(!el)return;
+  const tp=S.rows[idx].tp;
+  el.classList.remove('aN','aR','aH');
+  void el.offsetWidth;
+  if(!skip){
+    if(tp==='hr-top'||tp==='hr-mid') el.classList.add('aH');
+    else if(tp==='rem') el.classList.add('aR');
+    else el.classList.add('aN');
+    sfx(tp);
+  }
+  el.classList.add('show');
+}
+
+function doStep(skip=false){
+  if(S.cur>=S.rows.length){doPause();done();return;}
+  S.hist.push({cur:S.cur,qvisLen:S.qvisLen,borrowDone:S.borrowDone,supDone:S.supDone});
+  const r=S.rows[S.cur];
+  // quot-update: borrow 확정
+  if(r.tp==='quot-update'){
+    updateBorrow(r.partIdx,skip);
+    S.cur++;
+    upBtn();
+    updateProgress();
+    return;
+  }
+  if(r.isQuot) addQ(skip);
+  if(r.supTrigger!==undefined) updateSup(r.supTrigger,skip);
+  showRow(S.cur,skip);
+  S.cur++;
+  upBtn();
+  updateProgress();
+  if(S.cur>=S.rows.length){doPause();done();}
+}
+
+/* ── 전체 보기 (한 번에) ── */
+function doSkipAll(){
+  doPause();
+  while(S.cur<S.rows.length) doStep(true);
+}
+
+function done(){
+  // 몫 완전히 표시 (qParts 길이 기준, post 상태 유지)
+  const r0=document.getElementById('r0');
+  if(r0) r0.innerHTML=makeQuotLine(S.qParts.length,false,S.qParts.length-1,S.qParts.length-1);
+  const q=S.tQ, r=S.finalRem, dv=S.dv, dd=S.dd;
+  let mainTxt=`${q}`;
+  if(S.hasExp) mainTxt+=`(${S.expStr})`;
+  mainTxt+=` <span style="letter-spacing:0">⋯</span> ${r}`;
+  document.getElementById('aVMain').innerHTML=mainTxt;
+
+  if(r>0){
+    const g2=gcd(r,dv),fn=r/g2,fd=dv/g2;
+    document.getElementById('aVMixed').innerHTML=
+      `<span class="mixed">${q}<span class="frac"><span class="frac-n">${fn}</span><span class="frac-d">${fd}</span></span></span>`;
+  } else {
+    document.getElementById('aVMixed').textContent=String(q);
+  }
+  document.getElementById('aVDec').textContent=(dd/dv).toFixed(4);
+  document.getElementById('aVCheck').textContent=`${dv}×${q}+${r}=${dv*q+r}`;
+  document.getElementById('aC').style.display='block';
+  document.getElementById('aC').classList.add('slide-up');
+
+  // ── 팡파레 효과 ──
+  showFanfare(dd,dv,q,r);
+  flashLogo();
+
+  // 완료 사운드
+  if(S.sound){
+    tn(523,'sine',.15,.2);tn(659,'sine',.15,.2,.1);tn(784,'sine',.15,.2,.2);tn(1047,'sine',.25,.2,.3);
+  }
+
+  // 기록 추가
+  addHist(dd,dv,q,r);
+}
+
+function showFanfare(dd,dv,q,r){
+  // 컨페티
+  const overlay=document.createElement('div');
+  overlay.className='fanfare-overlay';
+  document.body.appendChild(overlay);
+  const colors=['#667eea','#764ba2','#f87171','#4ade80','#fbbf24','#60a5fa','#fb923c'];
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=Math.random()*100+'%';
+    c.style.top='-5%';
+    c.style.background=colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDuration=(1.5+Math.random()*2)+'s';
+    c.style.animationDelay=(Math.random()*0.5)+'s';
+    c.style.width=(5+Math.random()*6)+'px';
+    c.style.height=(5+Math.random()*6)+'px';
+    c.style.borderRadius=Math.random()>.5?'50%':'2px';
+    overlay.appendChild(c);
+  }
+  // 텍스트
+  const txt=document.createElement('div');
+  txt.className='fanfare-text';
+  txt.innerHTML=`✨ ${dd} ÷ ${dv} = ${q} R ${r} ✨`;
+  document.body.appendChild(txt);
+  // 정리
+  setTimeout(()=>{overlay.remove();txt.remove();},3500);
+}
+
+function doPlay(){
+  if(!S.rows.length) return;
+  try{ga().resume();}catch(e){}
+  S.playing=true;
+  document.getElementById('bPlay').style.display='none';
+  document.getElementById('bPause').style.display='block';
+  S.timer=setInterval(()=>doStep(),S.speed);
+}
+function doPause(){
+  S.playing=false;
+  clearInterval(S.timer);
+  document.getElementById('bPlay').style.display='block';
+  document.getElementById('bPause').style.display='none';
+}
+function doNext(){doPause();doStep();}
+function doPrev(){
+  doPause();
+  if(!S.hist.length) return;
+  const p=S.hist.pop();
+  // ── 버그 수정: 직전에 표시한 행(S.cur-1)을 숨김 ──
+  const lastShown=S.cur-1;
+  if(lastShown>0&&lastShown<S.rows.length){
+    const el=document.getElementById('r'+lastShown);
+    if(el&&S.rows[lastShown]?.tp!=='quot')
+      el.classList.remove('show','aN','aR','aH');
+  }
+  S.qvisLen=p.qvisLen;
+  S.borrowDone=p.borrowDone;
+  S.supDone=p.supDone!==undefined?p.supDone:-1;
+  const r0=document.getElementById('r0');
+  if(r0){
+    if(S.qvisLen===0) r0.innerHTML=' '.repeat(S.LL);
+    else r0.innerHTML=makeQuotLine(S.qvisLen,false,S.borrowDone,S.supDone);
+  }
+  S.cur=p.cur;
+  upBtn();
+  updateProgress();
+  document.getElementById('aC').style.display='none';
+}
+function doReset(){
+  doPause();
+  S.cur=0;S.hist=[];S.qvisLen=0;S.borrowDone=-1;S.supDone=-1;
+  S.rows.forEach((_,i)=>{
+    if(i===0)return;
+    const el=document.getElementById('r'+i);
+    if(el) el.classList.remove('show','aN','aR','aH');
+  });
+  const r0=document.getElementById('r0');
+  if(r0) r0.innerHTML=' '.repeat(S.LL||1);
+  document.getElementById('aC').style.display='none';
+  // 입력란 비우기
+  document.getElementById('dd').value='';
+  document.getElementById('dv').value='';
+  // 컨트롤 숨기기
+  document.getElementById('cw').style.display='none';
+  // 시각화 영역 비우기
+  document.getElementById('pre19').innerHTML='';
+  document.getElementById('pre19').style.backgroundImage='';
+  updateProgress();
+  upBtn();
+}
+function upBtn(){
+  document.getElementById('bPrev').disabled=S.hist.length===0;
+}
+
+/* ════════════════════════════════════════════════
+   기록 (History)
+════════════════════════════════════════════════ */
+let histData=[];
+function addHist(dd,dv,q,r){
+  histData.unshift({dd,dv,q,r,time:nowStr()});
+  if(histData.length>50) histData.pop();
+}
+function renderHist(){
+  const el=document.getElementById('histList');
+  if(!histData.length){
+    el.innerHTML='<div class="hist-empty">아직 계산 기록이 없습니다</div>';
+    return;
+  }
+  el.innerHTML=histData.map((h,i)=>
+    `<div class="hist-item" onclick="loadHist(${i})">
+      <span class="hist-expr">${h.dd} ÷ ${h.dv}</span>
+      <span class="hist-ans">몫 ${h.q} 나머지 ${h.r}</span>
+      <span class="hist-time">${h.time}</span>
+    </div>`
+  ).join('');
+}
+function loadHist(i){
+  const h=histData[i];
+  document.getElementById('dd').value=h.dd;
+  document.getElementById('dv').value=h.dv;
+  const tabs=document.querySelectorAll('.tab');
+  switchTab('viz',tabs[0]);
+  calc();
+}
+function clearHist(){
+  histData=[];
+  renderHist();
+}
+
+/* ════════════════════════════════════════════════
+   퀴즈 (Quiz)
+════════════════════════════════════════════════ */
+let quizState={dd:0,dv:0,q:0,r:0,count:0,correct:0,wrong:0,answered:false};
+
+function genQuiz(){
+  const minD=parseInt(document.getElementById('qMinD').value)||2;
+  const maxD=parseInt(document.getElementById('qMaxD').value)||999;
+  const minV=parseInt(document.getElementById('qMinV').value)||2;
+  const maxV=parseInt(document.getElementById('qMaxV').value)||50;
+  let dd,dv,tries=0;
+  do{
+    dv=Math.floor(Math.random()*(maxV-minV+1))+minV;
+    dd=Math.floor(Math.random()*(maxD-minD+1))+minD;
+    tries++;
+  }while((dd<dv||dv<2)&&tries<200);
+  if(dd<dv){[dd,dv]=[dv,dd];}
+  const res=compute(dd,dv);
+  quizState.dd=dd; quizState.dv=dv;
+  quizState.q=res.tQ; quizState.r=res.rem;
+  quizState.count++;
+  quizState.answered=false;
+  document.getElementById('quizNum').textContent=`문제 #${quizState.count}`;
+  document.getElementById('quizExpr').innerHTML=`<span>${dd}</span> ÷ <span>${dv}</span> = ?`;
+  document.getElementById('qAnsQ').value='';
+  document.getElementById('qAnsR').value='';
+  const res2=document.getElementById('quizResult');
+  res2.style.display='none';res2.className='quiz-result';
+  document.getElementById('btnQuizViz').style.display='none';
+  document.getElementById('qAnsQ').focus();
+}
+
+function checkQuiz(){
+  if(!quizState.dd) return;
+  if(quizState.answered) return;
+  const userQ=parseInt(document.getElementById('qAnsQ').value);
+  const userR=parseInt(document.getElementById('qAnsR').value);
+  if(isNaN(userQ)||isNaN(userR)){alert('몫과 나머지를 모두 입력하세요.\nPlease enter both Quotient and Remainder.');return;}
+  const correct=(userQ===quizState.q)&&(userR===quizState.r);
+  quizState.answered=true;
+  if(correct) quizState.correct++;
+  else quizState.wrong++;
+  const res=document.getElementById('quizResult');
+  res.style.display='block';
+  if(correct){
+    res.className='quiz-result correct';
+    res.textContent=`✅ 정답입니다!  몫 = ${quizState.q},  나머지 = ${quizState.r}`;
+  } else {
+    res.className='quiz-result wrong';
+    res.textContent=`❌ 오답!  정답:  몫 = ${quizState.q},  나머지 = ${quizState.r}`;
+  }
+  document.getElementById('stTotal').textContent=quizState.correct+quizState.wrong;
+  document.getElementById('stCorrect').textContent=quizState.correct;
+  document.getElementById('stWrong').textContent=quizState.wrong;
+  const rate=Math.round(quizState.correct/(quizState.correct+quizState.wrong)*100);
+  document.getElementById('stRate').textContent=rate+'%';
+  document.getElementById('btnQuizViz').style.display='inline-block';
+}
+
+function quizToViz(){
+  document.getElementById('dd').value=quizState.dd;
+  document.getElementById('dv').value=quizState.dv;
+  const tabs=document.querySelectorAll('.tab');
+  switchTab('viz',tabs[0]);
+  calc();
+}
+
+// 로고 flash 효과
+function flashLogo(){
+  const logo=document.querySelector('.logo-glow');
+  if(!logo) return;
+  logo.classList.remove('flash');
+  void logo.offsetWidth; // reflow로 애니메이션 리셋
+  logo.classList.add('flash');
+  setTimeout(()=>logo.classList.remove('flash'),1500);
+}
+
+// 초기 퀴즈 문제 생성 + 로고 flash
+window.addEventListener('DOMContentLoaded',()=>{genQuiz();flashLogo();});
+
+/* ════════════════════════════════════════════════
+   복사 유틸
+════════════════════════════════════════════════ */
+function flashBtn(btn){
+  btn.classList.add('tbtn-copied');
+  const orig=btn.textContent;
+  btn.textContent='✅ 복사됨!';
+  setTimeout(()=>{btn.classList.remove('tbtn-copied');btn.textContent=orig;},1800);
+}
+
+// 파일 다운로드
+function downloadApp(){
+  const src=document.documentElement.outerHTML;
+  const blob=new Blob([src],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='10단_분해_나눗셈_v9_5.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 3000); // 3초 후 해제
+}
+
+// 새 탭에서 앱 열기
+function openNewTab(){
+  const src=document.documentElement.outerHTML;
+  const blob=new Blob([src],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+}
+
+// 소스 코드 복사
+function copyCode(btn){
+  const src=document.documentElement.outerHTML;
+  navigator.clipboard.writeText(src).then(()=>flashBtn(btn))
+    .catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=src;document.body.appendChild(ta);ta.select();
+      document.execCommand('copy');document.body.removeChild(ta);
+      flashBtn(btn);
+    });
+}
+
+// 현재 시각화 영역 텍스트 복사 (pre 내용)
+function copyScreen(btn){
+  const pre=document.getElementById('pre19');
+  if(!pre){alert('복사할 시각화 내용이 없습니다.');return;}
+  const txt=pre.innerText||pre.textContent;
+  navigator.clipboard.writeText(txt).then(()=>flashBtn(btn))
+    .catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=txt;document.body.appendChild(ta);ta.select();
+      document.execCommand('copy');document.body.removeChild(ta);
+      flashBtn(btn);
+    });
+}
+
+</script>
+
+
+</body></html>
