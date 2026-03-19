@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>격자식 곱셈 · Lattice Multiplication</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080810;--surface:#10101c;--card:#16162a;--border:#252540;--text:#e8e8f8;--red:#ff4d6d;--teal:#00f5c4;--gold:#ffd166;--green:#06ffa5;--purple:#c77dff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── 전체 레이아웃 ── */
+.wrap{max-width:1020px;margin:0 auto;padding:6px 10px 40px;}
+
+/* ── 헤더 ── */
+header{text-align:center;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.header-inner{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.logo-wrap{position:relative;width:52px;height:52px;flex-shrink:0;}
+.logo-wrap svg{width:52px;height:52px;border-radius:50%;}
+.logo-glow{position:absolute;inset:-6px;border-radius:50%;filter:blur(8px);transition:all .6s;pointer-events:none;}
+.logo-wrap.glowing svg{filter:drop-shadow(0 0 10px #00f5c4) drop-shadow(0 0 22px #ffd166);}
+.logo-wrap.glowing .logo-glow{background:radial-gradient(circle,rgba(0,245,196,.6) 0%,rgba(255,209,102,.3) 60%,transparent 100%);}
+@keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 6px #00f5c4) drop-shadow(0 0 14px #ffd166);}50%{filter:drop-shadow(0 0 20px #ffd166) drop-shadow(0 0 40px #00f5c4);}}
+.logo-wrap.fanfare svg{animation:logoPulse .35s ease-in-out 6;}
+.title-block{text-align:left;}
+.title-ko{font-size:clamp(1.2rem,5vw,2rem);font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,var(--teal),var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.15;}
+.title-en{font-size:clamp(.65rem,2.5vw,.9rem);font-weight:700;color:#7878a8;letter-spacing:.5px;margin-top:2px;}
+.subtitle-row{color:#a0a0c0;font-size:.75rem;margin-top:4px;line-height:1.7;text-align:center;padding:0 4px;}
+.subtitle-row span{color:rgba(255,209,102,.6);margin:0 3px;}
+.subtitle-en{color:#6868a0;font-size:.68rem;}
+
+/* ── 입력 패널 ── */
+.input-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.num-inputs{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;}
+.num-field{font-family:'Space Mono',monospace;font-size:clamp(1.3rem,5vw,1.7rem);font-weight:700;width:clamp(88px,22vw,115px);text-align:center;background:#0a0a16;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 6px;outline:none;transition:all .2s;-moz-appearance:textfield;/* 터치 친화적 높이 */min-height:48px;}
+.num-field::-webkit-outer-spin-button,.num-field::-webkit-inner-spin-button{-webkit-appearance:none;}
+.num-field:focus{border-color:var(--teal);box-shadow:0 0 10px rgba(0,245,196,.4);}
+.times-sign{font-size:1.7rem;font-weight:900;color:var(--red);}
+.btn-row{display:flex;gap:8px;justify-content:center;margin-top:8px;}
+.go-btn{padding:12px 28px;background:linear-gradient(135deg,#00f5c4,#06ffa5);color:#0a0a16;border:none;border-radius:8px;font-family:'Noto Sans KR',sans-serif;font-weight:900;font-size:.95rem;cursor:pointer;transition:all .2s;box-shadow:0 0 16px rgba(0,245,196,.4);min-height:48px;touch-action:manipulation;}
+.go-btn:hover{transform:translateY(-2px);box-shadow:0 0 26px rgba(0,245,196,.7);}
+.go-btn:active{transform:translateY(0);box-shadow:0 0 10px rgba(0,245,196,.4);}
+.reset-btn{padding:12px 20px;background:linear-gradient(135deg,#444466,#2a2a44);color:#a0a0c8;border:1px solid var(--border);border-radius:8px;font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:all .2s;min-height:48px;touch-action:manipulation;}
+.reset-btn:hover{border-color:var(--teal);color:var(--teal);}
+.reset-btn:active{opacity:.7;}
+.num-fields-wrap{display:flex;flex-direction:column;align-items:center;}
+.num-fields-row{display:flex;gap:8px;align-items:center;}
+.range-hint{text-align:center;font-size:.72rem;color:#6868a0;margin-top:6px;}
+.input-error{text-align:center;font-size:.82rem;font-weight:700;color:var(--red);margin-top:5px;min-height:1.2em;}
+@keyframes errShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.input-error.shake{animation:errShake .35s ease;}
+
+/* ── 컨트롤 ── */
+.controls{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;}
+.playback{display:flex;gap:6px;align-items:center;}
+.ctrl-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.ctrl-btn:hover{border-color:var(--teal);color:var(--teal);}
+.ctrl-btn.active{background:var(--teal);color:var(--bg);border-color:var(--teal);}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed;}
+.ctrl-btn:active:not(:disabled){transform:scale(.92);}
+.slider-group{display:flex;align-items:center;gap:6px;}
+.slider-label{font-size:.72rem;color:#a0a0c0;white-space:nowrap;font-weight:600;display:flex;flex-direction:row;align-items:center;gap:3px;}
+.slider-label-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.4;}
+input[type=range]{-webkit-appearance:none;width:72px;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--teal);cursor:pointer;}
+.slider-val{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--teal);min-width:18px;font-weight:700;}
+.step-indicator{font-family:'Space Mono',monospace;font-size:.75rem;color:#a0a0c0;font-weight:700;}
+
+/* ── 스테이지 (캔버스 + 계산) ── */
+.stage{display:flex;flex-direction:row;gap:10px;align-items:flex-start;}
+.canvas-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;overflow:hidden;}
+.prob-title-row{position:relative;display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:6px;min-height:32px;}
+.prob-title{font-family:'Space Mono',monospace;font-size:clamp(1rem,3vw,1.6rem);font-weight:700;text-align:center;visibility:hidden;position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;}
+.prob-title .op{color:var(--red);}
+.canvas-area{display:flex;flex-direction:row;align-items:flex-start;gap:10px;width:100%;}
+.canvas-wrapper{flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;justify-content:center;}
+#cv{border-radius:8px;display:block;max-width:none;}
+.legend{display:flex;flex-direction:column;gap:10px;font-size:.7rem;color:#a0a0c0;font-weight:600;flex-shrink:0;padding-top:8px;}
+.leg{display:flex;align-items:flex-start;gap:5px;}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+
+/* ── 계산 패널 ── */
+.calc-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;width:240px;flex-shrink:0;}
+#calc-rows{display:flex;flex-direction:column;gap:2px;}
+.calc-card h3{font-size:.68rem;text-transform:uppercase;letter-spacing:2px;color:#a0a0c0;border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:8px;font-weight:700;}
+.calc-row{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;margin-bottom:6px;font-family:'Space Mono',monospace;font-size:.82rem;opacity:0;transform:translateX(-6px);transition:opacity .3s,transform .3s;}
+.calc-row.show{opacity:1;transform:translateX(0);}
+.c-eq{color:#9090b0;}
+.c-sum{color:var(--gold);font-weight:700;}
+.c-carry{color:var(--red);font-size:.75rem;font-weight:700;}
+.calc-divider{border:none;border-top:1px solid var(--border);margin:6px 0;opacity:0;transition:opacity .4s;}
+.calc-final{font-family:'Space Mono',monospace;font-weight:700;color:var(--green);opacity:0;transition:opacity .5s;line-height:1.3;text-align:left;display:none;}
+.calc-final.show{opacity:1;}
+
+/* ── 컨페티 ── */
+#confetti-cv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none;}
+
+/* ══════════════════════════════════════
+   모바일: 600px 이하
+══════════════════════════════════════ */
+@media(max-width:600px){
+  .wrap{padding:4px 8px 32px;}
+  .logo-wrap{width:44px;height:44px;}
+  .logo-wrap svg{width:44px;height:44px;}
+  .title-block{text-align:center;}
+  .subtitle-row{font-size:.68rem;}
+  .num-inputs{gap:6px;}
+  .btn-row{gap:6px;}
+  .go-btn{padding:12px 20px;font-size:.88rem;flex:1;max-width:160px;}
+  .reset-btn{padding:12px 14px;font-size:.82rem;}
+  .controls{gap:6px;padding:7px 8px;}
+  .ctrl-btn{width:44px;height:44px;}
+  input[type=range]{width:64px;}
+  .canvas-card{width:100%;min-width:0;}
+  .stage{flex-direction:column;}
+  .canvas-area{flex-direction:column;}
+  .legend{flex-direction:row;flex-wrap:wrap;gap:8px;padding-top:0;}
+  .canvas-wrapper{justify-content:flex-start;}
+  .calc-card{width:100%;}
+  .calc-card h3{font-size:.65rem;}
+  .calc-row{font-size:.73rem;}
+}
+
+/* ══════════════════════════════════════
+   초소형: 380px 이하
+══════════════════════════════════════ */
+@media(max-width:380px){
+  .header-inner{gap:8px;}
+  .logo-wrap{width:38px;height:38px;}
+  .logo-wrap svg{width:38px;height:38px;}
+  .num-field{width:80px;font-size:1.2rem;padding:7px 4px;}
+  .ctrl-btn{width:40px;height:40px;font-size:.9rem;}
+  input[type=range]{width:56px;}
+  .slider-label{font-size:.66rem;}
+}
+
+/* ══════════════════════════════════════
+   태블릿/데스크탑: 601px 이상
+══════════════════════════════════════ */
+@media(min-width:601px){
+  .num-inputs{gap:10px;}
+  .btn-row{display:contents;}/* 버튼을 num-inputs 줄에 합침 */
+  .btn-row .go-btn,.btn-row .reset-btn{display:inline-flex;align-items:center;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="confetti-cv"></canvas>
+<div class="wrap">
+<header>
+  <div class="header-inner">
+    <div class="logo-wrap" id="logo-wrap">
+      <div class="logo-glow"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+        <defs>
+          <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00b4d8"/>
+            <stop offset="100%" style="stop-color:#06ffa5"/>
+          </linearGradient>
+          <path id="arcT" d="M14,40 A26,26 0 0,1 66,40"/>
+          <path id="arcB" d="M9,40 A31,31 0 0,0 71,40"/>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <circle cx="40" cy="40" r="38" fill="url(#lg1)" stroke="#00a8cc" stroke-width="1.5"/>
+        <text font-family="Arial,sans-serif" font-size="7.5" font-weight="700" fill="white" opacity=".9" letter-spacing=".2">
+          <textPath href="#arcT" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+        </text>
+        <text font-family="Arial,sans-serif" font-size="7.5" font-weight="700" fill="white" opacity=".9" letter-spacing=".4">
+          <textPath href="#arcB" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+        </text>
+        <!-- 은 → 초성(ㅇ) 중성(ㅡ) 종성(ㄴ) 분리해서 기호처럼 -->
+        <text x="40" y="30" font-family="'Noto Sans KR',Arial,sans-serif"
+              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
+              filter="url(#glow)" opacity="1">ㅇ</text>
+        <text x="40" y="43" font-family="'Noto Sans KR',Arial,sans-serif"
+              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
+              filter="url(#glow)" opacity="1">ㅡ</text>
+        <text x="40" y="56" font-family="'Noto Sans KR',Arial,sans-serif"
+              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
+              filter="url(#glow)" opacity="1">ㄴ</text>
+      </svg>
+    </div>
+    <div class="title-block">
+      <div class="title-ko">격자식 곱셈</div>
+      <div class="title-en">Lattice Multiplication</div>
+    </div>
+  </div>
+  <p class="subtitle-row">
+    각 칸에 두 자리 곱을 채우고, 대각선 방향으로 합산하고, 받아올림하면 답!
+    <br><span class="subtitle-en">Fill each cell with digit products, sum along diagonals, carry → answer</span>
+  </p>
+</header>
+
+<div class="input-panel">
+  <div class="num-inputs">
+    <div class="num-fields-wrap">
+      <div class="num-fields-row">
+        <input class="num-field" id="f1" type="number" placeholder="" min="1" max="9999999" inputmode="numeric"/>
+        <span class="times-sign">×</span>
+        <input class="num-field" id="f2" type="number" placeholder="" min="1" max="9999999" inputmode="numeric"/>
+      </div>
+      <div class="range-hint">1 ~ 9,999,999</div>
+    </div>
+    <div class="btn-row">
+      <button class="go-btn" onclick="initDraw()">그리기 ▶<br><span style="font-size:.65rem;font-weight:600;opacity:.8;">Draw</span></button>
+      <button class="reset-btn" onclick="resetAll()">초기화 ↺<br><span style="font-size:.62rem;font-weight:600;opacity:.7;">Reset</span></button>
+    </div>
+  </div>
+  <div class="input-error" id="input-error"></div>
+</div>
+
+<div class="controls">
+  <div class="playback">
+    <button class="ctrl-btn" id="btn-prev" onclick="stepBack()" disabled title="이전 · Prev">⏮</button>
+    <button class="ctrl-btn" id="btn-play" onclick="togglePlay()" disabled title="재생/일시정지 · Play/Pause">▶</button>
+    <button class="ctrl-btn" id="btn-next" onclick="stepForward()" disabled title="다음 · Next">⏭</button>
+  </div>
+  <span class="step-indicator" id="step-ind">— / —</span>
+  <div class="slider-group">
+    <span class="slider-label">⚡<span class="slider-label-text"><span>속도</span><span style="font-size:.62rem;opacity:.7;">Speed</span></span></span>
+    <input type="range" id="speed-sl" min="1" max="5" value="3" oninput="updateSpeed(this.value)"/>
+    <span class="slider-val" id="speed-val">3</span>
+  </div>
+  <div class="slider-group">
+    <span class="slider-label">🔊<span class="slider-label-text"><span>볼륨</span><span style="font-size:.62rem;opacity:.7;">Volume</span></span></span>
+    <input type="range" id="vol-sl" min="0" max="10" value="5" oninput="updateVol(this.value)"/>
+    <span class="slider-val" id="vol-val">5</span>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="canvas-card">
+    <div class="prob-title-row">
+      <div class="prob-title" id="prob-title">
+        <span id="pt1"></span><span class="op"> × </span><span id="pt2"></span>
+      </div>
+    </div>
+    <div class="canvas-area">
+      <div class="canvas-wrapper">
+        <canvas id="cv"></canvas>
+      </div>
+      <div class="legend">
+        <div class="leg"><span class="leg-dot" style="background:#67c7eb"></span><span>십의 자리<br><span style="opacity:.55;font-size:.62rem;">Tens</span></span></div>
+        <div class="leg"><span class="leg-dot" style="background:#ffd166"></span><span>일의 자리<br><span style="opacity:.55;font-size:.62rem;">Ones</span></span></div>
+        <div class="leg"><span class="leg-dot" style="background:#c77dff"></span><span>대각합<br><span style="opacity:.55;font-size:.62rem;">Diag Sum</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="calc-card">
+    <h3>계산 과정</h3>
+    <div id="calc-rows"></div>
+    <hr class="calc-divider" id="calc-divider"/>
+    <div class="calc-final" id="calc-final"></div>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════════════════
+let AC = null;
+function getAC() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  return AC;
+}
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    if(typeof r==='number') r={tl:r,tr:r,br:r,bl:r};
+    const{tl=0,tr=0,br=0,bl=0}=r;
+    this.moveTo(x+tl,y); this.lineTo(x+w-tr,y); this.quadraticCurveTo(x+w,y,x+w,y+tr);
+    this.lineTo(x+w,y+h-br); this.quadraticCurveTo(x+w,y+h,x+w-br,y+h);
+    this.lineTo(x+bl,y+h); this.quadraticCurveTo(x,y+h,x,y+h-bl);
+    this.lineTo(x,y+tl); this.quadraticCurveTo(x,y,x+tl,y); this.closePath();
+  };
+}
+let VOL = 0.5;
+function tone(f,dur,vol,tp='sine',dl=0){
+  if(!VOL) return;
+  const ac=getAC();
+  if(ac.state==='suspended') ac.resume();
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type=tp; o.frequency.setValueAtTime(f, ac.currentTime+dl);
+  g.gain.setValueAtTime(0, ac.currentTime+dl);
+  g.gain.linearRampToValueAtTime(vol*VOL, ac.currentTime+dl+.01);
+  g.gain.exponentialRampToValueAtTime(.001, ac.currentTime+dl+dur);
+  o.start(ac.currentTime+dl); o.stop(ac.currentTime+dl+dur+.05);
+}
+function sndCell(){ tone(440+Math.random()*60, .07, .08, 'triangle'); }
+function sndDiag(i){ tone(540+i*45, .13, .1, 'sine'); }
+function sndCarry(){ tone(740, .09, .11, 'sine'); }
+function sndFanfare(){ [[523,0],[659,.13],[784,.26],[1047,.4],[784,.53],[1047,.66],[1318,.8]].forEach(([f,d])=>tone(f,.22,.12,'triangle',d)); }
+function updateVol(v){ VOL=v/10; document.getElementById('vol-val').textContent=v; }
+let SPEED_MS = 220;
+const SPEED_MAP = {1:550, 2:330, 3:220, 4:110, 5:40};
+function updateSpeed(v){ SPEED_MS=SPEED_MAP[v]; document.getElementById('speed-val').textContent=v; if(isPlaying) startAutoPlay(); }
+
+// ════════════════════════════════════════════════
+//  GLOBALS
+// ════════════════════════════════════════════════
+let steps=[], stepIdx=0, isPlaying=false, autoId=null;
+let curN1=0, curN2=0, d1=[], d2=[];
+let GEO=null;
+let rawDiag=[], finDiag=[], ND=0;
+let canvasState=null;
+let CW=0, CH=0;
+let carryAnimId=null, carryProgress=0;
+
+function digs(n){ return String(n).split('').map(Number); }
+
+// ════════════════════════════════════════════════
+//  CALCULATION
+//  대각합 계산:
+//    셀(c,r) = d1[c] × d2[r]
+//    십의 자리 → 대각 d = c+r
+//    일의 자리 → 대각 d = c+r+1
+//    총 대각 수 ND = cols+rows  (d=0 ~ d=ND-1)
+//
+//  예) 98×87: [7, 14, 12, 6] → [8,5,2,6] = 8526 ✓
+//  예) 456×45: [1,10,4,12,0] → [2,0,5,2,0] = 20520 ✓
+// ════════════════════════════════════════════════
+function calcDiags(d1, d2) {
+  const cols=d1.length, rows=d2.length, nd=cols+rows;
+  const raw = new Array(nd).fill(0);
+  for (let c=0; c<cols; c++) {
+    for (let r=0; r<rows; r++) {
+      const p = d1[c] * d2[r];
+      raw[c+r]   += Math.floor(p/10);  // 십의 자리
+      raw[c+r+1] += (p % 10);          // 일의 자리
+    }
+  }
+  const fin = [...raw];
+  for (let d=nd-1; d>0; d--) {
+    if (fin[d] >= 10) { fin[d-1] += Math.floor(fin[d]/10); fin[d] %= 10; }
+  }
+  return { raw, fin, nd };
+}
+
+// ════════════════════════════════════════════════
+//  DIAGONAL BOX POSITION
+//  d < rows  → 왼쪽 (r=d 행의 왼쪽)
+//  d >= rows → 아래 (c=d-rows 열의 아래, 격자 오른쪽 바깥 포함)
+//
+//  2345×234 (cols=4,rows=3): 왼쪽:d=0,1,2 / 아래:d=3,4,5,6
+//  98×87   (cols=2,rows=2): 왼쪽:d=0,1   / 아래:d=2,3
+//  54×67   (cols=2,rows=2): 왼쪽:d=0,1   / 아래:d=2,3
+// ════════════════════════════════════════════════
+function diagPos(d, cols, rows, ox, oy, C, GAP, BS, gw, d2LabelOffset) {
+  if (d < rows) {
+    // 왼쪽
+    return { x: ox-GAP-BS/2, y: oy+d*C+C/2, side:'left' };
+  } else {
+    const col = d - rows;
+    if (col >= cols) {
+      // 격자 오른쪽 밖: d2 레이블 아래 위치
+      return { x: ox + gw + (d2LabelOffset || 26), y: oy + rows*C + GAP + BS/2, side:'right' };
+    }
+    // 아래 (col번째 열)
+    return { x: ox + col*C + C/2, y: oy + rows*C + GAP + BS/2, side:'bottom' };
+  }
+}
+
+// ════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════
+function render() {
+  if (!GEO) return;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const st = canvasState;
+  const { cols, rows, C, ox, oy, gw, gh, GAP, BS, nd, diagStart } = GEO;
+
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle = '#07070f';
+  ctx.fillRect(0,0,CW,CH);
+
+
+  // ── 격자 ──────────────────────────────────
+  if (st.gridDrawn) {
+    // 외곽 테두리
+    ctx.strokeStyle = 'rgba(160,180,255,.9)'; ctx.lineWidth = 2.5;
+    ctx.strokeRect(ox, oy, gw, gh);
+    // 내부 세로선
+    ctx.strokeStyle = 'rgba(110,125,200,.5)'; ctx.lineWidth = 1.2;
+    for (let c=1; c<cols; c++) {
+      ctx.beginPath(); ctx.moveTo(ox+c*C, oy); ctx.lineTo(ox+c*C, oy+gh); ctx.stroke();
+    }
+    // 내부 가로선
+    for (let r=1; r<rows; r++) {
+      ctx.beginPath(); ctx.moveTo(ox, oy+r*C); ctx.lineTo(ox+gw, oy+r*C); ctx.stroke();
+    }
+    // 셀 안 대각선 (오른쪽위 → 왼쪽아래: /)
+    ctx.strokeStyle = 'rgba(140,155,230,.32)'; ctx.lineWidth = 1;
+    for (let c=0; c<cols; c++) {
+      for (let r=0; r<rows; r++) {
+        ctx.beginPath();
+        ctx.moveTo(ox+(c+1)*C, oy+r*C);      // 오른쪽 위
+        ctx.lineTo(ox+c*C,     oy+(r+1)*C);  // 왼쪽 아래
+        ctx.stroke();
+      }
+    }
+    // d1 숫자 레이블 (격자 위) - 셀 숫자보다 훨씬 크게
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(C*0.55)}px Space Mono,monospace`;
+    for (let c=0; c<cols; c++) {
+      ctx.fillStyle='#ff9f1c'; ctx.shadowColor='rgba(255,159,28,1)'; ctx.shadowBlur=16;
+      ctx.fillText(d1[c], ox+c*C+C/2, oy-26); ctx.shadowBlur=0;
+    }
+    // d2 숫자 레이블 (격자 바로 오른쪽)
+    const d2x = ox + gw + 30;
+    ctx.font = `bold ${Math.round(C*0.55)}px Space Mono,monospace`;
+    for (let r=0; r<rows; r++) {
+      ctx.fillStyle='#00f5c4'; ctx.shadowColor='rgba(0,245,196,1)'; ctx.shadowBlur=16;
+      ctx.fillText(d2[r], d2x, oy+r*C+C/2); ctx.shadowBlur=0;
+    }
+  }
+
+  // ── 셀 곱 값 ──────────────────────────────
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  st.cells.forEach(({c,r}) => {
+    const p = d1[c]*d2[r];
+    const tens = Math.floor(p/10), ones = p%10;
+    const cx = ox+c*C, cy = oy+r*C;
+    ctx.font = `bold ${Math.round(C*0.32)}px Space Mono,monospace`;
+    // 십의 자리: 왼쪽 위 (대각선 위 삼각)
+    ctx.fillStyle='#67c7eb'; ctx.shadowColor='rgba(103,199,235,.5)'; ctx.shadowBlur=5;
+    ctx.fillText(tens, cx+C*.28, cy+C*.30);
+    // 일의 자리: 오른쪽 아래 (대각선 아래 삼각)
+    ctx.fillStyle='#ffd166'; ctx.shadowColor='rgba(255,209,102,.5)'; ctx.shadowBlur=5;
+    ctx.fillText(ones, cx+C*.72, cy+C*.70);
+    ctx.shadowBlur=0;
+  });
+
+  // 현재 셀 하이라이트
+  if (st.highlightCell) {
+    const {c,r} = st.highlightCell;
+    ctx.save();
+    ctx.strokeStyle='rgba(199,125,255,.9)'; ctx.lineWidth=2.5;
+    ctx.strokeRect(ox+c*C+1.5, oy+r*C+1.5, C-3, C-3);
+    ctx.restore();
+  }
+
+  // ── 대각합 박스 (왼쪽+하단 ㄴ자) ──────────
+  if (st.diagSet.size > 0) {
+    ctx.save(); ctx.shadowBlur=0;
+
+    // 격자 하단 구분선
+    ctx.strokeStyle='rgba(199,125,255,.2)'; ctx.lineWidth=1; ctx.setLineDash([3,5]);
+    ctx.beginPath(); ctx.moveTo(ox, oy+gh+GAP-5); ctx.lineTo(ox+gw, oy+gh+GAP-5); ctx.stroke();
+    ctx.setLineDash([]);
+
+    st.diagSet.forEach(d => {
+      const dp = diagPos(d, cols, rows, ox, oy, C, GAP, BS, gw, 26);
+      const val = rawDiag[d];
+
+      // 셀→박스 연결 점선
+      ctx.strokeStyle='rgba(199,125,255,.2)'; ctx.lineWidth=.9; ctx.setLineDash([3,4]);
+      for (let c=0; c<cols; c++) {
+        // 십의 자리 기여: c+r=d
+        const rt = d-c;
+        if (rt>=0 && rt<rows) {
+          const fx=ox+c*C+C*.28, fy=oy+rt*C+C*.30;
+          const tx = dp.side==='bottom' ? dp.x : dp.x+BS/2+2;
+          const ty = dp.side==='bottom' ? dp.y-BS/2-2 : dp.y;
+          ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(tx,ty); ctx.stroke();
+        }
+        // 일의 자리 기여: c+r+1=d → c+r=d-1
+        const ro = (d-1)-c;
+        if (ro>=0 && ro<rows) {
+          const fx=ox+c*C+C*.72, fy=oy+ro*C+C*.70;
+          const tx = dp.side==='bottom' ? dp.x : dp.x+BS/2+2;
+          const ty = dp.side==='bottom' ? dp.y-BS/2-2 : dp.y;
+          ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(tx,ty); ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+
+      // 박스 크기: 값 길이에 따라 동적으로
+      ctx.font='bold 13px Space Mono,monospace';
+      const valStr = String(val);
+      const valW = ctx.measureText(valStr).width;
+      const bw = Math.max(BS+8, valW+14), bh=BS+4;
+      ctx.fillStyle='rgba(199,125,255,.18)';
+      ctx.beginPath(); ctx.roundRect(dp.x-bw/2, dp.y-bh/2, bw, bh, 7); ctx.fill();
+      ctx.strokeStyle='rgba(199,125,255,.88)'; ctx.lineWidth=1.8; ctx.stroke();
+      // 누적합 값을 박스 안에 표시
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#c77dff'; ctx.shadowColor='rgba(199,125,255,.6)'; ctx.shadowBlur=5;
+      ctx.fillText(valStr, dp.x, dp.y); ctx.shadowBlur=0;
+    });
+    ctx.restore();
+  }
+
+  // ── 받아올림 구역 ──────────────────────────
+  //  왼쪽 대각(d<rows): 대각합 박스 바로 오른쪽에 숫자 세로 표시
+  //  아래 대각(d>=rows): 대각합 박스 바로 아래에 숫자 가로 표시
+  //
+  //  레이아웃 (아래 대각 기준):
+  //   [대각합 박스]
+  //   ─────────────
+  //   [누적합 행]    rawDiag
+  //   ─────────────
+  //   [화살표]
+  //   [받아올림 행]  finDiag
+  //   ─────────────
+  //   [최종 답]
+
+  const boxBotY   = oy + gh + GAP + BS + 4;  // 대각합 박스 하단
+  const rawRowY   = boxBotY + 36;             // ① 누적합 행 (간격 넓힘)
+  const arrowY    = rawRowY + 36;             // ② 올림 화살표 (간격 넓힘)
+  const carryRowY = arrowY  + 32;             // ③ 받아올림 결과 행 (간격 넓힘)
+  const finalY    = carryRowY + 60;           // ④ 최종 답
+
+  const hasCarry = rawDiag.some((v,i) => v !== finDiag[i]);
+
+  // 각 대각의 x 위치
+  // 박스 그릴 때: diagPos 그대로
+  // 누적합/받아올림 행(수평 행): 왼쪽 대각도 수평선 위에 놓기
+  //   왼쪽 대각 d(0..rows-1): 격자 왼쪽에 C 간격으로 배치
+  //   아래 대각 d(rows..nd-1): diagPos 박스 x 그대로
+  function diagX(d) { return diagPos(d, cols, rows, ox, oy, C, GAP, BS, gw, 26).x; }
+  // 누적합/받아올림 행: diagStart 기준으로 중앙 정렬
+  // diagStart = CW/2 - (nd-1)*C/2 이므로 전체 행이 캔버스 중앙에 옴
+  function diagRowX(d) {
+    return diagStart + d * C;
+  }
+
+  if (st.showCarry) {
+    ctx.save(); ctx.shadowBlur=0;
+
+    // ── ① 누적합 행 레이블: 한글/영어 같은 x, 왼쪽 정렬 ──
+    const labelStartX = diagRowX(0) - C * 1.1;
+    ctx.textBaseline='middle'; ctx.textAlign='left';
+    ctx.font='bold 10px Noto Sans KR,sans-serif';
+    ctx.fillStyle='rgba(199,125,255,1)';
+    ctx.shadowColor='rgba(199,125,255,.8)'; ctx.shadowBlur=6;
+    ctx.fillText('대각합', labelStartX, rawRowY - 7);
+    ctx.shadowBlur=0;
+    ctx.font='bold 8px Space Mono,monospace';
+    ctx.fillStyle='rgba(199,125,255,.85)';
+    ctx.fillText('Diag Sum', labelStartX, rawRowY + 7);
+
+    // ── ① 누적합 숫자 표시 (rawDiag, 보라색) ──
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for (let d=0; d<nd; d++) {
+      const x = diagRowX(d);
+      ctx.font='bold 17px Space Mono,monospace';
+      ctx.fillStyle='#c77dff'; ctx.shadowColor='rgba(199,125,255,.55)'; ctx.shadowBlur=5;
+      ctx.fillText(rawDiag[d], x, rawRowY); ctx.shadowBlur=0;
+    }
+
+    if (hasCarry) {
+      // 구분선
+      ctx.strokeStyle='rgba(255,77,109,.18)'; ctx.lineWidth=1; ctx.setLineDash([3,5]);
+      ctx.beginPath(); ctx.moveTo(diagRowX(0) - C/2, rawRowY+14); ctx.lineTo(diagRowX(nd-1) + C/2, rawRowY+14); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 받아올림 레이블: 한글/영어 같은 x, 왼쪽 정렬
+      ctx.textAlign='left';
+      ctx.font='bold 10px Noto Sans KR,sans-serif';
+      ctx.fillStyle='rgba(6,255,165,1)';
+      ctx.shadowColor='rgba(6,255,165,.8)'; ctx.shadowBlur=6;
+      ctx.fillText('받아올림', labelStartX, carryRowY - 7);
+      ctx.shadowBlur=0;
+      ctx.font='bold 8px Space Mono,monospace';
+      ctx.fillStyle='rgba(6,255,165,.85)';
+      ctx.fillText('Carry', labelStartX, carryRowY + 7);
+
+      // ── 받아올림 시퀀스 계산 ──
+      const seq = [];
+      const tmp = [...rawDiag];
+      for (let d=nd-1; d>0; d--) {
+        if (tmp[d] >= 10) {
+          const cv = Math.floor(tmp[d]/10);
+          seq.push({ d, orig:tmp[d], carry:cv, result:tmp[d]%10 });
+          tmp[d-1] += cv; tmp[d] %= 10;
+        }
+      }
+      const total = seq.length;
+      const rs    = Math.min(carryProgress * total, total);
+      const done  = Math.min(Math.floor(rs), total);
+      const frac  = done < total ? rs - done : 0;
+
+      // 현재 각 대각의 값 (애니메이션 진행 반영)
+      const curVals = [...rawDiag];
+      for (let s=0; s<done; s++) {
+        curVals[seq[s].d]    = seq[s].result;
+        curVals[seq[s].d-1] += seq[s].carry;
+      }
+      const activeSeq = done < total ? seq[done] : null;
+
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+
+      for (let d=0; d<nd; d++) {
+        const ax = diagRowX(d);
+        const seqIdx = seq.findIndex(s => s.d === d);
+        const isDone   = seqIdx >= 0 && seqIdx < done;
+        const isActive = activeSeq && activeSeq.d === d;
+
+        if (isActive) {
+          const orig = curVals[d], result = activeSeq.result, carry = activeSeq.carry;
+
+          if (frac < 0.30) {
+            // 원래 값 강조 표시 (노란 박스) — 더 오래 보여줌
+            ctx.font='bold 20px Space Mono,monospace';
+            const tw = ctx.measureText(String(orig)).width + 14;
+            ctx.fillStyle='rgba(255,209,102,.22)';
+            ctx.beginPath(); ctx.roundRect(ax-tw/2, carryRowY-12, tw, 24, 5); ctx.fill();
+            ctx.strokeStyle='#ffd166'; ctx.lineWidth=2; ctx.stroke();
+            ctx.fillStyle='#ffd166'; ctx.shadowColor='rgba(255,209,102,.9)'; ctx.shadowBlur=12;
+            ctx.fillText(orig, ax, carryRowY); ctx.shadowBlur=0;
+          } else {
+            // 원래 값 취소선
+            ctx.font='bold 13px Space Mono,monospace';
+            const tw2 = ctx.measureText(String(orig)).width;
+            ctx.fillStyle='rgba(255,209,102,.45)';
+            ctx.fillText(orig, ax, carryRowY - 12);
+            ctx.strokeStyle='rgba(255,209,102,.45)'; ctx.lineWidth=1.2;
+            ctx.beginPath();
+            ctx.moveTo(ax - tw2/2 - 1, carryRowY - 12);
+            ctx.lineTo(ax + tw2/2 + 1, carryRowY - 12);
+            ctx.stroke();
+            // 새 값 페이드인 — frac 0.65부터
+            if (frac > 0.65) {
+              const al = Math.min(1, (frac - 0.65) * 2.8);
+              ctx.font='bold 20px Space Mono,monospace';
+              ctx.fillStyle = `rgba(6,255,165,${al})`;
+              ctx.shadowColor='rgba(6,255,165,.6)'; ctx.shadowBlur=10;
+              ctx.fillText(result, ax, carryRowY + 5); ctx.shadowBlur=0;
+            }
+          }
+
+          // 올림 화살표 (오른쪽→왼쪽 가로 점선)
+          if (frac > 0.25 && d-1 >= 0) {
+            const axL = diagRowX(d-1);
+            const af  = Math.min(1, (frac - 0.25) / 0.55);  // 0.25~0.8 구간에서 화살표 이동
+            const sy  = arrowY;
+            const sx  = ax - 4, ex = axL + 4;
+            const cx2 = sx + (ex - sx) * af;
+            ctx.strokeStyle='#ffd166'; ctx.lineWidth=2.5; ctx.setLineDash([5,3]);
+            ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(cx2, sy); ctx.stroke();
+            ctx.setLineDash([]);
+            if (af >= 1) {
+              ctx.fillStyle='#ffd166';
+              ctx.beginPath(); ctx.moveTo(ex,sy); ctx.lineTo(ex+9,sy-5); ctx.lineTo(ex+9,sy+5); ctx.closePath(); ctx.fill();
+            }
+            // 첨자: 크고 선명하게, frac 0.8까지 유지했다가 서서히 페이드
+            const labelAlpha = frac < 0.75 ? 1 : Math.max(0, 1-(frac-0.75)/0.25);
+            ctx.font='bold 15px Space Mono,monospace';
+            ctx.textAlign='center';
+            // 배경 박스
+            const lbl='+'+carry;
+            const lx=(sx+cx2)/2, ly=sy-16;
+            const lw=ctx.measureText(lbl).width+10;
+            ctx.fillStyle=`rgba(255,209,102,${0.22*labelAlpha})`;
+            ctx.beginPath(); ctx.roundRect(lx-lw/2, ly-9, lw, 18, 4); ctx.fill();
+            ctx.strokeStyle=`rgba(255,209,102,${0.7*labelAlpha})`; ctx.lineWidth=1.2; ctx.stroke();
+            ctx.fillStyle=`rgba(255,230,80,${labelAlpha})`;
+            ctx.shadowColor='rgba(255,209,102,.9)'; ctx.shadowBlur=14*labelAlpha;
+            ctx.fillText(lbl, lx, ly); ctx.shadowBlur=0;
+          }
+
+        } else if (isDone) {
+          // 받아올림 완료: 초록으로 최종값
+          ctx.font='bold 17px Space Mono,monospace';
+          ctx.fillStyle='#06ffa5'; ctx.shadowColor='rgba(6,255,165,.6)'; ctx.shadowBlur=6;
+          ctx.fillText(finDiag[d], ax, carryRowY); ctx.shadowBlur=0;
+
+        } else {
+          // 아직 처리 안 된 자리: curVals 그대로 보라색
+          ctx.font='bold 17px Space Mono,monospace';
+          ctx.fillStyle='#c77dff'; ctx.shadowColor='rgba(199,125,255,.45)'; ctx.shadowBlur=5;
+          ctx.fillText(curVals[d], ax, carryRowY); ctx.shadowBlur=0;
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  // ── 최종 답 ───────────────────────────────
+  if (st.showAnswer) {
+    ctx.save();
+    const ay = finalY;
+    const ansStr = '∴'+String(curN1*curN2);  // ∴ 바로 붙여서 공간 최소화
+    const line1 = curN1+' × '+curN2;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='bold 36px Space Mono,monospace';
+    const tw2 = ctx.measureText(ansStr).width + 32;
+    ctx.font='bold 18px Space Mono,monospace';
+    const tw = Math.max(ctx.measureText(line1).width + 32, tw2);
+    ctx.fillStyle='rgba(6,255,165,.12)';
+    ctx.beginPath(); ctx.roundRect(CW/2-tw/2, ay-32, tw, 64, 10); ctx.fill();
+    ctx.strokeStyle='rgba(6,255,165,.5)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.font='bold 22px Space Mono,monospace';
+    ctx.fillStyle='rgba(6,255,165,.7)'; ctx.fillText(line1, CW/2, ay-16);
+    ctx.font='bold 36px Space Mono,monospace';
+    ctx.fillStyle='#06ffa5'; ctx.shadowColor='rgba(6,255,165,.5)'; ctx.shadowBlur=14;
+    ctx.fillText(ansStr, CW/2, ay+18); ctx.shadowBlur=0;
+    ctx.restore();
+  }
+
+}
+
+
+// ════════════════════════════════════════════════
+//  CARRY ANIMATION
+// ════════════════════════════════════════════════
+function startCarryAnim(onDone) {
+  if (carryAnimId) cancelAnimationFrame(carryAnimId);
+  carryProgress = 0;
+  const cnt = rawDiag.filter((v,i)=>v!==finDiag[i]).length;
+  const dur = Math.max(2400, cnt*2000);  // 각 받아올림당 2000ms로 충분히 느리게
+  const start = performance.now();
+  function tick(now) {
+    carryProgress = Math.min(1,(now-start)/dur); render();
+    if (carryProgress<1) carryAnimId=requestAnimationFrame(tick);
+    else { carryAnimId=null; if(onDone) onDone(); }
+  }
+  carryAnimId = requestAnimationFrame(tick);
+}
+
+// ════════════════════════════════════════════════
+//  STEPS
+// ════════════════════════════════════════════════
+function buildSteps() {
+  const list = [];
+  const cols=d1.length, rows=d2.length;
+  // 1. 격자 그리기
+  list.push({ t:'grid' });
+  // 2. 셀 채우기: 대각선 순서 (c+r=k, k=0부터), 같은 대각은 c 작은 순
+  for (let k=0; k<cols+rows-1; k++) {
+    for (let c=0; c<cols; c++) {
+      const r=k-c;
+      if (r>=0 && r<rows) list.push({ t:'cell', c, r });
+    }
+  }
+  // 3. 대각합 박스 표시 (d=0부터)
+  for (let d=0; d<ND; d++) list.push({ t:'diag', d });
+  // 4. 받아올림 (있는 경우)
+  if (rawDiag.some((v,i)=>v!==finDiag[i])) list.push({ t:'carry' });
+  // 5. 최종 답
+  list.push({ t:'final' });
+  return list;
+}
+
+function freshState() {
+  return { gridDrawn:false, cells:[], highlightCell:null, diagSet:new Set(), showCarry:false, showAnswer:false };
+}
+
+function applyStep(idx) {
+  if (idx<0 || idx>=steps.length) return;
+  const _ac=getAC(); if(_ac.state==='suspended') _ac.resume();
+  const s = steps[idx];
+  if (s.t==='grid') canvasState.gridDrawn = true;
+  if (s.t==='cell') { canvasState.cells.push({c:s.c,r:s.r}); canvasState.highlightCell={c:s.c,r:s.r}; sndCell(); }
+  if (s.t==='diag') { canvasState.highlightCell=null; canvasState.diagSet.add(s.d); sndDiag(s.d); addCalcRow(s.d); }
+  if (s.t==='carry') {
+    canvasState.showCarry = true; sndCarry();
+    const wp = isPlaying;
+    if (wp) { stopAutoPlay(); isPlaying=false; document.getElementById('btn-play').textContent='▶'; document.getElementById('btn-play').classList.remove('active'); }
+    startCarryAnim(()=>{
+      if (wp) { isPlaying=true; document.getElementById('btn-play').textContent='⏸'; document.getElementById('btn-play').classList.add('active'); startAutoPlay(); }
+    });
+  }
+  if (s.t==='final') doFinal();
+  render(); updateUI();
+}
+
+function rebuildState(upTo) {
+  canvasState=freshState(); carryProgress=1;
+  document.getElementById('calc-rows').innerHTML='';
+  document.getElementById('calc-divider').style.opacity='0';
+  document.getElementById('calc-final').style.display='none';
+  document.getElementById('calc-final').classList.remove('show');
+  stopConfetti();
+  for (let i=0; i<upTo; i++) {
+    const s=steps[i];
+    if (s.t==='grid') canvasState.gridDrawn=true;
+    if (s.t==='cell') { canvasState.cells.push({c:s.c,r:s.r}); canvasState.highlightCell={c:s.c,r:s.r}; }
+    if (s.t==='diag') { canvasState.highlightCell=null; canvasState.diagSet.add(s.d); addCalcRow(s.d); }
+    if (s.t==='carry') canvasState.showCarry=true;
+    if (s.t==='final') doFinal(true);
+  }
+  render(); updateUI();
+}
+
+function addCalcRow(d) {
+  if (document.getElementById('cr-'+d)) return;
+  const cols=d1.length, rows=d2.length;
+
+  // 사선 d 위의 모든 기여점을 수집하고
+  // 격자의 왼쪽위 → 오른쪽아래 순서로 정렬
+  //
+  // 셀(c,r)에서:
+  //   일의 자리(아래삼각) → 대각 c+r+1 에 기여  → r=(d-1)-c
+  //   십의 자리(위삼각)   → 대각 c+r   에 기여  → r=d-c
+  //
+  // 사선은 오른쪽위→왼쪽아래 방향(/)이므로,
+  // 이 사선 위를 왼쪽위→오른쪽아래로 따라가면
+  // r이 감소하고 c가 증가하는 방향.
+  // → 정렬 기준: r 내림차순 (r 큰 것 = 위쪽 = 먼저)
+  //   r이 같으면 일의자리가 십의자리보다 아래에 있으므로
+  //   십의자리 먼저(type:'T'), 일의자리 나중(type:'O')
+
+  const points=[];
+  for(let c=0; c<cols; c++){
+    // 십의 자리: c+r = d
+    const rT=d-c;
+    if(rT>=0&&rT<rows)
+      points.push({c, r:rT, sub:0, v:Math.floor(d1[c]*d2[rT]/10), color:'#67c7eb'});
+    // 일의 자리: c+r+1 = d → r = d-1-c
+    const rO=d-1-c;
+    if(rO>=0&&rO<rows)
+      points.push({c, r:rO, sub:1, v:d1[c]*d2[rO]%10,              color:'#ffd166'});
+  }
+  // 34×56 사선1 원하는 순서: 2+5+1
+  // 2=셀(1,0)십(c=1,sub=0), 5=셀(0,0)일(c=0,sub=1), 1=셀(0,1)십(c=0,sub=0)
+  // → c 내림차순, 같은 c에서 일의자리(sub=1)가 십의자리(sub=0)보다 먼저
+  points.sort((a,b)=> a.c!==b.c ? b.c-a.c : b.sub-a.sub);
+
+  const raw=rawDiag[d], fin=finDiag[d];
+  const row=document.createElement('div');
+  row.className='calc-row'; row.id='cr-'+d;
+
+  const addendsHtml = points.length
+    ? points.map(p=>'<span style="color:'+p.color+';font-weight:700;">'+p.v+'</span>').join('<span class="c-eq">+</span>')
+    : '<span style="color:#7070a0">0</span>';
+
+  row.innerHTML =
+    addendsHtml
+    +'<span class="c-eq">=</span>'
+    +'<span class="c-sum">'+raw+'</span>'
+    +(raw!==fin?'<span class="c-carry"> →'+fin+'</span>':'');
+
+  document.getElementById('calc-rows').appendChild(row);
+  requestAnimationFrame(()=>row.classList.add('show'));
+}
+
+function doFinal(silent=false) {
+  canvasState.showAnswer=true;
+  document.getElementById('calc-divider').style.opacity='1';
+  const fe=document.getElementById('calc-final');
+  fe.innerHTML=
+    '<div style="font-size:.8rem;color:rgba(6,255,165,.6);line-height:1.1;">'+curN1+' × '+curN2+'</div>'
+    +'<div style="font-size:1.05rem;color:#06ffa5;text-shadow:0 0 10px rgba(6,255,165,.5);letter-spacing:-1px;">∴&thinsp;'+(curN1*curN2)+'</div>';
+  fe.style.display='block';
+  requestAnimationFrame(()=>fe.classList.add('show'));
+  if (!silent) {
+    const _ac=getAC(); if(_ac.state==='suspended') _ac.resume().then(()=>sndFanfare()); else sndFanfare();
+    setTimeout(startConfetti, 400);
+    const logo=document.getElementById('logo-wrap');
+    logo.classList.remove('fanfare','glowing'); void logo.offsetWidth;
+    logo.classList.add('fanfare','glowing');
+    setTimeout(()=>logo.classList.remove('fanfare'), 2300);
+    setTimeout(()=>logo.classList.remove('glowing'), 4200);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  PLAYBACK CONTROLS
+// ════════════════════════════════════════════════
+function stepForward()  { if(stepIdx<steps.length)  { applyStep(stepIdx); stepIdx++; } }
+function stepBack()     { if(stepIdx>0)              { stepIdx--; rebuildState(stepIdx); } }
+function togglePlay() {
+  getAC().state==='suspended' && getAC().resume();
+  isPlaying=!isPlaying;
+  document.getElementById('btn-play').textContent=isPlaying?'⏸':'▶';
+  document.getElementById('btn-play').classList.toggle('active',isPlaying);
+  if(isPlaying) startAutoPlay(); else stopAutoPlay();
+}
+function startAutoPlay() {
+  stopAutoPlay();
+  function tick() {
+    if(!isPlaying||stepIdx>=steps.length){ isPlaying=false; document.getElementById('btn-play').textContent='▶'; document.getElementById('btn-play').classList.remove('active'); return; }
+    stepForward(); autoId=setTimeout(tick,SPEED_MS);
+  }
+  autoId=setTimeout(tick,SPEED_MS);
+}
+function stopAutoPlay() { if(autoId){ clearTimeout(autoId); autoId=null; } }
+function updateUI() {
+  const tot=steps.length;
+  document.getElementById('step-ind').textContent=stepIdx+' / '+tot;
+  document.getElementById('btn-prev').disabled=stepIdx===0;
+  document.getElementById('btn-next').disabled=stepIdx>=tot;
+  if(stepIdx>=tot&&isPlaying){ isPlaying=false; document.getElementById('btn-play').textContent='▶'; document.getElementById('btn-play').classList.remove('active'); stopAutoPlay(); }
+}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+function initDraw() {
+  getAC().state==='suspended' && getAC().resume();
+  const v1=parseInt(document.getElementById('f1').value);
+  const v2=parseInt(document.getElementById('f2').value);
+  const errEl=document.getElementById('input-error');
+  function showErr(m){ errEl.textContent=m; errEl.classList.remove('shake'); void errEl.offsetWidth; errEl.classList.add('shake'); setTimeout(()=>errEl.classList.remove('shake'),400); }
+  errEl.textContent='';
+  if(isNaN(v1)||isNaN(v2)){ showErr('⚠ 숫자를 입력해 주세요'); return; }
+  if(v1<1||v2<1||v1>9999999||v2>9999999){ showErr('⚠ 1 이상 9,999,999 이하만 가능해요!'); return; }
+
+  stopAutoPlay(); isPlaying=false;
+  if(carryAnimId){ cancelAnimationFrame(carryAnimId); carryAnimId=null; }
+  carryProgress=0;
+  document.getElementById('btn-play').textContent='▶';
+  document.getElementById('btn-play').classList.remove('active');
+
+  curN1=v1; curN2=v2; d1=digs(v1); d2=digs(v2);
+  document.getElementById('pt1').textContent=v1;
+  document.getElementById('pt2').textContent=v2;
+  document.querySelector('.prob-title').style.visibility='visible';
+  document.getElementById('calc-rows').innerHTML='';
+  document.getElementById('calc-divider').style.opacity='0';
+  const fe=document.getElementById('calc-final'); fe.style.display='none'; fe.classList.remove('show');
+  stopConfetti();
+
+  const cols=d1.length, rows=d2.length;
+  const res=calcDiags(d1,d2);
+  rawDiag=res.raw; finDiag=res.fin; ND=res.nd;
+
+  // ── 1. wrapper 너비를 먼저 읽기 ──────────────────
+  const cv=document.getElementById('cv');
+  const canvasArea = document.querySelector('.canvas-area');
+  const canvasCard = document.querySelector('.canvas-card');
+  const W = Math.max(
+    (canvasArea ? canvasArea.clientWidth : 0) ||
+    (canvasCard ? canvasCard.clientWidth - 20 : 0) ||
+    300, 200);
+
+  // ── 2. C를 wrapper 너비에서 역산 ─────────────────
+  // CW = 2*sideSpace + cols*C
+  // sideSpace = max(PAD + rows*C, PAD + (cols-1)*C + d2LabelW)
+  // 단순화: CW ≈ W = (rows + cols + rows)*C + 2*PAD + d2LabelW
+  // → C = (W - 2*PAD - d2LabelW) / (cols + 2*rows)
+  const PAD = 20;
+  const d2LabelW = 50;
+  const GAP = 12, BS = 24;
+
+  let C = Math.floor((W - 2*PAD - d2LabelW) / (cols + 2*rows));
+  // 너무 크거나 작으면 클램프
+  C = Math.max(44, Math.min(C, 110));
+
+  const gw=cols*C, gh=rows*C;
+
+  // ── 3. CW를 C 기반으로 정확히 계산 ──────────────
+  const leftSpace  = PAD + rows * C;
+  const rightSpace = PAD + (cols - 1) * C + d2LabelW;
+  const sideSpace  = Math.max(leftSpace, rightSpace);
+  CW = 2 * sideSpace + cols * C;
+
+  const ox = sideSpace;
+  const diagStart = CW/2 - (ND-1)*C/2;
+  const oy = 60;
+
+  // ── 4. 높이 계산 ─────────────────────────────────
+  const boxBotY_  = oy + gh + GAP + BS;
+  const rawRowY_   = boxBotY_ + 36;
+  const arrowY_    = rawRowY_ + 36;
+  const carryRowY_ = arrowY_  + 32;
+  const hasC       = rawDiag.some((v,i)=>v!==finDiag[i]);
+  CH = (hasC ? carryRowY_ + 180 : rawRowY_ + 90) + 60;
+
+  // ── 5. 캔버스 크기 설정 — 축소 없음 ─────────────
+  cv.width=CW; cv.height=CH;
+  cv.style.width  = CW + 'px';
+  cv.style.height = CH + 'px';
+
+  // 창 크기 바뀌면 전체 다시 그리기
+  window._cvScaleFn = ()=>{ if(curN1&&curN2) initDraw(); };
+
+  GEO={ cols, rows, C, ox, oy, gw, gh, GAP, BS, nd:ND, diagStart };
+  steps=buildSteps(); stepIdx=0; canvasState=freshState();
+  ['btn-play','btn-next'].forEach(id=>document.getElementById(id).disabled=false);
+  document.getElementById('btn-prev').disabled=true;
+  render(); updateUI();
+
+  isPlaying=true;
+  document.getElementById('btn-play').textContent='⏸';
+  document.getElementById('btn-play').classList.add('active');
+  startAutoPlay();
+}
+
+// ════════════════════════════════════════════════
+//  CONFETTI
+// ════════════════════════════════════════════════
+let confAnim=null;
+const CC=['#ff4d6d','#00f5c4','#ffd166','#c77dff','#06ffa5','#ff9f1c'];
+function startConfetti(){
+  const cv=document.getElementById('confetti-cv');
+  cv.style.display='block'; cv.width=window.innerWidth; cv.height=window.innerHeight;
+  const ctx=cv.getContext('2d');
+  const ps=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*5+3,color:CC[Math.floor(Math.random()*CC.length)],speed:Math.random()*3+1.5,tA:0,tS:Math.random()*.07+.04}));
+  let f=0;
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{p.tA+=p.tS;p.y+=p.speed;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}
+      ctx.beginPath();ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=4;
+      ctx.ellipse(p.x+Math.sin(p.tA)*10,p.y,p.r,p.r*.5,p.tA,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    });
+    f++; if(f<260) confAnim=requestAnimationFrame(draw); else stopConfetti();
+  }
+  if(confAnim) cancelAnimationFrame(confAnim); confAnim=requestAnimationFrame(draw);
+}
+function stopConfetti(){
+  if(confAnim){ cancelAnimationFrame(confAnim); confAnim=null; }
+  const cv=document.getElementById('confetti-cv'); cv.style.display='none';
+  cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+}
+
+// ════════════════════════════════════════════════
+//  RESET
+// ════════════════════════════════════════════════
+function resetAll(){
+  stopAutoPlay(); isPlaying=false;
+  if(carryAnimId){ cancelAnimationFrame(carryAnimId); carryAnimId=null; }
+  carryProgress=0;
+  document.getElementById('btn-play').textContent='▶'; document.getElementById('btn-play').classList.remove('active');
+  ['btn-play','btn-next','btn-prev'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('step-ind').textContent='— / —';
+  document.getElementById('f1').value=''; document.getElementById('f2').value='';
+  document.getElementById('input-error').textContent='';
+  const cv=document.getElementById('cv'); cv.getContext('2d').clearRect(0,0,cv.width,cv.height); cv.width=0; cv.height=0;
+  document.getElementById('calc-rows').innerHTML='';
+  document.getElementById('calc-divider').style.opacity='0';
+  const fe=document.getElementById('calc-final'); fe.style.display='none'; fe.classList.remove('show');
+  document.querySelector('.prob-title').style.visibility='hidden';
+  stopConfetti();
+  document.getElementById('logo-wrap').classList.remove('fanfare','glowing');
+  steps=[]; stepIdx=0; GEO=null; curN1=0; curN2=0; d1=[]; d2=[]; canvasState=null;
+  document.getElementById('f1').focus();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('f1').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('f2').focus(); });
+  document.getElementById('f2').addEventListener('keydown',e=>{ if(e.key==='Enter') initDraw(); });
+  document.getElementById('f1').value=''; document.getElementById('f2').value='';
+  // 리사이즈 디바운스 — 300ms 후에 재그리기 (재생 중이면 멈추고 재그리기)
+  let resizeTimer=null;
+  window.addEventListener('resize', ()=>{
+    if(!curN1||!curN2) return;
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      stopAutoPlay(); isPlaying=false;
+      document.getElementById('btn-play').textContent='▶';
+      document.getElementById('btn-play').classList.remove('active');
+      initDraw();
+    }, 300);
+  });
+});
+</script>
+</body>
+</html>
