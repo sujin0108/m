@@ -9,7 +9,7 @@
 :root{--bg:#080810;--surface:#10101c;--card:#16162a;--border:#252540;--text:#e8e8f8;--red:#ff4d6d;--teal:#00f5c4;--gold:#ffd166;--green:#06ffa5;--purple:#c77dff;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html{-webkit-text-size-adjust:100%;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;padding:20px 16px 60px;}
 
 /* ── 전체 레이아웃 ── */
 .wrap{max-width:1020px;margin:0 auto;padding:6px 10px 40px;}
@@ -145,57 +145,72 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   .btn-row .go-btn,.btn-row .reset-btn{display:inline-flex;align-items:center;}
 }
 </style>
+<style>
+/* ══ NAEMANG 공통 헤더/툴바 CSS ══ */
+.nm-header{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;width:100%;max-width:1020px;}
+.nm-title-block{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+.nm-title-main{font-size:1.7rem;font-weight:900;color:#72c4ff;font-family:'JetBrains Mono',monospace;line-height:1.15;text-shadow:0 0 20px rgba(77,166,255,.5);letter-spacing:.01em;}
+.nm-title-sub{font-size:.74rem;color:var(--muted,#8a94ac);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;}
+.nm-toolbar{display:flex;justify-content:center;align-items:center;padding:8px 14px;background:transparent;border:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;width:100%;max-width:1020px;}
+.nm-tbar-l,.nm-tbar-r{display:flex;gap:6px;}
+.nm-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border:1.5px solid var(--border,#2e3748);border-radius:7px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:var(--surface2,#232a38);color:var(--text,#e8edf5);transition:background .15s,transform .1s;white-space:nowrap;}
+.nm-btn:hover{background:var(--border,#2e3748);}
+.nm-btn:active{transform:scale(.96);}
+.nm-btn.primary{background:linear-gradient(135deg,#4da6ff,#764ba2);color:#fff;border-color:#4da6ff;}
+.nm-btn.primary:hover{background:linear-gradient(135deg,#6bb8ff,#8b5fbf);}
+.nm-btn-ok{background:#dcfce7!important;color:#15803d!important;border-color:#86efac!important;}
+@keyframes nmLogoReveal{0%{opacity:0;filter:blur(10px) brightness(2);transform:scale(.75);}65%{opacity:1;filter:blur(0) brightness(1.35);transform:scale(1.04);}100%{opacity:1;filter:blur(0) brightness(1);transform:scale(1);}}
+@keyframes nmLogoPulse{0%,100%{filter:drop-shadow(0 0 4px rgba(77,166,255,.3));}50%{filter:drop-shadow(0 0 18px rgba(77,166,255,.9)) drop-shadow(0 0 32px rgba(77,166,255,.5));}}
+@keyframes nmTitleReveal{0%{opacity:0;transform:translateY(-8px);}100%{opacity:1;transform:translateY(0);}}
+.nm-logo-svg{animation:nmLogoReveal 1.2s cubic-bezier(.4,0,.2,1) forwards;transform-origin:center;}
+.nm-logo-svg.nm-pulse{animation:nmLogoPulse 1.0s ease-in-out;}
+.nm-title-block{animation:nmTitleReveal .9s .4s cubic-bezier(.4,0,.2,1) both;}
+</style>
 </head>
 <body>
 
 <canvas id="confetti-cv"></canvas>
-<div class="wrap">
-<header>
-  <div class="header-inner">
-    <div class="logo-wrap" id="logo-wrap">
-      <div class="logo-glow"></div>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-        <defs>
-          <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#00b4d8"/>
-            <stop offset="100%" style="stop-color:#06ffa5"/>
-          </linearGradient>
-          <path id="arcT" d="M14,40 A26,26 0 0,1 66,40"/>
-          <path id="arcB" d="M9,40 A31,31 0 0,0 71,40"/>
-          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="1.5" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <circle cx="40" cy="40" r="38" fill="url(#lg1)" stroke="#00a8cc" stroke-width="1.5"/>
-        <text font-family="Arial,sans-serif" font-size="7.5" font-weight="700" fill="white" opacity=".9" letter-spacing=".2">
-          <textPath href="#arcT" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
-        </text>
-        <text font-family="Arial,sans-serif" font-size="7.5" font-weight="700" fill="white" opacity=".9" letter-spacing=".4">
-          <textPath href="#arcB" startOffset="50%" text-anchor="middle">SJL0108</textPath>
-        </text>
-        <!-- 은 → 초성(ㅇ) 중성(ㅡ) 종성(ㄴ) 분리해서 기호처럼 -->
-        <text x="40" y="30" font-family="'Noto Sans KR',Arial,sans-serif"
-              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
-              filter="url(#glow)" opacity="1">ㅇ</text>
-        <text x="40" y="43" font-family="'Noto Sans KR',Arial,sans-serif"
-              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
-              filter="url(#glow)" opacity="1">ㅡ</text>
-        <text x="40" y="56" font-family="'Noto Sans KR',Arial,sans-serif"
-              font-size="16" font-weight="900" fill="#ffe566" text-anchor="middle"
-              filter="url(#glow)" opacity="1">ㄴ</text>
-      </svg>
-    </div>
-    <div class="title-block">
-      <div class="title-ko">격자식 곱셈</div>
-      <div class="title-en">Lattice Multiplication</div>
-    </div>
+
+<!-- ══ NAEMANG 헤더 시작 ══ -->
+<div class="nm-header">
+  <svg class="nm-logo-svg" id="nmLogoSvg" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 80 80" style="flex-shrink:0;">
+    <defs>
+      <linearGradient id="nmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4da6ff"/>
+        <stop offset="100%" style="stop-color:#764ba2"/>
+      </linearGradient>
+      <path id="nmArcT" d="M 13,40 A 27,27 0 0,1 67,40"/>
+      <path id="nmArcB" d="M 8,40 A 32,32 0 0,0 72,40"/>
+    </defs>
+    <circle cx="40" cy="40" r="38" fill="url(#nmGrad)" stroke="#5a4fcf" stroke-width="2"/>
+    <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.3">
+      <textPath href="#nmArcT" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+    </text>
+    <text x="40" y="36" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅇ</text>
+    <text x="40" y="47" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㅡ</text>
+    <text x="40" y="58" font-size="18" text-anchor="middle" fill="white" font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif" font-weight="900" stroke="white" stroke-width="0.8">ㄴ</text>
+    <text font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="white" letter-spacing="0.5">
+      <textPath href="#nmArcB" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+    </text>
+  </svg>
+  <div class="nm-title-block">
+    <span class="nm-title-main">격자식 곱셈</span>
+    <span class="nm-title-sub">Lattice Multiplication</span>
   </div>
-  <p class="subtitle-row">
-    각 칸에 두 자리 곱을 채우고, 대각선 방향으로 합산하고, 받아올림하면 답!
-    <br><span class="subtitle-en">Fill each cell with digit products, sum along diagonals, carry → answer</span>
-  </p>
-</header>
+</div>
+<div class="nm-toolbar">
+  <div class="nm-tbar-l">
+    <button class="nm-btn primary" onclick="nmNewTab()">🚀 새 탭 New Tab</button>
+    <button class="nm-btn primary" onclick="nmSave()">💾 저장 Save</button>
+  </div>
+  <div class="nm-tbar-r">
+    <button class="nm-btn" onclick="nmCopyCode(this)">🗒 코드 복사 Copy Code</button>
+    <button class="nm-btn" onclick="nmCopyScreen(this)">🖼 화면 복사 Copy Screen</button>
+  </div>
+</div>
+<!-- ══ NAEMANG 헤더 끝 ══ -->
+
+<div class="wrap">
 
 <div class="input-panel">
   <div class="num-inputs">
@@ -855,11 +870,9 @@ function doFinal(silent=false) {
   if (!silent) {
     const _ac=getAC(); if(_ac.state==='suspended') _ac.resume().then(()=>sndFanfare()); else sndFanfare();
     setTimeout(startConfetti, 400);
-    const logo=document.getElementById('logo-wrap');
-    logo.classList.remove('fanfare','glowing'); void logo.offsetWidth;
-    logo.classList.add('fanfare','glowing');
-    setTimeout(()=>logo.classList.remove('fanfare'), 2300);
-    setTimeout(()=>logo.classList.remove('glowing'), 4200);
+    const logo=document.getElementById('nmLogoSvg');
+    if(logo){logo.classList.remove('nm-pulse'); void logo.offsetWidth; logo.classList.add('nm-pulse');
+    setTimeout(()=>logo.classList.remove('nm-pulse'), 2300);}
   }
 }
 
@@ -1031,7 +1044,8 @@ function resetAll(){
   const fe=document.getElementById('calc-final'); fe.style.display='none'; fe.classList.remove('show');
   document.querySelector('.prob-title').style.visibility='hidden';
   stopConfetti();
-  document.getElementById('logo-wrap').classList.remove('fanfare','glowing');
+  const logo=document.getElementById('nmLogoSvg');
+  if(logo) logo.classList.remove('nm-pulse');
   steps=[]; stepIdx=0; GEO=null; curN1=0; curN2=0; d1=[]; d2=[]; canvasState=null;
   document.getElementById('f1').focus();
 }
@@ -1053,6 +1067,48 @@ document.addEventListener('DOMContentLoaded',()=>{
     }, 300);
   });
 });
+
+// ════════════════════════════════════════════════
+//  NAEMANG 헤더 버튼 함수
+// ════════════════════════════════════════════════
+function nmFlash(btn){
+  const orig=btn.textContent;
+  btn.classList.add('nm-btn-ok');
+  btn.textContent='✅ 복사됨!';
+  setTimeout(()=>{btn.classList.remove('nm-btn-ok');btn.textContent=orig;},1800);
+}
+function nmNewTab(){
+  const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+  window.open(URL.createObjectURL(b),'_blank');
+}
+function nmSave(){
+  const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');
+  a.href=u; a.download='lattice_multiplication.html';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(u),3000);
+}
+function nmCopyCode(btn){
+  const src=document.documentElement.outerHTML;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(src).then(()=>nmFlash(btn)).catch(()=>nmCopyFallback(btn,src));
+  } else { nmCopyFallback(btn,src); }
+}
+function nmCopyScreen(btn){
+  const txt=document.body.innerText||document.body.textContent||'';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>nmFlash(btn)).catch(()=>nmCopyFallback(btn,txt));
+  } else { nmCopyFallback(btn,txt); }
+}
+function nmCopyFallback(btn,text){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); nmFlash(btn); } catch(e){}
+  document.body.removeChild(ta);
+}
 </script>
 </body>
 </html>
