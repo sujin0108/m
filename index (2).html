@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>에카디카 나눗셈기 | Ekadhika Division Calculator</title>
+  <meta name="description" content="베다 수학의 에카디카 원리로 순환소수를 계산합니다 / Calculate repeating decimals using Vedic Mathematics Ekadhika principle" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;500;600&family=Fira+Code:wght@400;500&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- React + Babel via CDN (no build needed) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      font-family: 'Noto Sans KR', 'Crimson Pro', serif;
+      color: #e8d5b7;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #root { min-height: 100vh; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(232,180,120,0.3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(232,180,120,0.5); }
+
+    /* Number input spinner hide */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    button { transition: transform 0.15s, filter 0.15s; }
+    @media (hover: hover) {
+      button:hover { transform: translateY(-1px); filter: brightness(1.1); }
+      button:active { transform: translateY(0); }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes logoGlow {
+      0%, 100% { filter: drop-shadow(0 0 15px rgba(212,165,116,.6)) drop-shadow(0 0 30px rgba(184,149,106,.4)); }
+      50%       { filter: drop-shadow(0 0 25px rgba(212,165,116,.8)) drop-shadow(0 0 45px rgba(184,149,106,.6)); }
+    }
+    @keyframes digitSlideIn {
+      from { opacity: 0; transform: translateX(-20px) scale(1.2); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes carryAppear {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.5); }
+      50%  { opacity: 1; transform: translateX(-50%) translateY(-5px) scale(1.2); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    @keyframes carryDisappear {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+      50%  { opacity: .5; transform: translateX(-50%) translateY(-10px) scale(0.8); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.3); }
+    }
+    @keyframes carryAbsorb {
+      0%   { color: #7a9e7a; transform: scale(1.3); text-shadow: 0 0 15px rgba(122,200,122,.8); }
+      100% { color: #7a9e7a; transform: scale(1); text-shadow: none; }
+    }
+    @keyframes popIn {
+      0%   { transform: scale(0.8); opacity: .5; }
+      50%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    @keyframes celebrationPop {
+      0%   { transform: scale(0.5); opacity: 0; }
+      50%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    /* ─── Logo ─── */
+    const LogoSVG = ({ size = 80 }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 80 80"
+        style={{ filter:'drop-shadow(0 0 15px rgba(212,165,116,.6)) drop-shadow(0 0 30px rgba(184,149,106,.4))', animation:'logoGlow 3s ease-in-out infinite' }}>
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   style={{stopColor:'#d4a574'}}/>
+            <stop offset="50%"  style={{stopColor:'#c9956a'}}/>
+            <stop offset="100%" style={{stopColor:'#a67c52'}}/>
+          </linearGradient>
+          <path id="topArcInner"   d="M 13,40 A 27,27 0 0,1 67,40"/>
+          <path id="bottomArcOuter" d="M 8,40 A 32,32 0 0,0 72,40"/>
+        </defs>
+        <circle cx="40" cy="40" r="38" fill="url(#logoGrad)" stroke="#8b6914" strokeWidth="2"/>
+        <text fontFamily="Arial,sans-serif" fontSize="8.5" fontWeight="700" fill="#1a1a2e" letterSpacing="0.3">
+          <textPath href="#topArcInner" startOffset="50%" textAnchor="middle">NAEMANG2943</textPath>
+        </text>
+        <text x="40" y="36" fontSize="18" textAnchor="middle" fill="#1a1a2e" fontFamily="'Noto Sans KR',sans-serif" fontWeight="900" stroke="#1a1a2e" strokeWidth="0.5">ㅇ</text>
+        <text x="40" y="47" fontSize="18" textAnchor="middle" fill="#1a1a2e" fontFamily="'Noto Sans KR',sans-serif" fontWeight="900" stroke="#1a1a2e" strokeWidth="0.5">ㅡ</text>
+        <text x="40" y="58" fontSize="18" textAnchor="middle" fill="#1a1a2e" fontFamily="'Noto Sans KR',sans-serif" fontWeight="900" stroke="#1a1a2e" strokeWidth="0.5">ㄴ</text>
+        <text fontFamily="Arial,sans-serif" fontSize="8.5" fontWeight="700" fill="#1a1a2e" letterSpacing="0.5">
+          <textPath href="#bottomArcOuter" startOffset="50%" textAnchor="middle">SJL0108</textPath>
+        </text>
+      </svg>
+    );
+
+    /* ─── Helpers ─── */
+    const calculateEkadhika = (denom) => {
+      if (denom % 10 !== 9) return null;
+      return Math.floor(denom / 10) + 1;
+    };
+
+    const calculateRepeatingDecimal = (denom) => {
+      const eka = calculateEkadhika(denom);
+      if (!eka) return { steps: [], result: '' };
+      const calculationSteps = [];
+      let digits = [], carry = 0, current = 1;
+      const maxSteps = denom - 1;
+      for (let i = 0; i < maxSteps; i++) {
+        const product = current * eka + carry;
+        const digit = product % 10;
+        carry = Math.floor(product / 10);
+        calculationSteps.push({
+          step: i + 1, current, multiplier: eka,
+          prevCarry: i === 0 ? 0 : (calculationSteps[i-1]?.carry || 0),
+          product: current * eka, productWithCarry: product,
+          digit, carry, partialResult: digit + digits.join('')
+        });
+        digits.unshift(digit);
+        current = digit;
+        if (i > 0 && digit === 1 && carry === 0) break;
+      }
+      return { steps: calculationSteps, result: digits.join('') };
+    };
+
+    const checkSymmetry = (resultStr) => {
+      if (resultStr.length % 2 !== 0) return null;
+      const half = resultStr.length / 2;
+      const first = resultStr.slice(0, half);
+      const second = resultStr.slice(half);
+      let sum = '', carry = 0;
+      for (let i = half - 1; i >= 0; i--) {
+        const s = parseInt(first[i]) + parseInt(second[i]) + carry;
+        sum = (s % 10) + sum;
+        carry = Math.floor(s / 10);
+      }
+      if (carry) sum = carry + sum;
+      return { first, second, sum, isNines: /^9+$/.test(sum) };
+    };
+
+    /* ─── Shared button style helper ─── */
+    const toolBtn = {
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(232,180,120,0.3)',
+      borderRadius: '8px',
+      padding: '12px 10px',
+      fontSize: 'clamp(10px,2.5vw,12px)',
+      color: '#d4a574',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      minHeight: '44px',
+    };
+
+    /* ─── Main Component ─── */
+    const VedicMathApp = () => {
+      const [denominator,         setDenominator]         = useState(19);
+      const [ekadhika,            setEkadhika]            = useState(2);
+      const [steps,               setSteps]               = useState([]);
+      const [result,              setResult]              = useState('');
+      const [isPlaying,           setIsPlaying]           = useState(false);
+      const [currentStep,         setCurrentStep]         = useState(-1);
+      const [showSymmetry,        setShowSymmetry]        = useState(false);
+      const [error,               setError]               = useState('');
+      const [speed,               setSpeed]               = useState(1500);
+      const [showCelebration,     setShowCelebration]     = useState(false);
+      const [confetti,            setConfetti]            = useState([]);
+      const [celebrationTriggered,setCelebrationTriggered]= useState(false);
+      const [copyNotification,    setCopyNotification]    = useState('');
+      const stepsContainerRef = useRef(null);
+      const intervalRef       = useRef(null);
+
+      /* Notification */
+      const showNotification = (msg) => {
+        setCopyNotification(msg);
+        setTimeout(() => setCopyNotification(''), 2500);
+      };
+
+      /* Celebration */
+      const triggerCelebration = useCallback(() => {
+        if (celebrationTriggered) return;
+        setCelebrationTriggered(true);
+        setShowCelebration(true);
+        const colors = ['#f4d9a0','#d4a574','#667eea','#764ba2','#7a9e7a','#e8b478'];
+        const pieces = Array.from({ length: 100 }, (_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          delay: Math.random() * 2,
+          duration: 2 + Math.random() * 2,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 6 + Math.random() * 8,
+          rotation: Math.random() * 360,
+          isCircle: Math.random() > 0.5,
+        }));
+        setConfetti(pieces);
+        setTimeout(() => setConfetti([]), 5000);
+      }, [celebrationTriggered]);
+
+      /* Steps text generator */
+      const generateStepsText = useCallback(() => {
+        if (steps.length === 0) return '계산 과정이 없습니다. / No calculation steps.';
+        let t = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        t += `  에카디카 나눗셈기 / Ekadhika Division Calculator\n`;
+        t += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        t += `▶ 계산: 1/${denominator}  (매개수/Ekadhika: ${ekadhika})\n\n`;
+        t += `──────────────────────────────────────────────────\n`;
+        steps.forEach(s => {
+          const cT = s.prevCarry > 0 ? ` + ${s.prevCarry}` : '';
+          const nC = s.carry > 0 ? `  (올림/Carry: +${s.carry})` : '';
+          t += `  #${String(s.step).padStart(2,'0')}: ${s.current} × ${s.multiplier}${cT} = ${s.productWithCarry}  → 숫자: ${s.digit}${nC}\n`;
+          t += `        결과: ${s.partialResult}\n\n`;
+        });
+        t += `──────────────────────────────────────────────────\n`;
+        t += `  1/${denominator} = 0.${result}\n`;
+        t += `  순환 마디 길이: ${result.length}자리 / ${result.length} digits\n\n`;
+        t += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        return t;
+      }, [steps, denominator, ekadhika, result]);
+
+      /* Open in new tab */
+      const openInNewTab = () => {
+        if (steps.length === 0 || !result) { showNotification('⚠️ 먼저 계산을 실행하세요 / Run calculation first'); return; }
+        const stepsHtml = steps.map(s => {
+          const cT = s.prevCarry > 0 ? ` <span style="color:#ff6b6b;font-weight:bold">+</span> <span style="color:#7a9e7a">${s.prevCarry}</span>` : '';
+          const nC = s.carry > 0 ? ` <span style="color:#7a9e7a">(올림: <span style="color:#ff6b6b">+</span>${s.carry})</span>` : '';
+          return `<div style="padding:10px;margin:5px 0;background:#16213e;border-radius:6px;border-left:3px solid #d4a574;">
+            <span style="color:#8b7355">#${s.step}</span>: <span style="color:#a89880">${s.current}</span> × <span style="color:#d4a574">${s.multiplier}</span>${cT} = <span style="color:#f4d9a0;font-weight:bold">${s.productWithCarry}</span> → 숫자: <span style="color:#f4d9a0">${s.digit}</span>${nC} → <span style="color:#d4a574">${s.partialResult}</span>
+          </div>`;
+        }).join('');
+        const html = `<!DOCTYPE html><html><head><title>에카디카 - 1/${denominator}</title><meta charset="UTF-8">
+          <style>body{margin:0;padding:30px;background:#1a1a2e;color:#e8d5b7;font-family:'Noto Sans KR',sans-serif}h1{color:#f4d9a0}h2{color:#d4a574;margin-top:30px;border-bottom:1px solid #2a3a5e;padding-bottom:10px}.result-box{font-family:monospace;font-size:20px;color:#f4d9a0;background:#16213e;padding:20px;border-radius:8px;text-decoration:overline;letter-spacing:2px;word-break:break-all}.info{color:#a89880;margin:10px 0}</style></head>
+          <body><h1>에카디카 나눗셈기</h1><p class="info">1/${denominator}의 순환소수 | Ekadhika: <strong style="color:#f4d9a0;font-size:20px">${ekadhika}</strong></p>
+          <h2>📊 결과</h2><div class="result-box">${result}</div><p class="info">순환 마디 길이: ${result.length}자리</p>
+          <h2>📝 역순 계산 과정</h2>${stepsHtml}
+          <p style="margin-top:40px;color:#6b5b4f;font-size:12px;text-align:center;">Generated by 에카디카 나눗셈기 | वैदिक गणित</p></body></html>`;
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showNotification('🔗 새 탭에서 열림 / Opened!');
+      };
+
+      /* Save HTML file */
+      const saveAsFile = () => {
+        if (steps.length === 0 || !result) { showNotification('⚠️ 먼저 계산을 실행하세요 / Run calculation first'); return; }
+        const content = `<!DOCTYPE html><html><head><title>에카디카 결과 - 1/${denominator}</title><meta charset="UTF-8">
+<style>body{margin:0;padding:30px;background:#1a1a2e;color:#e8d5b7;font-family:monospace}h1{color:#f4d9a0}h2{color:#d4a574;margin-top:30px}.result{font-size:20px;color:#f4d9a0;background:#16213e;padding:15px;border-radius:8px}.step{padding:8px 0;border-bottom:1px solid #2a3a5e}.carry{color:#7a9e7a}.digit{color:#f4d9a0;font-weight:bold}</style></head>
+<body><h1>에카디카 나눗셈기 / Ekadhika Division Calculator</h1>
+<p>베다 수학의 비법으로 계산한 1/${denominator}의 순환소수 | 매개수: ${ekadhika}</p>
+<h2>📊 결과</h2><div class="result"><p>1/${denominator} = 0.<span style="text-decoration:overline">${result}</span></p><p>순환 마디 길이: ${result.length}자리</p></div>
+<h2>📝 역순 계산 과정</h2><div>${steps.map(s=>`<div class="step">#${s.step}: ${s.current}×${s.multiplier}${s.prevCarry>0?`+${s.prevCarry}`:''}=${s.productWithCarry} → <span class="digit">${s.digit}</span>${s.carry>0?` <span class="carry">(올림:+${s.carry})</span>`:''} → ${s.partialResult}</div>`).join('')}</div>
+<p style="margin-top:30px;color:#6b5b4f;font-size:12px;">Generated by 에카디카 나눗셈기 | वैदिक गणित</p></body></html>`;
+        const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `ekadhika_1_${denominator}.html`;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        showNotification('💾 파일 저장됨 / File saved!');
+      };
+
+      /* Copy code */
+      const copyCode = async () => {
+        const snippet = `function calculateEkadhika(d){if(d%10!==9)return null;return Math.floor(d/10)+1;}
+function calculateRepeatingDecimal(d){const e=calculateEkadhika(d);if(!e)return null;let digits=[],carry=0,cur=1;for(let i=0;i<d-1;i++){const p=cur*e+carry;const digit=p%10;carry=Math.floor(p/10);digits.unshift(digit);cur=digit;if(i>0&&digit===1&&carry===0)break;}return digits.join('');}
+// Example: 1/${denominator}
+console.log(calculateRepeatingDecimal(${denominator})); // → ${result || '(계산 필요)'}`;
+        try { await navigator.clipboard.writeText(snippet); showNotification('📋 코드 복사됨 / Code copied!'); }
+        catch { const ta=document.createElement('textarea');ta.value=snippet;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showNotification('📋 코드 복사됨!'); }
+      };
+
+      /* Copy screen */
+      const copyScreen = async () => {
+        if (steps.length === 0 || !result) { showNotification('⚠️ 먼저 계산을 실행하세요'); return; }
+        const text = generateStepsText();
+        try { await navigator.clipboard.writeText(text); showNotification('📄 화면 복사됨 / Screen copied!'); }
+        catch { const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showNotification('📄 복사됨!'); }
+      };
+
+      /* Calculation control */
+      const prepareCalculation = () => {
+        const eka = calculateEkadhika(denominator);
+        if (!eka) { setError('분모는 9로 끝나는 숫자여야 합니다 (예: 19, 29, 49...)'); return false; }
+        setError('');
+        setEkadhika(eka);
+        setShowCelebration(false);
+        setCelebrationTriggered(false);
+        const { steps: s, result: r } = calculateRepeatingDecimal(denominator);
+        setSteps(s); setResult(r); setCurrentStep(-1);
+        return true;
+      };
+
+      const play = () => { if (steps.length === 0) { if (!prepareCalculation()) return; } setIsPlaying(true); };
+      const pause = () => { setIsPlaying(false); if (intervalRef.current) clearInterval(intervalRef.current); };
+      const reset = () => { pause(); setCurrentStep(-1); setShowCelebration(false); setCelebrationTriggered(false); };
+
+      const nextStep = () => {
+        if (steps.length === 0) { if (!prepareCalculation()) return; }
+        if (currentStep < steps.length - 1) {
+          const ns = currentStep + 1;
+          setCurrentStep(ns);
+          if (ns === steps.length - 1) triggerCelebration();
+        }
+      };
+      const prevStep = () => { if (currentStep > 0) setCurrentStep(p => p - 1); };
+
+      /* Auto-play */
+      useEffect(() => {
+        if (isPlaying && steps.length > 0) {
+          intervalRef.current = setInterval(() => {
+            setCurrentStep(prev => {
+              if (prev >= steps.length - 1) { setIsPlaying(false); triggerCelebration(); return prev; }
+              return prev + 1;
+            });
+          }, speed);
+        }
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      }, [isPlaying, steps.length, speed, triggerCelebration]);
+
+      /* Auto-scroll */
+      useEffect(() => {
+        if (stepsContainerRef.current && currentStep >= 0) {
+          const el = stepsContainerRef.current.children[currentStep];
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, [currentStep]);
+
+      const symmetryData = result ? checkSymmetry(result) : null;
+
+      /* ─── Render ─── */
+      return (
+        <div style={{
+          minHeight: '100vh',
+          fontFamily: "'Noto Sans KR','Crimson Pro',serif",
+          color: '#e8d5b7',
+          padding: 'clamp(12px,3vw,20px)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Toast */}
+          {copyNotification && (
+            <div style={{
+              position:'fixed', top:'clamp(10px,2vw,20px)', left:'50%', transform:'translateX(-50%)',
+              background: copyNotification.includes('⚠️') ? 'rgba(220,100,100,.95)' : 'rgba(122,158,122,.95)',
+              color:'#fff', padding:'clamp(10px,2vw,12px) clamp(16px,4vw,24px)',
+              borderRadius:'8px', fontSize:'clamp(12px,3vw,14px)', fontWeight:'500',
+              zIndex:1001, animation:'fadeIn .3s ease', boxShadow:'0 4px 20px rgba(0,0,0,.3)',
+              maxWidth:'90vw', textAlign:'center'
+            }}>{copyNotification}</div>
+          )}
+
+          {/* Confetti */}
+          {confetti.map(c => (
+            <div key={c.id} style={{
+              position:'fixed', left:`${c.x}%`, top:'-20px',
+              width:`${c.size}px`, height:`${c.size}px`,
+              background:c.color,
+              borderRadius: c.isCircle ? '50%' : '2px',
+              transform:`rotate(${c.rotation}deg)`,
+              animation:`confettiFall ${c.duration}s linear ${c.delay}s forwards`,
+              pointerEvents:'none', zIndex:1000
+            }} />
+          ))}
+
+          {/* Celebration overlay */}
+          {showCelebration && (
+            <div style={{
+              position:'fixed', inset:0, background:'rgba(0,0,0,.8)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              zIndex:999, animation:'fadeIn .5s ease', padding:'20px'
+            }}>
+              <div style={{ textAlign:'center', animation:'celebrationPop .5s ease', maxWidth:'90vw' }}>
+                <div style={{ fontSize:'clamp(50px,15vw,80px)', marginBottom:'20px' }}>🎉</div>
+                <h2 style={{ fontSize:'clamp(22px,6vw,36px)', fontWeight:'300', color:'#f4d9a0', margin:'0 0 10px', textShadow:'0 0 30px rgba(244,217,160,.5)' }}>계산 완료!</h2>
+                <p style={{ fontSize:'clamp(14px,4vw,20px)', color:'#d4a574', margin:0 }}>1/{denominator}의 순환마디 {result.length}자리를 찾았습니다!</p>
+                <p style={{ fontSize:'clamp(12px,3vw,16px)', color:'#a89880', marginTop:'8px' }}>Found {result.length}-digit repeating cycle!</p>
+                <button onClick={() => setShowCelebration(false)} style={{
+                  marginTop:'24px', background:'linear-gradient(135deg,#d4a574,#b8956a)',
+                  border:'none', borderRadius:'8px', padding:'clamp(10px,2vw,12px) clamp(24px,5vw,32px)',
+                  fontSize:'clamp(14px,3vw,16px)', color:'#1a1a2e', cursor:'pointer', minHeight:'44px'
+                }}>결과 보기 / View Result</button>
+              </div>
+            </div>
+          )}
+
+          {/* Decorative bg */}
+          <div style={{
+            position:'fixed', inset:0,
+            backgroundImage:`radial-gradient(circle at 20% 80%, rgba(212,165,116,.08) 0%,transparent 50%), radial-gradient(circle at 80% 20%, rgba(184,149,106,.08) 0%,transparent 50%)`,
+            pointerEvents:'none'
+          }} />
+
+          <div style={{ maxWidth:'900px', margin:'0 auto', position:'relative' }}>
+
+            {/* ── Toolbar ── */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginBottom:'20px' }}>
+              {[
+                { fn: openInNewTab, label: '🔗 새 탭 / New Tab' },
+                { fn: saveAsFile,   label: '💾 저장 / Save'     },
+                { fn: copyCode,     label: '📋 코드복사 / Code'  },
+                { fn: copyScreen,   label: '📄 화면복사 / Copy'  },
+              ].map(({ fn, label }) => (
+                <button key={label} onClick={fn} style={toolBtn}>{label}</button>
+              ))}
+            </div>
+
+            {/* ── Header ── */}
+            <header style={{ textAlign:'center', marginBottom:'40px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'clamp(8px,2vw,24px)', marginBottom:'16px', flexWrap:'nowrap' }}>
+                <div style={{ flexShrink:0, width:'clamp(48px,10vw,80px)', height:'clamp(48px,10vw,80px)' }}>
+                  <LogoSVG size={80} />
+                </div>
+                <div style={{ textAlign:'left' }}>
+                  <div style={{ fontSize:'12px', letterSpacing:'6px', color:'#d4a574', marginBottom:'8px', textTransform:'uppercase' }}>
+                    वैदिक गणित • Vedic Mathematics
+                  </div>
+                  <h1 style={{ fontSize:'clamp(26px,5vw,42px)', fontWeight:'700', margin:'0 0 4px', background:'linear-gradient(90deg,#f4d9a0,#e8b478,#f4d9a0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                    에카디카 나눗셈기
+                  </h1>
+                  <h2 style={{ fontSize:'clamp(14px,3vw,20px)', fontWeight:'400', margin:0, color:'#b8956a' }}>
+                    Ekadhika Division Calculator
+                  </h2>
+                </div>
+              </div>
+              <p style={{ fontSize:'14px', color:'#a89880', margin:0, fontStyle:'italic' }}>
+                베다 수학의 비법으로 순환소수를 계산합니다<br/>
+                <span style={{ fontSize:'12px' }}>Calculate repeating decimals using Vedic Mathematics</span>
+              </p>
+            </header>
+
+            {/* ── Input section ── */}
+            <div style={{ background:'rgba(255,255,255,.03)', borderRadius:'16px', padding:'clamp(16px,4vw,28px)', marginBottom:'24px', border:'1px solid rgba(232,180,120,.15)', backdropFilter:'blur(10px)' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'clamp(8px,2vw,20px)', flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'clamp(6px,1.5vw,12px)' }}>
+                  <span style={{ fontSize:'clamp(32px,8vw,48px)', fontWeight:'200', color:'#d4a574' }}>1</span>
+                  <span style={{ fontSize:'clamp(32px,8vw,48px)', fontWeight:'200', color:'#8b7355' }}>/</span>
+                  <input
+                    type="number" inputMode="numeric" pattern="[0-9]*"
+                    value={denominator}
+                    onChange={e => { setDenominator(parseInt(e.target.value)||0); setSteps([]); setCurrentStep(-1); setCelebrationTriggered(false); }}
+                    style={{ width:'clamp(80px,20vw,100px)', fontSize:'clamp(24px,6vw,36px)', fontWeight:'300', background:'rgba(0,0,0,.3)', border:'2px solid rgba(232,180,120,.3)', borderRadius:'8px', color:'#f4d9a0', padding:'clamp(6px,1.5vw,8px) clamp(8px,2vw,16px)', textAlign:'center', outline:'none', minHeight:'44px' }}
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div style={{ marginTop:'16px', padding:'12px', background:'rgba(220,100,100,.15)', borderRadius:'8px', color:'#e8a0a0', textAlign:'center', fontSize:'14px' }}>
+                  ⚠️ {error}<br/><span style={{ fontSize:'12px' }}>Denominator must end with 9 (e.g., 19, 29, 49...)</span>
+                </div>
+              )}
+
+              {calculateEkadhika(denominator) && !error && (
+                <div style={{ marginTop:'20px', textAlign:'center', padding:'16px', background:'rgba(232,180,120,.08)', borderRadius:'8px' }}>
+                  <span style={{ color:'#a89880' }}>매개수 / Ekadhika: </span>
+                  <span style={{ fontSize:'24px', fontWeight:'600', color:'#f4d9a0', marginLeft:'8px' }}>{calculateEkadhika(denominator)}</span>
+                  <div style={{ fontSize:'13px', color:'#8b7355', marginTop:'6px' }}>
+                    {denominator} = 10 × {(denominator + 1) / 10} - 1 → Ekadhika = {(denominator + 1) / 10}
+                  </div>
+                </div>
+              )}
+
+              {/* Controls */}
+              <div style={{ marginTop:'24px', padding:'20px', background:'rgba(0,0,0,.2)', borderRadius:'12px' }}>
+                {/* Speed */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'16px', marginBottom:'20px', flexWrap:'wrap' }}>
+                  <span style={{ fontSize:'13px', color:'#a89880' }}>🐢 느림 / Slow</span>
+                  <input type="range" min="200" max="3000" step="200" value={3200-speed}
+                    onChange={e => setSpeed(3200-parseInt(e.target.value))}
+                    style={{ width:'150px', accentColor:'#d4a574' }} />
+                  <span style={{ fontSize:'13px', color:'#a89880' }}>🐇 빠름 / Fast</span>
+                  <span style={{ fontSize:'12px', color:'#8b7355', padding:'4px 8px', background:'rgba(255,255,255,.05)', borderRadius:'4px', minWidth:'60px', textAlign:'center' }}>{(speed/1000).toFixed(1)}초</span>
+                </div>
+
+                {/* Play buttons */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'clamp(6px,1.5vw,12px)', flexWrap:'wrap' }}>
+                  {[
+                    { fn: reset,   label: '⏮ 처음',    disabled: false, primary: false },
+                    { fn: prevStep,label: '⏪ 이전',    disabled: currentStep <= 0, primary: false },
+                  ].map(({ fn, label, disabled }) => (
+                    <button key={label} onClick={fn} disabled={disabled} style={{
+                      background: disabled ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.08)',
+                      border:'1px solid rgba(232,180,120,.3)', borderRadius:'8px',
+                      padding:'clamp(10px,2vw,12px) clamp(12px,3vw,20px)',
+                      fontSize:'clamp(12px,2.5vw,14px)', color: disabled ? '#6b5b4f' : '#d4a574',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      display:'flex', alignItems:'center', gap:'4px', minHeight:'44px', whiteSpace:'nowrap'
+                    }}>{label}</button>
+                  ))}
+
+                  <button onClick={isPlaying ? pause : play} style={{
+                    background:'linear-gradient(135deg,#d4a574,#b8956a)', border:'none', borderRadius:'8px',
+                    padding:'clamp(12px,2.5vw,14px) clamp(20px,5vw,32px)',
+                    fontSize:'clamp(14px,3vw,16px)', fontWeight:'500', color:'#1a1a2e', cursor:'pointer',
+                    boxShadow:'0 4px 20px rgba(212,165,116,.3)',
+                    display:'flex', alignItems:'center', gap:'6px', minHeight:'48px', whiteSpace:'nowrap'
+                  }}>{isPlaying ? '⏸ 정지' : '▶ 재생'}</button>
+
+                  <button onClick={nextStep}
+                    disabled={currentStep >= steps.length - 1 && steps.length > 0}
+                    style={{
+                      background: (currentStep >= steps.length-1 && steps.length>0) ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.08)',
+                      border:'1px solid rgba(232,180,120,.3)', borderRadius:'8px',
+                      padding:'clamp(10px,2vw,12px) clamp(12px,3vw,20px)',
+                      fontSize:'clamp(12px,2.5vw,14px)',
+                      color: (currentStep >= steps.length-1 && steps.length>0) ? '#6b5b4f' : '#d4a574',
+                      cursor: (currentStep >= steps.length-1 && steps.length>0) ? 'not-allowed' : 'pointer',
+                      display:'flex', alignItems:'center', gap:'4px', minHeight:'44px', whiteSpace:'nowrap'
+                    }}>다음 ⏩</button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Live calculation view ── */}
+            {steps.length > 0 && currentStep >= 0 && (
+              <div style={{ background:'rgba(255,255,255,.03)', borderRadius:'16px', padding:'28px', marginBottom:'24px', border:'1px solid rgba(232,180,120,.15)' }}>
+                <h2 style={{ fontSize:'18px', fontWeight:'400', color:'#d4a574', marginTop:0, marginBottom:'24px', display:'flex', alignItems:'center', gap:'10px' }}>
+                  <span style={{ fontSize:'20px' }}>✨</span> 라이브 계산 / Live Calculation
+                </h2>
+
+                {/* Formula */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'clamp(6px,2vw,12px)', marginBottom:'24px', fontSize:'clamp(18px,5vw,28px)', fontFamily:"'Fira Code',monospace", flexWrap:'wrap' }}>
+                  <span style={{ color:'#f4d9a0' }}>{steps[currentStep]?.current}</span>
+                  <span style={{ color:'#6b5b4f' }}>×</span>
+                  <span style={{ color:'#d4a574' }}>{ekadhika}</span>
+                  {steps[currentStep]?.prevCarry > 0 && (
+                    <><span style={{ color:'#ff6b6b', fontWeight:'bold' }}>+</span>
+                      <span style={{ color:'#7a9e7a', animation:'carryAbsorb .5s ease' }}>{steps[currentStep]?.prevCarry}</span></>
+                  )}
+                  <span style={{ color:'#6b5b4f' }}>=</span>
+                  <span style={{ color:'#f4d9a0', fontWeight:'600', animation:'popIn .3s ease' }}>{steps[currentStep]?.productWithCarry}</span>
+                </div>
+
+                {/* Digit accumulator */}
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'flex-start', minHeight:'80px', padding:'clamp(20px,4vw,30px) clamp(12px,3vw,20px) clamp(12px,3vw,20px)', background:'rgba(0,0,0,.25)', borderRadius:'12px', position:'relative', overflowX:'auto', overflowY:'visible', WebkitOverflowScrolling:'touch' }}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'flex-start', position:'relative', minWidth:'min-content', margin:'0 auto' }}>
+                    {/* New digit */}
+                    <div key={`dc-${currentStep}`} style={{ position:'relative', display:'inline-flex', flexDirection:'column', alignItems:'center' }}>
+                      {steps[currentStep]?.carry > 0 && (
+                        <span key={`carry-${currentStep}`} style={{ position:'absolute', top:'-28px', left:'50%', transform:'translateX(-50%)', fontSize:'18px', fontFamily:"'Fira Code',monospace", fontWeight:'700', display:'flex', alignItems:'center', gap:'2px', animation:'carryAppear .4s ease forwards', zIndex:10 }}>
+                          <span style={{ color:'#ff6b6b', fontWeight:'900', textShadow:'0 0 10px rgba(255,107,107,.8)' }}>+</span>
+                          <span style={{ color:'#7a9e7a', textShadow:'0 0 15px rgba(122,200,122,.8)' }}>{steps[currentStep]?.carry}</span>
+                        </span>
+                      )}
+                      <span style={{ fontSize:'clamp(28px,5vw,48px)', fontFamily:"'Fira Code',monospace", fontWeight:'600', color:'#f4d9a0', textShadow:'0 0 20px rgba(244,217,160,.5)', animation:'digitSlideIn .3s ease', marginRight:'2px', flexShrink:0 }}>
+                        {steps[currentStep]?.digit}
+                      </span>
+                    </div>
+                    {/* Previous digits */}
+                    {steps.slice(0, currentStep).reverse().map((step, idx) => (
+                      <div key={`pc-${idx}`} style={{ position:'relative', display:'inline-flex', flexDirection:'column', alignItems:'center' }}>
+                        {idx === 0 && steps[currentStep]?.prevCarry > 0 && (
+                          <span style={{ position:'absolute', top:'-28px', left:'50%', transform:'translateX(-50%)', fontSize:'16px', fontFamily:"'Fira Code',monospace", fontWeight:'700', display:'flex', alignItems:'center', gap:'2px', animation:'carryDisappear .4s ease forwards' }}>
+                            <span style={{ color:'#ff6b6b', opacity:.5 }}>+</span>
+                            <span style={{ color:'#7a9e7a', opacity:.5 }}>{steps[currentStep]?.prevCarry}</span>
+                          </span>
+                        )}
+                        <span style={{ fontSize:'clamp(28px,5vw,48px)', fontFamily:"'Fira Code',monospace", fontWeight:'400', color: idx===0 ? '#d4a574' : '#a89880', opacity: Math.max(0.4, 1 - idx*0.03), marginRight:'2px', flexShrink:0 }}>
+                          {step.digit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ marginTop:'20px', display:'flex', alignItems:'center', gap:'12px' }}>
+                  <div style={{ flex:1, height:'4px', background:'rgba(255,255,255,.1)', borderRadius:'2px', overflow:'hidden' }}>
+                    <div style={{ width:`${((currentStep+1)/steps.length)*100}%`, height:'100%', background:'linear-gradient(90deg,#d4a574,#f4d9a0)', borderRadius:'2px', transition:'width .3s ease' }} />
+                  </div>
+                  <span style={{ fontSize:'13px', color:'#8b7355', minWidth:'80px', textAlign:'right' }}>{currentStep+1} / {steps.length} 단계</span>
+                </div>
+              </div>
+            )}
+
+            {/* ── Steps list ── */}
+            {steps.length > 0 && (
+              <div style={{ background:'rgba(255,255,255,.03)', borderRadius:'16px', padding:'28px', marginBottom:'24px', border:'1px solid rgba(232,180,120,.15)' }}>
+                <h2 style={{ fontSize:'18px', fontWeight:'400', color:'#d4a574', marginTop:0, marginBottom:'20px', display:'flex', alignItems:'center', gap:'10px' }}>
+                  <span style={{ fontSize:'20px' }}>⟲</span> 역순 계산 과정 / Reverse Calculation Steps
+                </h2>
+                <div ref={stepsContainerRef} style={{ maxHeight:'280px', overflowY:'auto', paddingRight:'10px', WebkitOverflowScrolling:'touch' }}>
+                  {steps.map((step, index) => (
+                    <div key={index} style={{ display:'flex', alignItems:'center', gap:'clamp(8px,2vw,16px)', padding:'clamp(8px,2vw,12px) clamp(10px,2vw,16px)', marginBottom:'8px', background: index<=currentStep ? 'rgba(232,180,120,.1)' : 'rgba(255,255,255,.02)', borderRadius:'8px', borderLeft: index===currentStep ? '3px solid #d4a574' : '3px solid transparent', opacity: index<=currentStep ? 1 : 0.3, transition:'all .3s', flexWrap:'wrap' }}>
+                      <span style={{ fontSize:'12px', color:'#8b7355', minWidth:'35px' }}>#{step.step}</span>
+                      <div style={{ display:'flex', alignItems:'center', gap:'8px', fontFamily:"'Fira Code',monospace", fontSize:'14px', flex:1, minWidth:'200px' }}>
+                        <span style={{ color:'#a89880' }}>{step.current}</span>
+                        <span style={{ color:'#6b5b4f' }}>×</span>
+                        <span style={{ color:'#d4a574' }}>{step.multiplier}</span>
+                        {step.prevCarry > 0 && <><span style={{ color:'#ff6b6b', fontWeight:'bold' }}>+</span><span style={{ color:'#7a9e7a' }}>{step.prevCarry}</span></>}
+                        <span style={{ color:'#6b5b4f' }}>=</span>
+                        <span style={{ color:'#f4d9a0', fontWeight:'600' }}>{step.productWithCarry}</span>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:'12px', fontSize:'13px' }}>
+                        <span style={{ color:'#8b7355' }}>→ 숫자: <span style={{ color:'#f4d9a0' }}>{step.digit}</span></span>
+                        {step.carry > 0 && <span style={{ color:'#7a9e7a' }}>올림: <span style={{ color:'#ff6b6b' }}>+</span>{step.carry}</span>}
+                      </div>
+                      <div style={{ fontFamily:"'Fira Code',monospace", fontSize:'13px', color:'#d4a574', letterSpacing:'1px', marginLeft:'auto' }}>{step.partialResult}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Result ── */}
+            {result && currentStep >= steps.length - 1 && !showCelebration && (
+              <div style={{ background:'linear-gradient(135deg,rgba(232,180,120,.12),rgba(232,180,120,.05))', borderRadius:'16px', padding:'28px', marginBottom:'24px', border:'1px solid rgba(232,180,120,.25)', animation:'fadeIn .5s ease' }}>
+                <h2 style={{ fontSize:'18px', fontWeight:'400', color:'#d4a574', marginTop:0, marginBottom:'16px', display:'flex', alignItems:'center', gap:'10px' }}>
+                  <span style={{ fontSize:'20px' }}>✧</span> 순환 마디 결과 / Repeating Decimal Result
+                </h2>
+                <div style={{ textAlign:'center', marginBottom:'20px' }}>
+                  <div style={{ fontSize:'14px', color:'#a89880', marginBottom:'8px' }}>1/{denominator} = 0.</div>
+                  <div style={{ fontFamily:"'Fira Code',monospace", fontSize:'clamp(14px,3vw,22px)', color:'#f4d9a0', letterSpacing:'2px', padding:'16px', background:'rgba(0,0,0,.2)', borderRadius:'8px', wordBreak:'break-all', lineHeight:'1.6', textDecoration:'overline' }}>{result}</div>
+                  <div style={{ fontSize:'13px', color:'#8b7355', marginTop:'8px' }}>순환 마디 길이 / Cycle Length: {result.length}자리 / {result.length} digits</div>
+                </div>
+
+                {/* Symmetry */}
+                {symmetryData && (
+                  <div style={{ textAlign:'center' }}>
+                    <button onClick={() => setShowSymmetry(!showSymmetry)} style={{ background:'rgba(255,255,255,.05)', border:'1px solid rgba(232,180,120,.3)', borderRadius:'8px', padding:'10px 24px', fontSize:'14px', color:'#d4a574', cursor:'pointer' }}>
+                      {showSymmetry ? '대칭성 숨기기 / Hide Symmetry' : '🔮 대칭성 확인 / Check Symmetry'}
+                    </button>
+                    {showSymmetry && (
+                      <div style={{ marginTop:'20px', padding:'clamp(12px,3vw,20px)', background:'rgba(0,0,0,.2)', borderRadius:'12px', animation:'fadeIn .3s ease' }}>
+                        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'clamp(8px,2vw,16px)', flexWrap:'wrap', fontFamily:"'Fira Code',monospace", fontSize:'clamp(11px,2.5vw,14px)' }}>
+                          <div style={{ padding:'clamp(8px,2vw,12px) clamp(10px,2vw,16px)', background:'rgba(122,158,122,.15)', borderRadius:'8px', color:'#a8c8a8', wordBreak:'break-all', maxWidth:'40vw' }}>{symmetryData.first}</div>
+                          <span style={{ color:'#8b7355', fontSize:'clamp(16px,4vw,20px)' }}>+</span>
+                          <div style={{ padding:'clamp(8px,2vw,12px) clamp(10px,2vw,16px)', background:'rgba(158,122,122,.15)', borderRadius:'8px', color:'#c8a8a8', wordBreak:'break-all', maxWidth:'40vw' }}>{symmetryData.second}</div>
+                          <span style={{ color:'#8b7355', fontSize:'clamp(16px,4vw,20px)' }}>=</span>
+                          <div style={{ padding:'clamp(8px,2vw,12px) clamp(10px,2vw,16px)', background: symmetryData.isNines ? 'rgba(232,180,120,.2)' : 'rgba(255,255,255,.1)', borderRadius:'8px', color: symmetryData.isNines ? '#f4d9a0' : '#a89880', fontWeight:'600', wordBreak:'break-all', maxWidth:'40vw' }}>{symmetryData.sum}</div>
+                        </div>
+                        {symmetryData.isNines && (
+                          <div style={{ marginTop:'12px', color:'#d4a574', fontSize:'14px' }}>
+                            ✨ 완벽한 9의 대칭! / Perfect 9's symmetry!<br/>
+                            <span style={{ fontSize:'12px', color:'#a89880' }}>The first and second halves sum to all 9s</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Info card ── */}
+            <div style={{ background:'rgba(255,255,255,.02)', borderRadius:'16px', padding:'clamp(16px,4vw,24px)', border:'1px solid rgba(232,180,120,.1)', marginBottom:'40px' }}>
+              <h3 style={{ fontSize:'clamp(14px,3vw,15px)', fontWeight:'500', color:'#d4a574', marginTop:0, marginBottom:'16px' }}>
+                📜 에카디카 원리란? / What is the Ekadhika Principle?
+              </h3>
+              <div style={{ fontSize:'clamp(12px,3vw,14px)', lineHeight:'1.8', color:'#a89880' }}>
+                <p style={{ margin:'0 0 12px' }}>
+                  베다 수학에서 분모가 9로 끝나는 분수의 순환소수를 빠르게 구하는 방법입니다.<br/>
+                  <span style={{ fontSize:'12px', color:'#8b7355' }}>A Vedic Mathematics technique for quickly finding repeating decimals of fractions with denominators ending in 9.</span>
+                </p>
+                <p style={{ margin:'0 0 12px' }}>
+                  <strong style={{ color:'#d4a574' }}>매개수 계산 / Ekadhika:</strong> 분모 = 10n − 1 일 때, 매개수 = n<br/>
+                  <span style={{ fontSize:'12px', color:'#8b7355' }}>When denominator = 10n − 1, Ekadhika = n</span>
+                </p>
+                <p style={{ margin:0 }}>
+                  <strong style={{ color:'#d4a574' }}>역순 계산 / Reverse Calculation:</strong> 1부터 시작하여 매개수를 계속 곱하고, 10 이상이면 올림합니다.<br/>
+                  <span style={{ fontSize:'12px', color:'#8b7355' }}>Start from 1, multiply by Ekadhika repeatedly, carry over when ≥10.</span>
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<VedicMathApp />);
+  </script>
+</body>
+</html>
