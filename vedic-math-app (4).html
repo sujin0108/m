@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에카디카 나눗셈기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh; color: #e8d5b7; padding: clamp(12px, 3vw, 20px);
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    .notification {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 1001;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: none;
+    }
+    .notification.success { background: rgba(122, 158, 122, 0.95); color: #fff; }
+    .notification.warning { background: rgba(220, 100, 100, 0.95); color: #fff; }
+    
+    .toolbar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
+    .toolbar button {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(232, 180, 120, 0.3);
+      border-radius: 8px; padding: 10px 8px; font-size: 11px; color: #d4a574;
+      cursor: pointer; min-height: 44px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px; line-height: 1.3;
+    }
+    .toolbar button .en { font-size: 9px; color: #8b7355; }
+    
+    header { text-align: center; margin-bottom: 32px; }
+    .header-content { 
+      display: inline-flex; align-items: center; justify-content: center; 
+      gap: clamp(12px, 3vw, 20px); margin-bottom: 12px;
+    }
+    .logo { width: clamp(60px, 15vw, 80px); height: clamp(60px, 15vw, 80px); animation: logoGlow 3s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes logoGlow {
+      0%, 100% { filter: drop-shadow(0 0 15px rgba(212, 165, 116, 0.6)); }
+      50% { filter: drop-shadow(0 0 25px rgba(212, 165, 116, 0.8)); }
+    }
+    .title-section { text-align: left; }
+    .subtitle { font-size: 10px; letter-spacing: 3px; color: #8b7355; margin-bottom: 4px; }
+    h1 {
+      font-size: clamp(22px, 5vw, 36px); font-weight: 700; margin: 0 0 2px 0;
+      background: linear-gradient(90deg, #f4d9a0, #e8b478, #f4d9a0);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    h2.eng-title { font-size: clamp(11px, 2.5vw, 16px); font-weight: 400; color: #a89880; margin: 0; }
+    .description { font-size: 13px; color: #a89880; font-style: italic; margin-top: 8px; }
+    .description .en { font-size: 11px; color: #6b5b4f; display: block; margin-top: 2px; }
+    
+    /* 전역 .en 스타일 - 한영 병기 */
+    .en { font-size: 0.8em; color: #6b5b4f; font-weight: 400; margin-left: 4px; }
+    .ctrl-btn .en { font-size: 9px; margin-left: 3px; }
+    .section-title .en { font-size: 12px; color: #8b7355; }
+    .info-card .en { font-size: 11px; color: #6b5b4f; display: block; margin-top: 2px; font-style: normal; }
+    .info-card h3 .en { display: inline; margin-left: 6px; }
+    .info-card strong .en { font-weight: 400; }
+    .error-msg .en { font-size: 11px; display: block; margin-top: 4px; color: #c88080; }
+    #autoScrollBtn .en { font-size: 9px; }
+    #symmetryBtn .en { font-size: 11px; }
+    #closeBtn .en { font-size: 11px; display: block; margin-top: 2px; margin-left: 0; }
+    
+    .input-section {
+      background: rgba(255, 255, 255, 0.03); border-radius: 16px;
+      padding: clamp(16px, 4vw, 28px); margin-bottom: 24px;
+      border: 1px solid rgba(232, 180, 120, 0.15);
+    }
+    .fraction-input { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .fraction-num { font-size: clamp(32px, 8vw, 48px); font-weight: 200; color: #d4a574; }
+    .fraction-slash { font-size: clamp(32px, 8vw, 48px); font-weight: 200; color: #8b7355; }
+    #denominator {
+      width: clamp(80px, 20vw, 100px); font-size: clamp(24px, 6vw, 36px); font-weight: 300;
+      background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(232, 180, 120, 0.3);
+      border-radius: 8px; color: #f4d9a0; padding: 8px 16px; text-align: center; outline: none;
+    }
+    
+    .error-msg { margin-top: 16px; padding: 12px; background: rgba(220, 100, 100, 0.15); border-radius: 8px; color: #e8a0a0; text-align: center; display: none; }
+    .ekadhika-info { margin-top: 20px; text-align: center; padding: 16px; background: rgba(232, 180, 120, 0.08); border-radius: 8px; }
+    .ekadhika-value { font-size: 24px; font-weight: 600; color: #f4d9a0; margin-left: 8px; }
+    .ekadhika-formula { font-size: 13px; color: #8b7355; margin-top: 6px; }
+    
+    .controller { margin-top: 24px; padding: 20px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; }
+    .speed-control { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    #speedSlider { width: 150px; accent-color: #d4a574; }
+    .speed-value { font-size: 12px; color: #8b7355; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; }
+    
+    .play-controls { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(232, 180, 120, 0.3);
+      border-radius: 8px; padding: 12px 20px; font-size: 14px; color: #d4a574;
+      cursor: pointer; min-height: 44px; white-space: nowrap;
+    }
+    .ctrl-btn:disabled { background: rgba(255, 255, 255, 0.03); color: #6b5b4f; cursor: not-allowed; }
+    #playBtn {
+      background: linear-gradient(135deg, #d4a574, #b8956a); border: none;
+      padding: 14px 32px; font-size: 16px; font-weight: 500; color: #1a1a2e;
+      box-shadow: 0 4px 20px rgba(212, 165, 116, 0.3);
+    }
+    
+    .sound-toggle { display: flex; justify-content: center; margin-top: 16px; }
+    #soundBtn { border-radius: 20px; padding: 8px 20px; font-size: 13px; }
+    #soundBtn.on { background: rgba(122, 158, 122, 0.2); border-color: rgba(122, 158, 122, 0.4); color: #7a9e7a; }
+    #soundBtn.off { background: rgba(255, 255, 255, 0.05); border-color: rgba(232, 180, 120, 0.2); color: #8b7355; }
+    
+    .section { background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 28px; margin-bottom: 24px; border: 1px solid rgba(232, 180, 120, 0.15); display: none; }
+    .section.show { display: block; }
+    .section-title { font-size: 18px; font-weight: 400; color: #d4a574; margin: 0 0 24px 0; display: flex; align-items: center; gap: 10px; }
+    
+    .current-calc { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; font-size: clamp(18px, 5vw, 28px); font-family: 'Fira Code', monospace; flex-wrap: wrap; }
+    
+    .digit-display {
+      display: flex; align-items: flex-start; justify-content: flex-start; min-height: 80px;
+      padding: clamp(35px, 8vw, 45px) clamp(12px, 3vw, 20px) clamp(15px, 3vw, 20px);
+      background: rgba(0, 0, 0, 0.25); border-radius: 12px;
+      overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; touch-action: pan-x;
+    }
+    .digit-container { display: flex; align-items: flex-start; position: relative; min-width: min-content; margin: 0 auto; padding-top: 5px; }
+    .digit-wrapper { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
+    .digit { font-size: clamp(28px, 5vw, 48px); font-family: 'Fira Code', monospace; line-height: 1.2; margin-right: 2px; }
+    .digit.current { font-weight: 600; color: #f4d9a0; text-shadow: 0 0 20px rgba(244, 217, 160, 0.5); }
+    .digit.prev { font-weight: 400; color: #d4a574; }
+    .digit.old { font-weight: 400; color: #a89880; }
+    
+    .carry-badge {
+      position: absolute; top: clamp(-24px, -5vw, -28px); left: 50%; transform: translateX(-50%);
+      font-size: clamp(14px, 3.5vw, 18px); font-family: 'Fira Code', monospace; font-weight: 700;
+      display: flex; align-items: center; gap: 2px; white-space: nowrap; z-index: 10;
+    }
+    .carry-plus { color: #ff6b6b; font-weight: 900; text-shadow: 0 0 10px rgba(255, 107, 107, 0.8); }
+    .carry-num { color: #7a9e7a; text-shadow: 0 0 15px rgba(122, 200, 122, 0.8); }
+    
+    .progress-bar { margin-top: 20px; display: flex; align-items: center; gap: 12px; }
+    .progress-track { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #f4d9a0); border-radius: 2px; transition: width 0.3s; width: 0%; }
+    .progress-text { font-size: 13px; color: #8b7355; min-width: 80px; text-align: right; }
+    
+    .steps-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    #autoScrollBtn { background: rgba(122, 158, 122, 0.2); border: 1px solid rgba(122, 158, 122, 0.4); border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #7a9e7a; cursor: pointer; }
+    #autoScrollBtn.off { background: rgba(255, 255, 255, 0.05); border-color: rgba(232, 180, 120, 0.2); color: #8b7355; }
+    
+    .steps-container { max-height: 280px; overflow-y: auto; padding-right: 10px; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+    .step-item {
+      display: flex; align-items: center; gap: 16px; padding: 12px 16px; margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.02); border-radius: 8px; border-left: 3px solid transparent;
+      opacity: 0.3; transition: all 0.3s; flex-wrap: wrap;
+    }
+    .step-item.active { background: rgba(232, 180, 120, 0.1); border-left-color: #d4a574; opacity: 1; }
+    .step-item.done { opacity: 1; }
+    .step-num { font-size: 12px; color: #8b7355; min-width: 35px; }
+    .step-calc { display: flex; align-items: center; gap: 8px; font-family: 'Fira Code', monospace; font-size: 14px; flex: 1; min-width: 200px; }
+    .step-result { font-family: 'Fira Code', monospace; font-size: 13px; color: #d4a574; letter-spacing: 1px; margin-left: auto; }
+    
+    .result-section { background: linear-gradient(135deg, rgba(232, 180, 120, 0.12), rgba(232, 180, 120, 0.05)); border: 1px solid rgba(232, 180, 120, 0.25); }
+    .result-display { text-align: center; margin-bottom: 20px; }
+    .result-label { font-size: 14px; color: #a89880; margin-bottom: 8px; }
+    .result-value {
+      font-family: 'Fira Code', monospace; font-size: clamp(14px, 3vw, 22px); color: #f4d9a0;
+      letter-spacing: 2px; padding: 16px; background: rgba(0, 0, 0, 0.2); border-radius: 8px;
+      word-break: break-all; line-height: 1.6; text-decoration: overline;
+    }
+    .result-length { font-size: 13px; color: #8b7355; margin-top: 8px; }
+    
+    .symmetry-section { text-align: center; }
+    #symmetryBtn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(232, 180, 120, 0.3); border-radius: 8px; padding: 10px 24px; font-size: 14px; color: #d4a574; cursor: pointer; }
+    .symmetry-display { margin-top: 20px; padding: 20px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; display: none; }
+    .symmetry-display.show { display: block; }
+    .symmetry-calc { display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; font-family: 'Fira Code', monospace; font-size: clamp(11px, 2.5vw, 14px); }
+    .sym-box { padding: 12px 16px; border-radius: 8px; word-break: break-all; max-width: 40vw; }
+    .sym-first { background: rgba(122, 158, 122, 0.15); color: #a8c8a8; }
+    .sym-second { background: rgba(158, 122, 122, 0.15); color: #c8a8a8; }
+    .sym-result { background: rgba(232, 180, 120, 0.2); color: #f4d9a0; font-weight: 600; }
+    .sym-op { color: #8b7355; font-size: 20px; }
+    .symmetry-message { margin-top: 12px; color: #d4a574; font-size: 14px; }
+    
+    .info-card { background: rgba(255, 255, 255, 0.02); border-radius: 16px; padding: 24px; border: 1px solid rgba(232, 180, 120, 0.1); margin-bottom: 40px; }
+    .info-card h3 { font-size: 15px; font-weight: 500; color: #d4a574; margin: 0 0 16px 0; }
+    .info-card p { font-size: 14px; line-height: 1.8; color: #a89880; margin: 0 0 12px 0; }
+    .info-card strong { color: #d4a574; }
+    
+    .celebration { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+    .celebration.show { display: flex; }
+    .celebration-content { text-align: center; max-width: 90vw; }
+    .celebration-emoji { font-size: clamp(50px, 15vw, 80px); margin-bottom: 20px; }
+    .celebration h2 { font-size: clamp(22px, 6vw, 36px); font-weight: 300; color: #f4d9a0; margin: 0 0 10px 0; }
+    .celebration p { font-size: clamp(14px, 4vw, 20px); color: #d4a574; margin: 0; }
+    .celebration small { font-size: clamp(12px, 3vw, 16px); color: #a89880; display: block; margin-top: 8px; }
+    #closeBtn { margin-top: 24px; background: linear-gradient(135deg, #d4a574, #b8956a); border: none; border-radius: 8px; padding: 12px 32px; font-size: 16px; color: #1a1a2e; cursor: pointer; }
+    
+    .confetti { position: fixed; top: -20px; pointer-events: none; z-index: 1000; }
+    @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(232, 180, 120, 0.3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="notification" class="notification"></div>
+  
+  <div id="celebration" class="celebration">
+    <div class="celebration-content">
+      <div class="celebration-emoji">🎉</div>
+      <h2>계산 완료! <span style="font-size:0.7em;color:#b8956a">Complete!</span></h2>
+      <p id="celebrationMsg"></p>
+      <small id="celebrationEng"></small>
+      <button id="closeBtn">결과 보기 <span class="en">View Result</span></button>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="toolbar">
+      <button onclick="openInNewTab()">🔗 새 탭<span class="en">New Tab</span></button>
+      <button onclick="saveAsFile()">💾 저장<span class="en">Save</span></button>
+      <button onclick="copyCode()">📋 코드복사<span class="en">Copy Code</span></button>
+      <button onclick="copyScreen()">📄 화면복사<span class="en">Copy Text</span></button>
+    </div>
+    
+    <header>
+      <div class="header-content">
+        <svg class="logo" viewBox="0 0 80 80">
+          <defs>
+            <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#d4a574"/><stop offset="50%" stop-color="#c9956a"/><stop offset="100%" stop-color="#a67c52"/>
+            </linearGradient>
+            <path id="ta" d="M 13,40 A 27,27 0 0,1 67,40"/><path id="ba" d="M 8,40 A 32,32 0 0,0 72,40"/>
+          </defs>
+          <circle cx="40" cy="40" r="38" fill="url(#lg)" stroke="#8b6914" stroke-width="2"/>
+          <text font-family="Arial" font-size="8.5" font-weight="700" fill="#1a1a2e"><textPath href="#ta" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath></text>
+          <text x="40" y="36" font-size="18" text-anchor="middle" fill="#1a1a2e" font-weight="900">ㅇ</text>
+          <text x="40" y="47" font-size="18" text-anchor="middle" fill="#1a1a2e" font-weight="900">ㅡ</text>
+          <text x="40" y="58" font-size="18" text-anchor="middle" fill="#1a1a2e" font-weight="900">ㄴ</text>
+          <text font-family="Arial" font-size="8.5" font-weight="700" fill="#1a1a2e"><textPath href="#ba" startOffset="50%" text-anchor="middle">SJL0108</textPath></text>
+        </svg>
+        <div class="title-section">
+          <div class="subtitle">वैदिक गणित • Vedic Math</div>
+          <h1>에카디카 나눗셈기</h1>
+          <h2 class="eng-title">Ekadhika Division Calculator</h2>
+        </div>
+      </div>
+      <p class="description">베다 수학의 비법으로 순환소수를 계산합니다<span class="en">Calculate repeating decimals using Vedic Mathematics</span></p>
+    </header>
+    
+    <div class="input-section">
+      <div class="fraction-input">
+        <span class="fraction-num">1</span>
+        <span class="fraction-slash">/</span>
+        <input type="number" id="denominator" value="19" inputmode="numeric">
+      </div>
+      <div id="errorMsg" class="error-msg">⚠️ 분모는 9로 끝나는 숫자여야 합니다<span class="en">Denominator must end with 9</span></div>
+      <div id="ekadhikaInfo" class="ekadhika-info">
+        <span style="color:#a89880">매개수 <span style="color:#6b5b4f;font-size:11px">Ekadhika</span>:</span>
+        <span id="ekadhikaValue" class="ekadhika-value">2</span>
+        <div id="ekadhikaFormula" class="ekadhika-formula">19 = 10 × 2 - 1 → Ekadhika = 2</div>
+      </div>
+      
+      <div class="controller">
+        <div class="speed-control">
+          <span style="font-size:13px;color:#a89880">🐢</span>
+          <input type="range" id="speedSlider" min="200" max="3000" step="200" value="1700">
+          <span style="font-size:13px;color:#a89880">🐇</span>
+          <span id="speedValue" class="speed-value">1.5초</span>
+        </div>
+        <div class="play-controls">
+          <button class="ctrl-btn" id="resetBtn" onclick="resetCalc()">⏮ 처음 <span class="en">Reset</span></button>
+          <button class="ctrl-btn" id="prevBtn" onclick="prevStep()" disabled>⏪ 이전 <span class="en">Prev</span></button>
+          <button class="ctrl-btn" id="playBtn" onclick="togglePlay()">▶ 재생 <span class="en">Play</span></button>
+          <button class="ctrl-btn" id="nextBtn" onclick="nextStep()">다음 <span class="en">Next</span> ⏩</button>
+        </div>
+        <div class="sound-toggle">
+          <button class="ctrl-btn on" id="soundBtn" onclick="toggleSound()">🔊 효과음 ON <span class="en">Sound</span></button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="liveCalc" class="section">
+      <h2 class="section-title"><span>✨</span> 라이브 계산 <span class="en">Live Calculation</span></h2>
+      <div id="currentCalc" class="current-calc"></div>
+      <div class="digit-display" id="digitDisplay" ontouchstart="userTouchedScroll()" ontouchmove="userTouchedScroll()" onmousedown="userTouchedScroll()" onwheel="userTouchedScroll()">
+        <div class="digit-container" id="digitContainer"></div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressText" class="progress-text">0 / 0</span>
+      </div>
+    </div>
+    
+    <div id="stepsSection" class="section">
+      <div class="steps-header">
+        <h2 class="section-title" style="margin:0"><span>⟲</span> 역순 계산 과정 <span class="en">Steps</span></h2>
+        <button id="autoScrollBtn" onclick="toggleAutoScroll()">📍 자동스크롤 <span class="en">Auto</span></button>
+      </div>
+      <div class="steps-container" id="stepsContainer" ontouchstart="userTouchedScroll()" ontouchmove="userTouchedScroll()" onmousedown="userTouchedScroll()" onwheel="userTouchedScroll()"></div>
+    </div>
+    
+    <div id="resultSection" class="section result-section">
+      <h2 class="section-title"><span>✧</span> 순환 마디 결과 <span class="en">Result</span></h2>
+      <div class="result-display">
+        <div id="resultLabel" class="result-label">1/19 = 0.</div>
+        <div id="resultValue" class="result-value"></div>
+        <div id="resultLength" class="result-length"></div>
+      </div>
+      <div class="symmetry-section">
+        <button id="symmetryBtn" onclick="toggleSymmetry()">🔮 대칭성 확인 <span class="en">Symmetry</span></button>
+        <div id="symmetryDisplay" class="symmetry-display">
+          <div id="symmetryCalc" class="symmetry-calc"></div>
+          <div id="symmetryMsg" class="symmetry-message"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-card">
+      <h3>📜 에카디카 원리란? <span class="en">What is Ekadhika?</span></h3>
+      <p>베다 수학에서 분모가 9로 끝나는 분수의 순환소수를 빠르게 구하는 방법입니다.<span class="en">A Vedic technique for finding repeating decimals of fractions ending in 9.</span></p>
+      <p><strong>매개수 계산 <span class="en">Ekadhika</span>:</strong> 분모 = 10n - 1 일 때, 매개수 = n</p>
+      <p><strong>역순 계산 <span class="en">Reverse Calc</span>:</strong> 1부터 시작하여 매개수를 계속 곱하고, 10 이상이면 올림합니다.</p>
+    </div>
+  </div>
+
+<script>
+var denominator = 19, ekadhika = 2, steps = [], result = '', currentStep = -1;
+var isPlaying = false, playInterval = null, speed = 1500;
+var soundEnabled = true, autoScrollEnabled = true, audioCtx = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  updateEkadhikaInfo();
+  
+  document.getElementById('denominator').addEventListener('input', function(e) {
+    denominator = parseInt(e.target.value) || 0;
+    steps = []; currentStep = -1;
+    updateEkadhikaInfo(); hideAllSections();
+  });
+  
+  document.getElementById('speedSlider').addEventListener('input', function(e) {
+    speed = 3200 - parseInt(e.target.value);
+    document.getElementById('speedValue').textContent = (speed / 1000).toFixed(1) + '초';
+  });
+  
+  document.getElementById('closeBtn').addEventListener('click', closeCelebration);
+});
+
+// 사용자가 스크롤 영역 터치/조작하면 자동 스크롤 끄기
+function userTouchedScroll() {
+  if (autoScrollEnabled) {
+    autoScrollEnabled = false;
+    updateAutoScrollBtn();
+  }
+}
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playDigitSound() {
+  if (!soundEnabled) return;
+  try {
+    var ctx = getAudioCtx(), osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1);
+  } catch(e) {}
+}
+
+function playCarrySound() {
+  if (!soundEnabled) return;
+  try {
+    var ctx = getAudioCtx(), osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 0.15);
+    osc.type = 'triangle';
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function playClickSound() {
+  if (!soundEnabled) return;
+  try {
+    var ctx = getAudioCtx(), osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.type = 'square';
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.05);
+  } catch(e) {}
+}
+
+function playFanfare() {
+  if (!soundEnabled) return;
+  try {
+    var ctx = getAudioCtx(), notes = [523.25, 659.25, 783.99, 1046.50], durs = [0.15, 0.15, 0.15, 0.4], t = ctx.currentTime;
+    notes.forEach(function(freq, i) {
+      var osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(freq, t); osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.01, t + durs[i]);
+      osc.start(t); osc.stop(t + durs[i]); t += durs[i] * 0.8;
+    });
+  } catch(e) {}
+}
+
+function calculateEkadhika(d) { return d % 10 === 9 ? Math.floor(d / 10) + 1 : null; }
+
+function calculateRepeatingDecimal(d) {
+  var eka = calculateEkadhika(d);
+  if (!eka) return { steps: [], result: '' };
+  var calcSteps = [], digits = [], carry = 0, current = 1;
+  for (var i = 0; i < d - 1; i++) {
+    var product = current * eka + carry, digit = product % 10;
+    carry = Math.floor(product / 10);
+    calcSteps.push({ step: i + 1, current: current, multiplier: eka, prevCarry: i === 0 ? 0 : (calcSteps[i-1] ? calcSteps[i-1].carry : 0), productWithCarry: product, digit: digit, carry: carry, partialResult: digit + digits.join('') });
+    digits.unshift(digit); current = digit;
+    if (i > 0 && digit === 1 && carry === 0) break;
+  }
+  return { steps: calcSteps, result: digits.join('') };
+}
+
+function checkSymmetry(str) {
+  if (str.length % 2 !== 0) return null;
+  var half = str.length / 2, first = str.slice(0, half), second = str.slice(half), sum = '', carry = 0;
+  for (var i = half - 1; i >= 0; i--) { var s = parseInt(first[i]) + parseInt(second[i]) + carry; sum = (s % 10) + sum; carry = Math.floor(s / 10); }
+  if (carry) sum = carry + sum;
+  return { first: first, second: second, sum: sum, isNines: /^9+$/.test(sum) };
+}
+
+function updateEkadhikaInfo() {
+  var eka = calculateEkadhika(denominator);
+  document.getElementById('errorMsg').style.display = eka ? 'none' : 'block';
+  document.getElementById('ekadhikaInfo').style.display = eka ? 'block' : 'none';
+  if (eka) {
+    document.getElementById('ekadhikaValue').textContent = eka;
+    document.getElementById('ekadhikaFormula').textContent = denominator + ' = 10 × ' + eka + ' - 1 → Ekadhika = ' + eka;
+    ekadhika = eka;
+  }
+}
+
+function hideAllSections() {
+  ['liveCalc', 'stepsSection', 'resultSection'].forEach(function(id) { document.getElementById(id).classList.remove('show'); });
+}
+
+function updateButtons() {
+  document.getElementById('prevBtn').disabled = currentStep <= 0;
+  document.getElementById('nextBtn').disabled = currentStep >= steps.length - 1 && steps.length > 0;
+  document.getElementById('playBtn').innerHTML = isPlaying ? '⏸ 정지 <span class="en">Stop</span>' : '▶ 재생 <span class="en">Play</span>';
+}
+
+function updateAutoScrollBtn() {
+  var btn = document.getElementById('autoScrollBtn');
+  btn.innerHTML = autoScrollEnabled ? '📍 자동스크롤 <span class="en">Auto ON</span>' : '✋ 자동스크롤 <span class="en">Auto OFF</span>';
+  btn.className = autoScrollEnabled ? '' : 'off';
+}
+
+function renderCurrentCalc() {
+  if (currentStep < 0 || !steps[currentStep]) return;
+  var s = steps[currentStep];
+  var html = '<span style="color:#f4d9a0">' + s.current + '</span><span style="color:#6b5b4f">×</span><span style="color:#d4a574">' + ekadhika + '</span>';
+  if (s.prevCarry > 0) html += '<span style="color:#ff6b6b;font-weight:bold">+</span><span style="color:#7a9e7a">' + s.prevCarry + '</span>';
+  html += '<span style="color:#6b5b4f">=</span><span style="color:#f4d9a0;font-weight:600">' + s.productWithCarry + '</span>';
+  document.getElementById('currentCalc').innerHTML = html;
+}
+
+function renderDigits() {
+  if (currentStep < 0) return;
+  var container = document.getElementById('digitContainer'), html = '', curr = steps[currentStep];
+  html += '<div class="digit-wrapper">';
+  if (curr.carry > 0) html += '<span class="carry-badge"><span class="carry-plus">+</span><span class="carry-num">' + curr.carry + '</span></span>';
+  html += '<span class="digit current">' + curr.digit + '</span></div>';
+  for (var i = currentStep - 1; i >= 0; i--) {
+    var opacity = Math.max(0.4, 1 - (currentStep - 1 - i) * 0.03), cls = i === currentStep - 1 ? 'prev' : 'old';
+    html += '<div class="digit-wrapper">';
+    if (i === currentStep - 1 && curr.prevCarry > 0) html += '<span class="carry-badge" style="opacity:0.3"><span class="carry-plus">+</span><span class="carry-num">' + curr.prevCarry + '</span></span>';
+    html += '<span class="digit ' + cls + '" style="opacity:' + opacity + '">' + steps[i].digit + '</span></div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderSteps() {
+  var container = document.getElementById('stepsContainer'), html = '';
+  steps.forEach(function(s, i) {
+    var cls = i === currentStep ? 'active' : (i < currentStep ? 'done' : '');
+    html += '<div class="step-item ' + cls + '"><span class="step-num">#' + s.step + '</span><div class="step-calc"><span style="color:#a89880">' + s.current + '</span><span style="color:#6b5b4f">×</span><span style="color:#d4a574">' + s.multiplier + '</span>';
+    if (s.prevCarry > 0) html += '<span style="color:#ff6b6b;font-weight:bold">+</span><span style="color:#7a9e7a">' + s.prevCarry + '</span>';
+    html += '<span style="color:#6b5b4f">=</span><span style="color:#f4d9a0;font-weight:600">' + s.productWithCarry + '</span></div><div style="font-size:13px"><span style="color:#8b7355">→ <span style="color:#f4d9a0">' + s.digit + '</span></span>';
+    if (s.carry > 0) html += ' <span style="color:#7a9e7a">(올림 <span style="color:#ff6b6b">+</span>' + s.carry + ')</span>';
+    html += '</div><div class="step-result">' + s.partialResult + '</div></div>';
+  });
+  container.innerHTML = html;
+  
+  // 자동 스크롤 - autoScrollEnabled가 true일 때만
+  if (autoScrollEnabled && currentStep >= 0 && container.children[currentStep]) {
+    container.children[currentStep].scrollIntoView({ behavior: 'auto', block: 'nearest' });
+  }
+}
+
+function updateProgress() {
+  var pct = steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = (currentStep + 1) + ' / ' + steps.length;
+}
+
+function showResult() {
+  document.getElementById('resultSection').classList.add('show');
+  document.getElementById('resultLabel').textContent = '1/' + denominator + ' = 0.';
+  document.getElementById('resultValue').textContent = result;
+  document.getElementById('resultLength').textContent = '순환 마디 길이: ' + result.length + '자리';
+}
+
+function prepareCalculation() {
+  if (!calculateEkadhika(denominator)) return false;
+  var calc = calculateRepeatingDecimal(denominator);
+  steps = calc.steps; result = calc.result; currentStep = -1;
+  document.getElementById('liveCalc').classList.add('show');
+  document.getElementById('stepsSection').classList.add('show');
+  document.getElementById('resultSection').classList.remove('show');
+  renderSteps();
+  return true;
+}
+
+function goToStep(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  currentStep = idx;
+  playDigitSound();
+  if (steps[currentStep] && steps[currentStep].carry > 0) setTimeout(playCarrySound, 100);
+  renderCurrentCalc(); renderDigits(); renderSteps(); updateProgress(); updateButtons();
+  if (currentStep === steps.length - 1) triggerCelebration();
+}
+
+function togglePlay() {
+  playClickSound();
+  if (isPlaying) { isPlaying = false; clearInterval(playInterval); }
+  else {
+    if (steps.length === 0 && !prepareCalculation()) return;
+    autoScrollEnabled = true; updateAutoScrollBtn(); isPlaying = true;
+    playInterval = setInterval(function() {
+      if (currentStep >= steps.length - 1) { isPlaying = false; clearInterval(playInterval); updateButtons(); return; }
+      goToStep(currentStep + 1);
+    }, speed);
+  }
+  updateButtons();
+}
+
+function nextStep() { playClickSound(); if (steps.length === 0 && !prepareCalculation()) return; if (currentStep < steps.length - 1) goToStep(currentStep + 1); }
+function prevStep() { playClickSound(); if (currentStep > 0) goToStep(currentStep - 1); }
+function resetCalc() {
+  playClickSound(); isPlaying = false; clearInterval(playInterval); currentStep = -1;
+  autoScrollEnabled = true; updateAutoScrollBtn();
+  document.getElementById('digitContainer').innerHTML = '';
+  document.getElementById('currentCalc').innerHTML = '';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressText').textContent = '0 / 0';
+  document.getElementById('resultSection').classList.remove('show');
+  if (steps.length > 0) renderSteps();
+  updateButtons();
+}
+
+function toggleSound() {
+  playClickSound(); soundEnabled = !soundEnabled;
+  var btn = document.getElementById('soundBtn');
+  btn.innerHTML = soundEnabled ? '🔊 효과음 ON <span class="en">Sound</span>' : '🔇 효과음 OFF <span class="en">Sound</span>';
+  btn.className = 'ctrl-btn ' + (soundEnabled ? 'on' : 'off');
+}
+
+function toggleAutoScroll() { playClickSound(); autoScrollEnabled = !autoScrollEnabled; updateAutoScrollBtn(); }
+
+function toggleSymmetry() {
+  var display = document.getElementById('symmetryDisplay'), btn = document.getElementById('symmetryBtn');
+  if (display.classList.contains('show')) { 
+    display.classList.remove('show'); 
+    btn.innerHTML = '🔮 대칭성 확인 <span class="en">Symmetry</span>'; 
+  }
+  else {
+    var sym = checkSymmetry(result);
+    if (sym) {
+      document.getElementById('symmetryCalc').innerHTML = '<div class="sym-box sym-first">' + sym.first + '</div><span class="sym-op">+</span><div class="sym-box sym-second">' + sym.second + '</div><span class="sym-op">=</span><div class="sym-box sym-result">' + sym.sum + '</div>';
+      document.getElementById('symmetryMsg').innerHTML = sym.isNines ? '✨ 완벽한 9의 대칭! <span style="font-size:12px;color:#a89880">Perfect 9s symmetry!</span>' : '';
+    }
+    display.classList.add('show'); 
+    btn.innerHTML = '대칭성 숨기기 <span class="en">Hide</span>';
+  }
+}
+
+function triggerCelebration() {
+  playFanfare();
+  document.getElementById('celebrationMsg').textContent = '1/' + denominator + '의 순환마디 ' + result.length + '자리를 찾았습니다!';
+  document.getElementById('celebrationEng').textContent = 'Found ' + result.length + '-digit repeating cycle!';
+  document.getElementById('celebration').classList.add('show');
+  var colors = ['#f4d9a0', '#d4a574', '#667eea', '#764ba2', '#7a9e7a', '#e8b478'];
+  for (var i = 0; i < 80; i++) {
+    var conf = document.createElement('div');
+    conf.className = 'confetti';
+    conf.style.left = Math.random() * 100 + '%';
+    conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+    conf.style.width = conf.style.height = (6 + Math.random() * 8) + 'px';
+    conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    conf.style.animation = 'confettiFall ' + (2 + Math.random() * 2) + 's linear ' + (Math.random() * 2) + 's forwards';
+    document.body.appendChild(conf);
+    setTimeout(function(c) { if (c.parentNode) c.parentNode.removeChild(c); }, 5000, conf);
+  }
+}
+
+function closeCelebration() { document.getElementById('celebration').classList.remove('show'); showResult(); }
+
+function showNotification(msg, type) {
+  var el = document.getElementById('notification');
+  el.textContent = msg; el.className = 'notification ' + (type || 'success'); el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 2500);
+}
+
+function openInNewTab() {
+  // 현재 페이지를 새 탭에서 열기
+  window.open(window.location.href, '_blank');
+  showNotification('🔗 새 탭에서 열림!');
+}
+
+function saveAsFile() {
+  if (!result) { showNotification('⚠️ 먼저 계산을 실행하세요', 'warning'); return; }
+  
+  var stepsHtml = steps.map(function(s) { 
+    return '<div style="padding:12px 16px;margin:8px 0;background:#16213e;border-radius:8px;border-left:3px solid #d4a574;font-family:monospace">' +
+      '<span style="color:#8b7355">#' + s.step + '</span>: ' +
+      '<span style="color:#a89880">' + s.current + '</span> × ' +
+      '<span style="color:#d4a574">' + s.multiplier + '</span>' +
+      (s.prevCarry > 0 ? ' <span style="color:#ff6b6b">+</span> <span style="color:#7a9e7a">' + s.prevCarry + '</span>' : '') +
+      ' = <span style="color:#f4d9a0;font-weight:bold">' + s.productWithCarry + '</span>' +
+      ' → 숫자: <span style="color:#f4d9a0">' + s.digit + '</span>' +
+      (s.carry > 0 ? ' <span style="color:#7a9e7a">(올림 +' + s.carry + ')</span>' : '') +
+      ' → <span style="color:#d4a574">' + s.partialResult + '</span></div>'; 
+  }).join('');
+  
+  var html = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">' +
+    '<title>에카디카 나눗셈기 결과 - 1/' + denominator + '</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#e8d5b7;font-family:sans-serif;padding:24px;min-height:100vh}' +
+    '.container{max-width:800px;margin:0 auto}h1{color:#f4d9a0;font-size:28px;margin-bottom:8px}h2{color:#d4a574;font-size:18px;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid rgba(212,165,116,0.3)}' +
+    '.info{color:#a89880;margin-bottom:16px}.result-box{background:#16213e;padding:20px;border-radius:12px;margin-bottom:24px}' +
+    '.result-value{font-family:monospace;font-size:clamp(16px,4vw,24px);color:#f4d9a0;word-break:break-all;text-decoration:overline;letter-spacing:2px}' +
+    '.steps{max-height:none}.footer{margin-top:32px;text-align:center;color:#6b5b4f;font-size:12px}</style></head>' +
+    '<body><div class="container">' +
+    '<h1>🔢 에카디카 나눗셈기 결과</h1>' +
+    '<p class="info">베다 수학의 비법으로 계산한 1/' + denominator + '의 순환소수</p>' +
+    '<p class="info">매개수 (Ekadhika): <strong style="color:#f4d9a0;font-size:20px">' + ekadhika + '</strong></p>' +
+    '<h2>✧ 결과</h2>' +
+    '<div class="result-box"><div class="result-value">' + result + '</div><p style="color:#8b7355;margin-top:12px">순환 마디 길이: ' + result.length + '자리</p></div>' +
+    '<h2>⟲ 역순 계산 과정</h2>' +
+    '<div class="steps">' + stepsHtml + '</div>' +
+    '<p class="footer">Generated by 에카디카 나눗셈기 | वैदिक गणित<br>파일 생성일: ' + new Date().toLocaleString('ko-KR') + '</p>' +
+    '</div></body></html>';
+  
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ekadhika_1_' + denominator + '_result.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showNotification('💾 파일 저장됨!');
+}
+
+function copyCode() {
+  var code = '// ═══════════════════════════════════════════════════\n' +
+    '// 에카디카 나눗셈 알고리즘 (Ekadhika Division Algorithm)\n' +
+    '// 베다 수학 - 분모가 9로 끝나는 분수의 순환소수 계산\n' +
+    '// ═══════════════════════════════════════════════════\n\n' +
+    '// 매개수(Ekadhika) 계산: 분모가 9로 끝나면 (분모+1)/10\n' +
+    'function calculateEkadhika(denominator) {\n' +
+    '  if (denominator % 10 !== 9) return null;\n' +
+    '  return Math.floor(denominator / 10) + 1;\n' +
+    '}\n\n' +
+    '// 순환소수 계산: 역순으로 숫자를 쌓아감\n' +
+    'function calculateRepeatingDecimal(denominator) {\n' +
+    '  const ekadhika = calculateEkadhika(denominator);\n' +
+    '  if (!ekadhika) return null;\n' +
+    '  \n' +
+    '  let digits = [];\n' +
+    '  let carry = 0;\n' +
+    '  let current = 1;\n' +
+    '  \n' +
+    '  for (let i = 0; i < denominator - 1; i++) {\n' +
+    '    const product = current * ekadhika + carry;\n' +
+    '    const digit = product % 10;\n' +
+    '    carry = Math.floor(product / 10);\n' +
+    '    digits.unshift(digit);\n' +
+    '    current = digit;\n' +
+    '    \n' +
+    '    // 순환 완료 체크\n' +
+    '    if (i > 0 && digit === 1 && carry === 0) break;\n' +
+    '  }\n' +
+    '  \n' +
+    '  return digits.join(\'\');\n' +
+    '}\n\n' +
+    '// ═══════════════════════════════════════════════════\n' +
+    '// 사용 예시\n' +
+    '// ═══════════════════════════════════════════════════\n' +
+    'const denominator = ' + denominator + ';\n' +
+    'const ekadhika = calculateEkadhika(denominator);\n' +
+    'const result = calculateRepeatingDecimal(denominator);\n\n' +
+    'console.log(`1/${denominator}의 매개수: ${ekadhika}`);\n' +
+    'console.log(`1/${denominator} = 0.${result}`);\n' +
+    'console.log(`순환마디 길이: ${result.length}자리`);\n';
+  
+  navigator.clipboard.writeText(code).then(function() { 
+    showNotification('📋 코드 복사됨!'); 
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = code;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showNotification('📋 코드 복사됨!');
+  });
+}
+
+function copyScreen() {
+  if (!result) { showNotification('⚠️ 먼저 계산을 실행하세요', 'warning'); return; }
+  
+  var text = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  text += '  🔢 에카디카 나눗셈기 계산 결과\n';
+  text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+  text += '▶ 계산: 1/' + denominator + '\n';
+  text += '▶ 매개수 (Ekadhika): ' + ekadhika + '\n\n';
+  text += '──────────────────────────────────────\n';
+  text += '  ⟲ 역순 계산 과정\n';
+  text += '──────────────────────────────────────\n\n';
+  
+  steps.forEach(function(s) { 
+    var line = '  #' + String(s.step).padStart(2, '0') + ': ';
+    line += s.current + ' × ' + s.multiplier;
+    if (s.prevCarry > 0) line += ' + ' + s.prevCarry;
+    line += ' = ' + s.productWithCarry;
+    line += '  → 숫자: ' + s.digit;
+    if (s.carry > 0) line += '  (올림: +' + s.carry + ')';
+    line += '\n       결과: ' + s.partialResult + '\n\n';
+    text += line;
+  });
+  
+  text += '──────────────────────────────────────\n';
+  text += '  ✧ 최종 결과\n';
+  text += '──────────────────────────────────────\n\n';
+  text += '  1/' + denominator + ' = 0.' + result + '\n';
+  text += '  순환 마디 길이: ' + result.length + '자리\n\n';
+  text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  text += '  Generated by 에카디카 나눗셈기\n';
+  text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  
+  navigator.clipboard.writeText(text).then(function() { 
+    showNotification('📄 화면 복사됨!'); 
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showNotification('📄 화면 복사됨!');
+  });
+}
+</script>
+</body>
+</html>
