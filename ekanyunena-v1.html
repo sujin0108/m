@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>에카뉴네나 푸르베나 Ekanyunena Purvena v1</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      font-family:'Courier New',Consolas,monospace;
+      background: #080012;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(120,40,255,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(255,80,180,0.13) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 80% at 50% 50%, rgba(40,10,90,0.6) 0%, transparent 100%);
+      min-height:100vh; color:#F0E8FF; padding:12px; overflow-x:hidden;
+    }
+
+    /* ── 꽃비 ── */
+    .confetti-container{ position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden; }
+    .confetti{ position:absolute;opacity:0; }
+    @keyframes confetti-fall{
+      0%  { transform:translateY(-10px) rotate(0deg);   opacity:1; }
+      100%{ transform:translateY(100vh) rotate(720deg); opacity:0; }
+    }
+
+    /* ── 헤더 ── */
+    .header{
+      text-align:center; padding:10px 0 8px;
+      border-bottom:2px solid rgba(180,100,255,0.35); margin-bottom:8px;
+    }
+    .title-row{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:4px; }
+    .logo{ width:50px; height:50px; transition:filter 0.5s; flex-shrink:0; }
+    .logo.glow{ animation:logoGlow 1s ease-in-out; }
+    @keyframes logoGlow{
+      0%,100%{ filter:drop-shadow(0 0 8px rgba(180,100,255,0.9)); }
+      50%     { filter:drop-shadow(0 0 22px rgba(220,140,255,1)) drop-shadow(0 0 38px rgba(255,100,220,0.6)); }
+    }
+    .title-text{ text-align:left; }
+    .subtitle   { font-size:19px; font-weight:700; color:#CC88FF; font-family:-apple-system,sans-serif; line-height:1.2; }
+    .subtitle-en{ font-size:11px; color:#AA77DD; font-family:-apple-system,sans-serif; font-style:italic; margin-top:2px; }
+    .desc       { font-size:11px; color:#9966CC; font-family:-apple-system,sans-serif; margin-top:6px; }
+
+    /* ── 유틸 ── */
+    .util-row{ display:flex; justify-content:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .util-btn{
+      padding:5px 10px; font-size:10px; color:#AA88DD;
+      background:rgba(40,0,80,0.55); border:1px solid rgba(180,100,255,0.28);
+      border-radius:4px; cursor:pointer; font-family:-apple-system,sans-serif; transition:all 0.2s;
+      line-height:1.3;
+    }
+    .util-btn:hover{ background:rgba(180,100,255,0.18); color:#CC88FF; }
+    .util-dropdown{ position:relative; display:inline-block; }
+    .util-dropdown-content{
+      display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+      background:rgba(15,5,35,0.97); border:1px solid rgba(180,100,255,0.32);
+      border-radius:6px; min-width:155px; z-index:100; overflow:hidden;
+    }
+    .util-dropdown:hover .util-dropdown-content,
+    .util-dropdown.active  .util-dropdown-content{ display:block; }
+    .util-dropdown-item{
+      display:block; width:100%; padding:8px 12px; font-size:11px; color:#AA88DD;
+      background:none; border:none; text-align:left; cursor:pointer;
+      font-family:-apple-system,sans-serif; line-height:1.4;
+    }
+    .util-dropdown-item:hover{ background:rgba(180,100,255,0.2); color:#CC88FF; }
+
+    .main{ max-width:620px; margin:0 auto; }
+
+    /* ── 입력 ── */
+    .input-box{
+      background:rgba(30,0,60,0.7); border-radius:12px; padding:16px;
+      margin-bottom:12px; border:1px solid rgba(180,100,255,0.22);
+    }
+    .input-row{
+      display:flex; align-items:center; justify-content:center;
+      gap:14px; margin-bottom:12px; font-family:-apple-system,sans-serif;
+    }
+    .input-group{ text-align:center; }
+    .input-group .label-ko{ font-size:11px; color:#CC88FF; font-weight:600; display:block; line-height:1.3; }
+    .input-group .label-en{ font-size:9px;  color:#9966CC; font-style:italic; display:block; line-height:1.3; }
+    .input-group input{
+      width:115px; height:44px; font-size:18px; font-weight:600;
+      text-align:center; background:rgba(10,0,25,0.7);
+      border:2px solid rgba(180,100,255,0.32); border-radius:8px;
+      color:#F0E8FF; outline:none; font-family:inherit; margin-top:4px;
+    }
+    .input-group input:focus{ border-color:#CC88FF; box-shadow:0 0 0 3px rgba(180,100,255,0.18); }
+    .mult-symbol{ font-size:28px; color:#CC88FF; padding-top:18px; font-weight:700; }
+
+    /* 나인 선택 버튼 */
+    .nines-row{
+      display:flex; justify-content:center; gap:6px; margin-bottom:14px; flex-wrap:wrap;
+    }
+    .nine-btn{
+      padding:5px 10px; font-size:12px; font-weight:700;
+      background:rgba(40,0,80,0.5); border:1px solid rgba(180,100,255,0.3);
+      border-radius:6px; cursor:pointer; color:#CC88FF; font-family:'Courier New',monospace;
+      transition:all 0.2s;
+    }
+    .nine-btn:hover  { background:rgba(180,100,255,0.2); }
+    .nine-btn.active { background:linear-gradient(135deg,#8844CC,#6622AA); color:#fff; border-color:#CC88FF; }
+    .nine-label-ko{ font-size:10px; color:#9966CC; text-align:center; margin-bottom:6px; display:block; }
+    .nine-label-en{ font-size:9px; color:#6644AA; font-style:italic; text-align:center; margin-bottom:8px; display:block; }
+
+    .calc-btn{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      width:100%; height:48px; font-weight:600; color:#F0E8FF;
+      background:linear-gradient(135deg,#8833CC,#6611AA);
+      border:none; border-radius:24px; cursor:pointer; font-family:-apple-system,sans-serif;
+      box-shadow:0 4px 20px rgba(140,50,220,0.4);
+    }
+    .calc-btn .ko{ font-size:14px; line-height:1.2; }
+    .calc-btn .en{ font-size:10px; opacity:0.8; line-height:1.2; }
+    .calc-btn:hover{ background:linear-gradient(135deg,#9944DD,#7722BB); }
+
+    /* ── 컨트롤 ── */
+    .control-panel{
+      background:rgba(10,0,25,0.65); border-radius:10px; padding:12px;
+      margin-bottom:12px; border:1px solid rgba(180,100,255,0.2); font-family:-apple-system,sans-serif;
+    }
+    .control-row{ display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:10px; }
+    .control-row:last-child{ margin-bottom:0; }
+    .ctrl-btn{
+      padding:6px 10px; font-size:11px; font-weight:600;
+      background:rgba(30,0,60,0.8); border:1px solid rgba(180,100,255,0.32);
+      border-radius:6px; color:#CC88FF; cursor:pointer; transition:all 0.15s;
+      display:flex; flex-direction:column; align-items:center; min-width:50px;
+    }
+    .ctrl-btn .en{ font-size:8px; color:#9966CC; font-weight:normal; line-height:1.2; }
+    .ctrl-btn:hover:not(:disabled){ background:rgba(180,100,255,0.2); }
+    .ctrl-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+    .ctrl-btn.primary{
+      background:linear-gradient(135deg,#8833CC,#6611AA); color:#F0E8FF; min-width:70px;
+    }
+    .ctrl-btn.primary .en{ color:rgba(240,232,255,0.7); }
+    .ctrl-btn.primary:hover:not(:disabled){ background:linear-gradient(135deg,#9944DD,#7722BB); }
+    .speed-control{ display:flex; align-items:center; gap:8px; }
+    .speed-box{ display:flex; flex-direction:column; align-items:center; }
+    .speed-lko{ font-size:10px; color:#CC88FF; line-height:1.2; }
+    .speed-len{ font-size:8px;  color:#9966CC; font-style:italic; line-height:1.2; }
+    .speed-slider{ width:70px; margin-top:2px; accent-color:#CC88FF; }
+    .speed-value{ font-size:11px; color:#CC88FF; min-width:35px; text-align:center; }
+    .sound-toggle{ display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; color:#9966CC; cursor:pointer; }
+    .sound-toggle input{ display:none; }
+    .sound-toggle .sound-icon{ font-size:18px; }
+    .sound-toggle .sound-lko{ font-size:9px; display:block; line-height:1.2; }
+    .sound-toggle .sound-len{ font-size:8px; font-style:italic; display:block; color:#6644AA; line-height:1.2; }
+    .sound-toggle.muted .sound-icon{ opacity:0.35; }
+
+    /* ── 단계 박스 ── */
+    .step-box{
+      background:rgba(140,50,220,0.10); border:1px solid rgba(180,100,255,0.25);
+      border-radius:8px; padding:10px 14px; margin-bottom:12px; font-family:-apple-system,sans-serif;
+    }
+    .step-num     { font-size:10px; color:#9966CC; margin-bottom:4px; }
+    .step-desc-ko { font-size:14px; color:#F0E8FF; font-weight:600; line-height:1.4; }
+    .step-desc-en { font-size:11px; color:#9966CC; font-style:italic; margin-top:3px; line-height:1.4; }
+
+    /* ── 메인 시각화 박스 ── */
+    .result-box{
+      background:rgba(20,0,45,0.75); border-radius:14px; padding:18px;
+      margin-bottom:12px; border:1px solid rgba(180,100,255,0.22);
+    }
+
+    /* ── 정보 바 ── */
+    .info-row{
+      display:flex; gap:8px; justify-content:center;
+      margin-bottom:16px; font-family:-apple-system,sans-serif; flex-wrap:wrap;
+    }
+    .info-item{ padding:6px 10px; background:rgba(10,0,25,0.55); border-radius:6px; text-align:center; }
+    .info-item.gold{ border:1px solid rgba(180,100,255,0.32); }
+    .info-label   { font-size:10px; color:#CC88FF; line-height:1.2; display:block; }
+    .info-label-en{ font-size:8px;  color:#6644AA; font-style:italic; line-height:1.2; display:block; }
+    .info-value   { font-size:15px; font-weight:700; color:#CC88FF; margin-top:3px; font-family:'Courier New',monospace; }
+
+    /* ══ 핵심 시각화: LHS │ RHS 박스 ══ */
+    .split-visual{
+      display:flex; align-items:stretch; justify-content:center;
+      gap:0; margin-bottom:16px; font-family:'Courier New',monospace;
+    }
+    .sv-lhs{
+      flex:1; max-width:200px; background:rgba(80,20,160,0.25);
+      border:2px solid rgba(180,100,255,0.35); border-right:none;
+      border-radius:12px 0 0 12px; padding:16px 12px; text-align:center;
+      transition:all 0.3s;
+    }
+    .sv-rhs{
+      flex:1; max-width:200px; background:rgba(180,20,100,0.18);
+      border:2px solid rgba(255,100,200,0.35); border-left:none;
+      border-radius:0 12px 12px 0; padding:16px 12px; text-align:center;
+      transition:all 0.3s;
+    }
+    .sv-sep{
+      width:4px; background:linear-gradient(180deg,transparent,rgba(220,160,255,0.7),transparent);
+      align-self:stretch; position:relative;
+    }
+    .sv-sep::after{
+      content:'│'; position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-size:28px; color:rgba(220,160,255,0.5); font-weight:bold;
+    }
+    .sv-tag-ko { font-size:10px; color:#AA77DD; display:block; line-height:1.3; }
+    .sv-tag-en { font-size:8px;  color:#7755AA; font-style:italic; display:block; line-height:1.3; margin-bottom:8px; }
+    .sv-val    {
+      font-size:34px; font-weight:700; color:#E0C8FF; line-height:1.1;
+      min-height:42px; display:flex; align-items:center; justify-content:center;
+      transition:all 0.3s;
+    }
+    .sv-val.active-lhs { color:#CC88FF; text-shadow:0 0 20px rgba(200,120,255,0.7); animation:valPop 0.4s ease-out; }
+    .sv-val.active-rhs { color:#FF88CC; text-shadow:0 0 20px rgba(255,120,200,0.7); animation:valPop 0.4s ease-out; }
+    .sv-val.dim { color:rgba(200,180,230,0.35); }
+    .sv-sub    { font-size:11px; color:#9966CC; margin-top:6px; line-height:1.4; }
+
+    .sv-lhs.hl { background:rgba(180,100,255,0.25); border-color:#CC88FF; box-shadow:0 0 18px rgba(180,100,255,0.35); }
+    .sv-rhs.hl { background:rgba(255,80,180,0.22);  border-color:#FF88CC; box-shadow:0 0 18px rgba(255,80,180,0.35); }
+
+    @keyframes valPop{
+      0%   { transform:scale(0.7); opacity:0; }
+      60%  { transform:scale(1.12); }
+      100% { transform:scale(1);   opacity:1; }
+    }
+
+    /* ── 계산 상세 테이블 ── */
+    .calc-detail{
+      background:rgba(10,0,25,0.45); border-radius:8px; padding:14px;
+      margin-bottom:14px; font-family:'Courier New',monospace; font-size:14px;
+    }
+    .cd-row{
+      display:flex; align-items:baseline; gap:8px; padding:5px 0;
+      border-bottom:1px solid rgba(180,100,255,0.09);
+    }
+    .cd-row:last-child{ border-bottom:none; }
+    .cd-lbl-ko{ font-size:11px; color:#9966CC; min-width:90px; display:block; line-height:1.3; font-family:-apple-system,sans-serif; }
+    .cd-lbl-en{ font-size:9px;  color:#6644AA; min-width:90px; display:block; line-height:1.3; font-style:italic; font-family:-apple-system,sans-serif; }
+    .cd-val   { color:#E0C8FF; font-weight:600; }
+    .cd-val.lhs-color { color:#CC88FF; }
+    .cd-val.rhs-color { color:#FF88CC; }
+    .cd-val.ans-color { color:#FFD700; }
+    .cd-op    { color:#9966CC; font-size:13px; }
+    .cd-new   { animation:rowPop 0.4s ease-out; }
+    @keyframes rowPop{
+      0%  { opacity:0; transform:translateX(-8px); }
+      100%{ opacity:1; transform:translateX(0); }
+    }
+
+    /* 패딩 표시 */
+    .pad-note{
+      background:rgba(255,180,80,0.10); border:1px dashed rgba(255,180,80,0.4);
+      border-radius:6px; padding:8px 12px; margin-bottom:10px;
+      font-family:-apple-system,sans-serif;
+    }
+    .pad-note .pn-ko{ font-size:12px; color:#FFD080; line-height:1.6; display:block; }
+    .pad-note .pn-en{ font-size:10px; color:#AA8844; font-style:italic; line-height:1.6; display:block; }
+
+    /* ── 최종 답 박스 ── */
+    .final-answer{
+      text-align:center; padding:20px; margin-bottom:14px;
+      background:rgba(40,0,80,0.45);
+      border:2px solid rgba(220,160,255,0.4); border-radius:12px;
+      animation:answerReveal 0.6s ease-out;
+      font-family:'Courier New',monospace;
+    }
+    @keyframes answerReveal{
+      0%  { transform:scale(0.9); opacity:0; box-shadow:0 0 0 0 rgba(180,100,255,0.5); }
+      60% { box-shadow:0 0 30px rgba(180,100,255,0.5); }
+      100%{ transform:scale(1);   opacity:1; }
+    }
+    .fa-label-ko{ font-size:11px; color:#CC88FF; display:block; line-height:1.3; }
+    .fa-label-en{ font-size:9px;  color:#9966CC; font-style:italic; display:block; line-height:1.3; margin-bottom:8px; }
+    .fa-expression{ font-size:15px; color:#AA88DD; margin-bottom:6px; }
+    .fa-val{ font-size:42px; font-weight:900; color:#FFD700; letter-spacing:2px; text-shadow:0 0 20px rgba(255,215,0,0.5); }
+    .fa-lhs-part{ color:#CC88FF; }
+    .fa-rhs-part{ color:#FF88CC; }
+
+    /* ── 검산 ── */
+    .verify{
+      text-align:center; padding:12px; border-radius:8px;
+      font-family:-apple-system,sans-serif;
+    }
+    .verify.ok{ background:rgba(129,199,132,0.2); color:#81C784; border:2px solid rgba(129,199,132,0.4); }
+    .verify.party{ animation:party 0.5s ease-out; box-shadow:0 0 20px rgba(129,199,132,0.4); }
+    @keyframes party{ 0%,100%{transform:scale(1);} 30%{transform:scale(1.08) rotate(-1deg);} 70%{transform:scale(1.08) rotate(1deg);} }
+    .v-lko { font-size:10px; color:#A5D6A7; display:block; line-height:1.3; }
+    .v-len { font-size:9px;  color:#6A9E6C; font-style:italic; display:block; line-height:1.3; margin-bottom:4px; }
+
+    /* ── 수식 패널 ── */
+    .formula-strip{
+      display:flex; gap:10px; justify-content:center; margin-bottom:16px; flex-wrap:wrap;
+    }
+    .fs-box{
+      padding:10px 16px; background:rgba(80,20,160,0.22);
+      border:1px solid rgba(180,100,255,0.28); border-radius:8px;
+      text-align:center; font-family:-apple-system,sans-serif;
+    }
+    .fs-ko { font-size:11px; color:#CC88FF; display:block; line-height:1.3; }
+    .fs-en { font-size:9px;  color:#9966CC; font-style:italic; display:block; line-height:1.3; margin-bottom:4px; }
+    .fs-formula { font-family:'Courier New',monospace; font-size:13px; color:#E0C8FF; font-weight:700; }
+
+    /* ── 안내 패널 ── */
+    .info-panel{
+      background:rgba(25,0,55,0.65); border:1px solid rgba(180,100,255,0.2);
+      border-radius:12px; margin-bottom:12px; overflow:hidden;
+      font-family:-apple-system,sans-serif;
+    }
+    .info-panel-toggle{
+      display:flex; align-items:center; justify-content:space-between;
+      width:100%; padding:12px 16px; background:none; border:none; cursor:pointer; color:#CC88FF;
+    }
+    .info-panel-toggle .left { display:flex; align-items:center; gap:8px; }
+    .info-panel-toggle .icon { font-size:18px; }
+    .info-panel-toggle .t-ko { font-size:15px; font-weight:700; color:#CC88FF; display:block; line-height:1.2; }
+    .info-panel-toggle .t-en { font-size:10px; color:#9966CC; font-style:italic; display:block; line-height:1.2; }
+    .info-panel-toggle .arrow{ font-size:12px; transition:transform 0.3s; }
+    .info-panel-toggle.open .arrow{ transform:rotate(180deg); }
+    .info-panel-body { display:none; padding:0 16px 16px; }
+    .info-panel-body.open { display:block; }
+
+    .info-principle{
+      background:rgba(10,0,25,0.6); border-left:3px solid #CC88FF;
+      border-radius:0 8px 8px 0; padding:12px; margin-bottom:14px;
+      font-size:13px; color:#D0B8F0; line-height:1.75;
+    }
+    .highlight{ color:#CC88FF; font-weight:700; }
+    .sect-title-ko{ font-size:14px; font-weight:700; color:#CC88FF; display:block; line-height:1.3; margin-bottom:2px; }
+    .sect-title-en{ font-size:11px; color:#9966CC; font-style:italic; display:block; line-height:1.3; margin-bottom:10px; }
+
+    .step-summary{ margin-bottom:14px; }
+    .step-summary-item{
+      display:flex; gap:10px; align-items:flex-start;
+      padding:8px 0; border-bottom:1px solid rgba(180,100,255,0.1);
+      font-size:13px; color:#D0B8F0; line-height:1.6;
+    }
+    .step-num-badge{
+      flex-shrink:0; width:22px; height:22px; border-radius:50%;
+      background:#8833CC; color:#fff; font-size:12px; font-weight:700;
+      display:flex; align-items:center; justify-content:center; margin-top:1px;
+    }
+    .s-ko{ font-weight:600; color:#F0E8FF; display:block; line-height:1.4; }
+    .s-en{ font-size:11px; color:#9966CC; font-style:italic; display:block; line-height:1.4; }
+
+    .proof-box{
+      background:rgba(10,0,25,0.6); border:1px dashed rgba(180,100,255,0.3);
+      border-radius:8px; padding:12px 14px; font-size:13px; color:#D0B8F0; line-height:1.9; margin-bottom:0;
+    }
+    .proof-box .pt-ko{ font-size:14px; font-weight:700; color:#CC88FF; display:block; margin-bottom:3px; }
+    .proof-box .pt-en{ font-size:11px; color:#9966CC; font-style:italic; display:block; margin-bottom:8px; }
+    .proof-box .val{ color:#FFD700; font-weight:700; font-family:'Courier New',monospace; }
+
+    /* ── 연습 문제 ── */
+    .ex-section{ margin-bottom:12px; font-family:-apple-system,sans-serif; }
+    .ex-header  { display:flex; gap:8px; margin-bottom:8px; }
+    .ex-toggle{
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      height:42px; background:rgba(30,0,60,0.7); border:1px solid rgba(180,100,255,0.3);
+      border-radius:8px; cursor:pointer;
+    }
+    .ex-toggle .ko{ font-size:12px; color:#CC88FF; line-height:1.3; }
+    .ex-toggle .en{ font-size:9px;  color:#9966CC; font-style:italic; line-height:1.3; }
+    .ex-random{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:0 15px; height:42px; background:rgba(30,0,60,0.7);
+      border:1px solid rgba(129,199,132,0.35); border-radius:8px; cursor:pointer;
+    }
+    .ex-random .ko{ font-size:11px; color:#81C784; line-height:1.3; }
+    .ex-random .en{ font-size:8px;  color:#A5D6A7; font-style:italic; line-height:1.3; }
+    .ex-random:hover{ background:rgba(129,199,132,0.13); }
+    .ex-grid{ display:none; grid-template-columns:1fr 1fr; gap:6px; }
+    .ex-grid.open{ display:grid; }
+    .ex-btn{
+      height:36px; font-size:11px; color:#F0E8FF;
+      background:rgba(10,0,25,0.6); border:1px solid rgba(180,100,255,0.22);
+      border-radius:6px; cursor:pointer; font-family:'Courier New',monospace;
+    }
+    .ex-btn:hover{ background:rgba(180,100,255,0.12); }
+
+    /* ── 토스트 ── */
+    .toast{
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      background:rgba(140,50,220,0.92); color:#F0E8FF; padding:8px 18px;
+      border-radius:20px; font-size:12px; font-family:-apple-system,sans-serif;
+      z-index:9999; pointer-events:none; animation:toastIn 0.3s ease-out;
+    }
+    @keyframes toastIn{
+      from{ opacity:0; transform:translateX(-50%) translateY(12px); }
+      to  { opacity:1; transform:translateX(-50%) translateY(0); }
+    }
+
+    /* ── 모달 ── */
+    .modal-overlay{
+      display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.88); z-index:500; align-items:center;
+      justify-content:center; padding:15px;
+    }
+    .modal-overlay.show{ display:flex; }
+    .modal-content{
+      background:linear-gradient(135deg,#0a0018,#150030);
+      border:2px solid rgba(180,100,255,0.48); border-radius:16px; padding:20px;
+      max-width:95%; max-height:90%; overflow:auto;
+      box-shadow:0 10px 40px rgba(100,0,200,0.5);
+    }
+    .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-family:-apple-system,sans-serif; }
+    .modal-title   { font-size:16px; color:#CC88FF; font-weight:600; display:block; line-height:1.3; }
+    .modal-title-en{ font-size:11px; color:#9966CC; font-style:italic; display:block; line-height:1.3; }
+    .modal-close{ background:none; border:none; color:#9966CC; font-size:28px; cursor:pointer; line-height:1; }
+    .modal-body { color:#F0E8FF; font-size:13px; line-height:1.6; }
+    .modal-footer{ margin-top:15px; display:flex; justify-content:center; }
+
+    /* ── 푸터 ── */
+    .footer{ text-align:center; padding:12px 10px 6px; font-family:-apple-system,sans-serif; }
+    .footer-text  { font-size:10px; color:#6644AA; }
+    .footer-credit{ font-size:10px; color:#553399; letter-spacing:1.5px; margin-top:4px; }
+
+    /* ── 반응형 ── */
+    @media(max-width:480px){
+      .ctrl-btn{ min-width:44px; padding:6px 7px; font-size:10px; }
+      .ctrl-btn.primary{ min-width:58px; }
+      .sv-val{ font-size:26px; }
+      .fa-val{ font-size:30px; }
+      .speed-slider{ width:55px; }
+      .sv-lhs,.sv-rhs{ padding:12px 8px; }
+    }
+    @media(max-width:360px){
+      .input-group input{ width:95px; font-size:16px; height:40px; }
+      .sv-val{ font-size:22px; }
+      .fa-val{ font-size:24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="confetti-container" id="confettiContainer"></div>
+
+<header class="header">
+  <div class="title-row">
+    <!-- 로고: 원본과 동일 (NAEMANG2943 / ㅇ ㅡ ㄴ / SJL0108), 선명도 극대화 -->
+    <svg class="logo" id="logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   style="stop-color:#9933EE"/>
+          <stop offset="100%" style="stop-color:#550099"/>
+        </linearGradient>
+        <path id="tArc" d="M 13,40 A 27,27 0 0,1 67,40"/>
+        <path id="bArc" d="M  9,40 A 31,31 0 0,0 71,40"/>
+      </defs>
+      <circle cx="40" cy="40" r="38" fill="url(#lGrad)" stroke="#BB66FF" stroke-width="1.5"/>
+      <circle cx="40" cy="40" r="33" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.6"/>
+      <!-- 상단: NAEMANG2943 -->
+      <text font-family="'Arial Black','Arial',sans-serif" font-size="8.5" font-weight="900"
+            fill="#FFFFFF" stroke="#330066" stroke-width="0.7" paint-order="stroke fill" letter-spacing="0.4">
+        <textPath href="#tArc" startOffset="50%" text-anchor="middle">NAEMANG2943</textPath>
+      </text>
+      <!-- 중앙: ㅇ ㅡ ㄴ -->
+      <text x="40" y="36" font-size="16" text-anchor="middle" dominant-baseline="middle"
+            fill="#FFFFFF" stroke="#330066" stroke-width="0.9" paint-order="stroke fill"
+            font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-weight="900">ㅇ</text>
+      <text x="40" y="47" font-size="16" text-anchor="middle" dominant-baseline="middle"
+            fill="#FFFFFF" stroke="#330066" stroke-width="0.9" paint-order="stroke fill"
+            font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-weight="900">ㅡ</text>
+      <text x="40" y="58" font-size="16" text-anchor="middle" dominant-baseline="middle"
+            fill="#FFFFFF" stroke="#330066" stroke-width="0.9" paint-order="stroke fill"
+            font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-weight="900">ㄴ</text>
+      <!-- 하단: SJL0108 -->
+      <text font-family="'Arial Black','Arial',sans-serif" font-size="9" font-weight="900"
+            fill="#FFFFFF" stroke="#330066" stroke-width="0.7" paint-order="stroke fill" letter-spacing="1.0">
+        <textPath href="#bArc" startOffset="50%" text-anchor="middle">SJL0108</textPath>
+      </text>
+    </svg>
+
+    <div class="title-text">
+      <div class="subtitle">에카뉴네나 푸르베나</div>
+      <div class="subtitle-en">Ekanyunena Purvena</div>
+    </div>
+  </div>
+  <p class="desc">एकन्यूनेन पूर्वेण &nbsp;•&nbsp; "이전 것보다 하나 적게" &nbsp;•&nbsp; "One less than the previous"</p>
+
+  <div class="util-row">
+    <button class="util-btn" id="btnNewTab">📄 새 탭<br><span style="font-size:8px;color:#6644AA;">New Tab</span></button>
+    <button class="util-btn" id="btnCopyCode">📋 코드 복사<br><span style="font-size:8px;color:#6644AA;">Copy Code</span></button>
+    <div class="util-dropdown" id="captureDropdown">
+      <button class="util-btn">📷 결과<br><span style="font-size:8px;color:#6644AA;">Result ▾</span></button>
+      <div class="util-dropdown-content">
+        <button class="util-dropdown-item" id="btnPreview">🖼 화면 보기<br><span style="font-size:9px;color:#6644AA;">View Screen</span></button>
+        <button class="util-dropdown-item" id="btnCopyResult">📋 텍스트 복사<br><span style="font-size:9px;color:#6644AA;">Copy Text</span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ── 안내 패널 ── -->
+  <section class="info-panel" id="infoPanel">
+    <button class="info-panel-toggle open" id="infoPanelToggle">
+      <span class="left">
+        <span class="icon">📖</span>
+        <span><span class="t-ko">에카뉴네나 푸르베나란?</span><span class="t-en">What is Ekanyunena Purvena?</span></span>
+      </span>
+      <span class="arrow">▼</span>
+    </button>
+    <div class="info-panel-body open" id="infoPanelBody">
+      <div class="info-principle">
+        <span class="highlight">에카뉴네나 푸르베나</span>는 9, 99, 999, 9999… 와의 곱셈을<br>
+        단 <span class="highlight">2단계</span>로 암산하는 베다 수학의 마법 같은 기법입니다.<br><br>
+        핵심: 임의의 수 N을 9…9(k자리)와 곱할 때,<br>
+        N × 9…9 = N × (10<sup>k</sup> − 1) = N × 10<sup>k</sup> − N<br>
+        이 계산이 항상 <span class="highlight">LHS = N−1</span> 과 <span class="highlight">RHS = 9…9 − (N−1)</span> 로 깔끔하게 분리됩니다.<br><br>
+        <span style="font-size:12px;color:#9966CC;font-style:italic;">
+        "Ekaṁ nyūnam pūrvena" means each digit is one less than before.
+        </span>
+      </div>
+
+      <span class="sect-title-ko">🔢 2단계 계산법</span>
+      <span class="sect-title-en">2-Step Method</span>
+      <div class="step-summary">
+        <div class="step-summary-item">
+          <span class="step-num-badge">A</span>
+          <span>
+            <span class="s-ko">왼쪽(LHS) = N − 1</span>
+            <span class="s-en">Left side (LHS) = N minus 1</span>
+          </span>
+        </div>
+        <div class="step-summary-item">
+          <span class="step-num-badge">B</span>
+          <span>
+            <span class="s-ko">오른쪽(RHS) = 9…9 − LHS (항상 k자리 보장)</span>
+            <span class="s-en">Right side (RHS) = 9…9 minus LHS (always k digits)</span>
+          </span>
+        </div>
+        <div class="step-summary-item">
+          <span class="step-num-badge">★</span>
+          <span>
+            <span class="s-ko">답 = LHS 와 RHS 를 이어 붙인 수</span>
+            <span class="s-en">Answer = LHS concatenated with RHS</span>
+          </span>
+        </div>
+      </div>
+
+      <span class="sect-title-ko">✏️ 예시 모음</span>
+      <span class="sect-title-en">Examples</span>
+      <div class="proof-box">
+        <span class="pt-ko">예시 1) 24 × 99</span>
+        <span class="pt-en">Example 1) 24 × 99</span>
+        LHS = <span class="val">24−1 = 23</span> &nbsp;│&nbsp; RHS = <span class="val">99−23 = 76</span> &nbsp;→&nbsp; <span class="val">2376</span><br><br>
+        <span class="pt-ko">예시 2) 356 × 999</span>
+        <span class="pt-en">Example 2) 356 × 999</span>
+        LHS = <span class="val">356−1 = 355</span> &nbsp;│&nbsp; RHS = <span class="val">999−355 = 644</span> &nbsp;→&nbsp; <span class="val">355644</span><br><br>
+        <span class="pt-ko">예시 3) 878 × 9999 (자릿수 패딩: 878 → 0878)</span>
+        <span class="pt-en">Example 3) 878 × 9999 (pad: 878 → 0878)</span>
+        LHS = <span class="val">878−1 = 877</span> &nbsp;│&nbsp; RHS = <span class="val">9999−877 = 9122</span> &nbsp;→&nbsp; <span class="val">8779122</span><br><br>
+        <span style="font-size:12px;color:#9966CC;">
+        💡 수학적 증명 (Mathematical proof)<br>
+        N × 9…9 = N × (10<sup>k</sup>−1) = N·10<sup>k</sup> − N<br>
+        앞부분 → N·10<sup>k</sup> 에서 N을 뺄 때 앞자리: N−1<br>
+        뒷부분 → 10<sup>k</sup>−N = 9…9−(N−1)
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 입력 ── -->
+  <section class="input-box">
+    <div class="input-row">
+      <div class="input-group">
+        <span class="label-ko">곱해지는 수 N</span>
+        <span class="label-en">Multiplicand N</span>
+        <input type="tel" id="numN" value="24" inputmode="numeric">
+      </div>
+      <span class="mult-symbol">×</span>
+      <div class="input-group">
+        <span class="label-ko">9의 개수 선택</span>
+        <span class="label-en">Choose 9…9</span>
+        <input type="tel" id="numNines" value="99" inputmode="numeric" readonly
+               style="cursor:pointer;background:rgba(140,50,220,0.15);">
+      </div>
+    </div>
+    <span class="nine-label-ko">빠른 선택 (Quick Select)</span>
+    <span class="nine-label-en">Tap to set divisor</span>
+    <div class="nines-row" id="ninesRow">
+      <button class="nine-btn active" data-v="9">9</button>
+      <button class="nine-btn" data-v="99">99</button>
+      <button class="nine-btn" data-v="999">999</button>
+      <button class="nine-btn" data-v="9999">9999</button>
+      <button class="nine-btn" data-v="99999">99999</button>
+    </div>
+    <button class="calc-btn" id="calcBtn">
+      <span class="ko">계산 시작</span>
+      <span class="en">Start Calculation</span>
+    </button>
+  </section>
+
+  <!-- ── 컨트롤 ── -->
+  <section class="control-panel" id="ctrlPanel" style="display:none;">
+    <div class="control-row">
+      <button class="ctrl-btn" id="btnFirst"><span>처음</span><span class="en">First</span></button>
+      <button class="ctrl-btn" id="btnPrev"><span>◀ 이전</span><span class="en">Prev</span></button>
+      <button class="ctrl-btn primary" id="btnPlay"><span id="playLabel">▶ 재생</span><span class="en" id="playLabelEn">Play</span></button>
+      <button class="ctrl-btn" id="btnNext"><span>다음 ▶</span><span class="en">Next</span></button>
+      <button class="ctrl-btn" id="btnLast"><span>끝</span><span class="en">Last</span></button>
+    </div>
+    <div class="control-row">
+      <div class="speed-control">
+        <div class="speed-box">
+          <span class="speed-lko">속도</span>
+          <span class="speed-len">Speed</span>
+        </div>
+        <input type="range" class="speed-slider" id="speedSlider" min="1" max="5" value="3">
+        <span class="speed-value" id="speedVal">1.0×</span>
+      </div>
+      <label class="sound-toggle" id="soundToggle">
+        <input type="checkbox" id="soundChk" checked>
+        <span class="sound-icon">🔊</span>
+        <span class="sound-lko">효과음</span>
+        <span class="sound-len">Sound</span>
+      </label>
+    </div>
+  </section>
+
+  <div id="stepBox"></div>
+  <div id="result"></div>
+
+  <!-- ── 연습 문제 ── -->
+  <section class="ex-section">
+    <div class="ex-header">
+      <button class="ex-toggle" id="exToggle">
+        <span class="ko">연습 문제 ▼</span>
+        <span class="en">Practice Problems</span>
+      </button>
+      <button class="ex-random" id="exRandom">
+        <span class="ko">🎲 새 문제</span>
+        <span class="en">Random</span>
+      </button>
+    </div>
+    <div class="ex-grid" id="exGrid"></div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-text">वेद गणित &nbsp;•&nbsp; Vedic Mathematics &nbsp;•&nbsp; 베다 수학 &nbsp;|&nbsp; एकन्यूनेन पूर्वेण</div>
+  <div class="footer-credit">NAEMANG2943 &nbsp;&nbsp; SJL0108</div>
+</footer>
+
+<!-- ── 모달 ── -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>
+        <span class="modal-title">계산 결과</span>
+        <span class="modal-title-en">Calculation Result</span>
+      </span>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="ctrl-btn primary" id="modalCopy">
+        <span>📋 복사</span><span class="en">Copy</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+function $(id){ return document.getElementById(id); }
+var $numN=$('numN'),$numNines=$('numNines'),$calcBtn=$('calcBtn');
+var $result=$('result'),$ctrlPanel=$('ctrlPanel'),$stepBox=$('stepBox');
+var $logo=$('logo'),$confetti=$('confettiContainer');
+var $btnFirst=$('btnFirst'),$btnPrev=$('btnPrev'),$btnPlay=$('btnPlay');
+var $btnNext=$('btnNext'),$btnLast=$('btnLast');
+var $playLabel=$('playLabel'),$playLabelEn=$('playLabelEn');
+var $speedSlider=$('speedSlider'),$speedVal=$('speedVal');
+var $soundToggle=$('soundToggle'),$soundChk=$('soundChk');
+var $exToggle=$('exToggle'),$exGrid=$('exGrid'),$exRandom=$('exRandom');
+var $btnNewTab=$('btnNewTab'),$btnCopyCode=$('btnCopyCode');
+var $captureDropdown=$('captureDropdown');
+var $btnPreview=$('btnPreview'),$btnCopyResult=$('btnCopyResult');
+var $previewModal=$('previewModal'),$modalClose=$('modalClose');
+var $modalBody=$('modalBody'),$modalCopy=$('modalCopy');
+
+var data=null,curStep=-1,playing=false,timer=null;
+var speed=1.0,soundOn=true,exOpen=false,audioCtx=null;
+
+/* ─── 9 선택 버튼 ─── */
+$('ninesRow').querySelectorAll('.nine-btn').forEach(function(btn){
+  btn.onclick=function(){
+    $('ninesRow').querySelectorAll('.nine-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    $numNines.value=btn.dataset.v;
+  };
+});
+$numNines.onclick=function(){
+  $('ninesRow').querySelectorAll('.nine-btn').forEach(function(b){b.classList.remove('active');});
+};
+
+/* ─── 꽃비 ─── */
+function showConfetti(){
+  $confetti.innerHTML='';
+  var colors=['#CC88FF','#FF88CC','#FFD700','#81C784','#64B5F6','#FFB74D','#E8F4FD'];
+  var shapes=['★','◆','●','■','♦','✦','▲'];
+  for(var i=0;i<90;i++){
+    var c=document.createElement('div'); c.className='confetti';
+    c.textContent=shapes[Math.floor(Math.random()*shapes.length)];
+    c.style.left=Math.random()*100+'%';
+    c.style.color=colors[Math.floor(Math.random()*colors.length)];
+    c.style.fontSize=(Math.random()*16+8)+'px';
+    var dur=(Math.random()*2+2)+'s', del=(Math.random()*0.6)+'s';
+    c.style.animation='confetti-fall '+dur+' ease-out '+del+' forwards';
+    $confetti.appendChild(c);
+  }
+  setTimeout(function(){$confetti.innerHTML='';},4500);
+}
+
+/* ─── 토스트 ─── */
+function toast(msg){
+  var t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();},2200);
+}
+
+/* ─── 로고 글로우 ─── */
+function logoGlow(){
+  $logo.classList.add('glow');
+  setTimeout(function(){$logo.classList.remove('glow');},1100);
+}
+
+/* ─── 오디오 ─── */
+function initAudio(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }
+function snd(type){
+  if(!soundOn) return; initAudio();
+  var t=audioCtx.currentTime;
+  function tone(f1,f2,dur,wtype,vol){
+    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination); o.type=wtype||'sine';
+    o.frequency.setValueAtTime(f1,t);
+    if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+    g.gain.setValueAtTime(vol||0.08,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t); o.stop(t+dur);
+  }
+  if(type==='stepA')    tone(660,880,0.18,'sine',0.09);
+  else if(type==='stepB')   tone(880,1100,0.18,'triangle',0.08);
+  else if(type==='combine') tone(523,1047,0.25,'sine',0.10);
+  else if(type==='fanfare'){
+    [523,659,784,880,1047].forEach(function(f,i){
+      var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination); o.type='square';
+      o.frequency.setValueAtTime(f,t+i*0.08);
+      g.gain.setValueAtTime(0,t+i*0.08);
+      g.gain.linearRampToValueAtTime(0.13,t+i*0.08+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,t+i*0.08+0.22);
+      o.start(t+i*0.08); o.stop(t+i*0.08+0.28);
+    });
+    setTimeout(function(){
+      if(!soundOn) return; var ct=audioCtx.currentTime;
+      [523,659,784].forEach(function(f){
+        var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination); o.type='sine';
+        o.frequency.setValueAtTime(f,ct);
+        g.gain.setValueAtTime(0.09,ct); g.gain.exponentialRampToValueAtTime(0.001,ct+0.5);
+        o.start(ct); o.stop(ct+0.5);
+      });
+    },470);
+  }else if(type==='success'){
+    tone(523,784,0.35,'sine',0.10);
+  }else{
+    tone(800,800,0.04,'sine',0.05);
+  }
+}
+
+/* ══════════════════════════════════════════
+   ★ 에카뉴네나 알고리즘
+   ══════════════════════════════════════════ */
+function calcEkanyunena(N, ninesStr){
+  var k=ninesStr.length; /* 9의 개수 */
+  var nines=parseInt(ninesStr);
+  var answer=N*nines;
+
+  /* 패딩 여부 */
+  var Nstr=N.toString();
+  var needsPad=(Nstr.length<k);
+  var paddedN=needsPad ? parseInt(Nstr) : N; /* 실제 계산엔 영향 없음 */
+
+  /* LHS, RHS */
+  var lhs=N-1;
+  var rhs=nines-lhs; /* = 10^k - N */
+
+  /* RHS 를 k자리 문자열로 표현 */
+  var rhsStr=rhs.toString();
+  while(rhsStr.length<k) rhsStr='0'+rhsStr;
+
+  var steps=[];
+
+  /* Step 0: 문제 제시 */
+  steps.push({
+    type:'init',
+    descKo: N+' × '+nines+' 를 2단계로 계산합니다',
+    descEn: 'Solve '+N+' × '+nines+' in just 2 steps',
+    lhsShow:false, rhsShow:false, ansShow:false
+  });
+
+  /* Step 1: 원리 설명 */
+  steps.push({
+    type:'formula',
+    descKo: N+' × '+nines+' = '+N+' × (10<sup>'+k+'</sup>−1)',
+    descEn: 'Rewrite as '+N+' × (10<sup>'+k+'</sup> − 1)',
+    lhsShow:false, rhsShow:false, ansShow:false
+  });
+
+  /* Step 2: 패딩 (필요시) */
+  if(needsPad){
+    steps.push({
+      type:'pad',
+      descKo: '자릿수 맞추기: '+N+' → '+'0'.repeat(k-Nstr.length)+Nstr+' ('+k+'자리로 맞춤)',
+      descEn: 'Pad to '+k+' digits: '+N+' → '+'0'.repeat(k-Nstr.length)+Nstr,
+      lhsShow:false, rhsShow:false, ansShow:false,
+      padFrom:N, padTo:'0'.repeat(k-Nstr.length)+Nstr
+    });
+  }
+
+  /* Step 3: LHS 계산 */
+  steps.push({
+    type:'stepA',
+    descKo: '왼쪽(LHS) = N − 1 = '+N+' − 1 = '+lhs,
+    descEn: 'Left side (LHS) = N − 1 = '+N+' − 1 = '+lhs,
+    lhsShow:true, rhsShow:false, ansShow:false, lhs:lhs
+  });
+
+  /* Step 4: RHS 계산 */
+  steps.push({
+    type:'stepB',
+    descKo: '오른쪽(RHS) = '+nines+' − LHS = '+nines+' − '+lhs+' = '+rhs,
+    descEn: 'Right side (RHS) = '+nines+' − LHS = '+nines+' − '+lhs+' = '+rhs,
+    lhsShow:true, rhsShow:true, ansShow:false, lhs:lhs, rhs:rhs, rhsStr:rhsStr
+  });
+
+  /* Step 5: 합치기 */
+  steps.push({
+    type:'combine',
+    descKo: '정답 = LHS + RHS 이어 붙이기 = '+lhs+' | '+rhsStr,
+    descEn: 'Answer = Concatenate LHS + RHS = '+lhs+' | '+rhsStr,
+    lhsShow:true, rhsShow:true, ansShow:true,
+    lhs:lhs, rhs:rhs, rhsStr:rhsStr, answer:answer
+  });
+
+  /* Step 6: 검산 */
+  var ok=(answer===N*nines);
+  steps.push({
+    type:'verify',
+    descKo: '검산: '+N+' × '+nines+' = '+answer+(ok?' ✓ 정답!':' ✗'),
+    descEn: 'Verify: '+N+' × '+nines+' = '+answer+(ok?' ✓ Correct!':' ✗'),
+    lhsShow:true, rhsShow:true, ansShow:true,
+    lhs:lhs, rhs:rhs, rhsStr:rhsStr, answer:answer, ok:ok
+  });
+
+  return {N:N, nines:nines, ninesStr:ninesStr, k:k, needsPad:needsPad,
+          lhs:lhs, rhs:rhs, rhsStr:rhsStr, answer:answer, ok:ok, steps:steps};
+}
+
+/* ══════════════════════════════════════════
+   ★ 렌더 함수
+   ══════════════════════════════════════════ */
+function render(data, si){
+  if(si<0||!data) return '';
+  var st=data.steps[si];
+  var html='<div class="result-box">';
+
+  /* 정보 바 */
+  html+='<div class="info-row">';
+  html+=ic('곱해지는 수','Multiplicand',data.N);
+  html+=ic('곱하는 수','Multiplier',data.ninesStr);
+  html+=ic('9의 개수','Nines count',data.k);
+  html+=ic('자릿수 패딩','Padding needed',data.needsPad?'필요 Yes':'불필요 No');
+  html+='</div>';
+
+  /* 수식 스트립 */
+  html+='<div class="formula-strip">';
+  html+='<div class="fs-box"><span class="fs-ko">왼쪽</span><span class="fs-en">Left (LHS)</span><span class="fs-formula">N − 1 = '+(st.lhsShow?data.lhs:'?')+'</span></div>';
+  html+='<div class="fs-box"><span class="fs-ko">오른쪽</span><span class="fs-en">Right (RHS)</span><span class="fs-formula">9…9 − LHS = '+(st.rhsShow?data.rhsStr:'?')+'</span></div>';
+  html+='</div>';
+
+  /* LHS│RHS 시각화 */
+  var lhsCls='sv-lhs'+(st.type==='stepA'?' hl':'');
+  var rhsCls='sv-rhs'+(st.type==='stepB'?' hl':'');
+  var lhsValCls='sv-val'+(st.type==='stepA'?' active-lhs':'')+((!st.lhsShow)?' dim':'');
+  var rhsValCls='sv-val'+(st.type==='stepB'?' active-rhs':'')+((!st.rhsShow)?' dim':'');
+  var lhsDisplay=st.lhsShow?String(data.lhs):'—';
+  var rhsDisplay=st.rhsShow?data.rhsStr:'—';
+
+  html+='<div class="split-visual">';
+  html+='<div class="'+lhsCls+'">';
+  html+='<span class="sv-tag-ko">왼쪽 (LHS)</span><span class="sv-tag-en">Left side</span>';
+  html+='<div class="'+lhsValCls+'">'+lhsDisplay+'</div>';
+  if(st.lhsShow) html+='<div class="sv-sub">= '+data.N+' − 1</div>';
+  html+='</div>';
+  html+='<div class="sv-sep"></div>';
+  html+='<div class="'+rhsCls+'">';
+  html+='<span class="sv-tag-ko">오른쪽 (RHS)</span><span class="sv-tag-en">Right side</span>';
+  html+='<div class="'+rhsValCls+'">'+rhsDisplay+'</div>';
+  if(st.rhsShow) html+='<div class="sv-sub">= '+data.ninesStr+' − '+data.lhs+'</div>';
+  html+='</div>';
+  html+='</div>';
+
+  /* 패딩 안내 */
+  if(data.needsPad&&(st.type==='pad'||st.type==='stepA'||st.type==='stepB'||st.type==='combine'||st.type==='verify')){
+    var padded='0'.repeat(data.k-data.N.toString().length)+data.N;
+    html+='<div class="pad-note">';
+    html+='<span class="pn-ko">💡 자릿수 맞추기: N('+data.N+')이 '+data.k+'자리보다 작으므로 → '+padded+' 로 간주</span>';
+    html+='<span class="pn-en">N('+data.N+') has fewer than '+data.k+' digits → treated as '+padded+'</span>';
+    html+='</div>';
+  }
+
+  /* 계산 상세 */
+  html+='<div class="calc-detail">';
+  /* Step A */
+  if(st.lhsShow){
+    html+='<div class="cd-row cd-new">';
+    html+='<span><span class="cd-lbl-ko">Step A (왼쪽)</span><span class="cd-lbl-en">Left side</span></span>';
+    html+='<span class="cd-val lhs-color">'+data.N+' − 1 = <strong>'+data.lhs+'</strong></span>';
+    html+='</div>';
+  }
+  /* Step B */
+  if(st.rhsShow){
+    html+='<div class="cd-row cd-new">';
+    html+='<span><span class="cd-lbl-ko">Step B (오른쪽)</span><span class="cd-lbl-en">Right side</span></span>';
+    html+='<span class="cd-val rhs-color">'+data.ninesStr+' − '+data.lhs+' = <strong>'+data.rhsStr+'</strong></span>';
+    html+='</div>';
+  }
+  /* 합치기 */
+  if(st.ansShow){
+    html+='<div class="cd-row cd-new">';
+    html+='<span><span class="cd-lbl-ko">결합 (이어 붙이기)</span><span class="cd-lbl-en">Concatenate</span></span>';
+    html+='<span class="cd-val ans-color"><strong>'+data.lhs+'</strong> + <strong>'+data.rhsStr+'</strong> = <strong>'+data.answer+'</strong></span>';
+    html+='</div>';
+  }
+  html+='</div>';
+
+  /* 최종 답 */
+  if(st.ansShow){
+    /* 색 구분으로 LHS|RHS 보여주기 */
+    var ansStr=String(data.answer);
+    var lhsStr=String(data.lhs);
+    var rhsPart=data.rhsStr;
+    var lhsLen=lhsStr.length;
+    var coloredAns='<span class="fa-lhs-part">'+ansStr.slice(0,lhsLen)+'</span>'+
+                   '<span class="fa-rhs-part">'+ansStr.slice(lhsLen)+'</span>';
+    html+='<div class="final-answer">';
+    html+='<span class="fa-label-ko">최종 정답</span>';
+    html+='<span class="fa-label-en">Final Answer</span>';
+    html+='<div class="fa-expression">'+data.N+' × '+data.ninesStr+' =</div>';
+    html+='<div class="fa-val">'+coloredAns+'</div>';
+    html+='<div style="font-size:11px;color:#9966CC;margin-top:6px;">'+
+          '<span style="color:#CC88FF;">■</span> LHS('+data.lhs+') &nbsp;+&nbsp; '+
+          '<span style="color:#FF88CC;">■</span> RHS('+data.rhsStr+')</div>';
+    html+='</div>';
+  }
+
+  /* 검산 */
+  if(st.type==='verify'){
+    html+='<div class="verify '+(st.ok?'ok party':'')+'">';
+    html+='<span class="v-lko">검산</span>';
+    html+='<span class="v-len">Verification</span>';
+    html+='<div style="margin-top:5px;font-size:14px;">'+data.N+' × '+data.nines+' = '+data.answer+'</div>';
+    html+='<div style="font-size:18px;font-weight:700;margin-top:4px;">'+(st.ok?'✓ 정답!':'✗ 오류')+'</div>';
+    if(st.ok) html+='<div style="font-size:11px;color:#A5D6A7;font-style:italic;">Correct!</div>';
+    html+='</div>';
+  }
+
+  html+='</div>';
+  return html;
+}
+
+/* 정보 셀 */
+function ic(ko,en,val){
+  return '<div class="info-item gold">'+
+    '<span class="info-label">'+ko+'</span>'+
+    '<span class="info-label-en">'+en+'</span>'+
+    '<div class="info-value">'+val+'</div></div>';
+}
+
+/* ── 텍스트 결과 ── */
+function getResultText(){
+  if(!data) return '';
+  var sep='═══════════════════════════════════════════';
+  var ln ='───────────────────────────────────────────';
+  var lines=[
+    sep,
+    '  에카뉴네나 푸르베나',
+    '  Ekanyunena Purvena',
+    sep,
+    '  곱해지는 수 (Multiplicand) : '+data.N,
+    '  곱하는 수   (Multiplier)   : '+data.ninesStr,
+    '  9의 개수    (Nines count)  : '+data.k,
+    '  자릿수 패딩 (Padding)      : '+(data.needsPad?'필요 (Yes)':'불필요 (No)'),
+    ln,
+    '  Step A — 왼쪽 (Left / LHS)',
+    ln,
+    '  LHS = N − 1 = '+data.N+' − 1 = '+data.lhs,
+    ln,
+    '  Step B — 오른쪽 (Right / RHS)',
+    ln,
+    '  RHS = '+data.ninesStr+' − '+data.lhs+' = '+data.rhsStr,
+    ln,
+    '  결합 (Concatenation)',
+    ln,
+    '  LHS + RHS = '+data.lhs+' | '+data.rhsStr+' = '+data.answer,
+    ln,
+    '  검산 (Verification)',
+    ln,
+    '  '+data.N+' × '+data.nines+' = '+data.answer,
+    '  '+(data.ok?'✓ 정답! (Correct!)':'✗ 오류 (Error)'),
+    sep
+  ];
+  return lines.join('\n');
+}
+
+/* ── 단계 박스 ── */
+function updateStep(){
+  if(!data) return;
+  var st=data.steps[curStep];
+  $stepBox.innerHTML=
+    '<div class="step-box">'+
+    '<div class="step-num">단계 · Step '+(curStep+1)+' / '+data.steps.length+'</div>'+
+    '<div class="step-desc-ko">'+st.descKo+'</div>'+
+    '<div class="step-desc-en">'+st.descEn+'</div>'+
+    '</div>';
+}
+
+function updateCtrls(){
+  if(!data) return;
+  $btnFirst.disabled=curStep<=0;
+  $btnPrev.disabled=curStep<=0;
+  $btnNext.disabled=curStep>=data.steps.length-1;
+  $btnLast.disabled=curStep>=data.steps.length-1;
+  $playLabel.textContent=playing?'⏸ 정지':'▶ 재생';
+  $playLabelEn.textContent=playing?'Pause':'Play';
+}
+
+function goStep(i,withSound){
+  if(!data) return;
+  if(i<0) i=0; if(i>=data.steps.length) i=data.steps.length-1;
+  var prev=curStep; curStep=i;
+  if(withSound&&curStep!==prev){
+    var st=data.steps[curStep];
+    if(st.type==='verify'&&st.ok){ snd('fanfare'); logoGlow(); showConfetti(); }
+    else if(st.type==='combine') { snd('combine'); logoGlow(); }
+    else if(st.type==='stepA')   snd('stepA');
+    else if(st.type==='stepB')   snd('stepB');
+    else if(st.type==='verify')  snd('success');
+    else snd('click');
+  }
+  $result.innerHTML=render(data,curStep);
+  updateStep(); updateCtrls();
+  if(curStep>=data.steps.length-1) stopPlay();
+}
+
+function startPlay(){
+  if(playing||!data) return;
+  if(curStep>=data.steps.length-1) curStep=-1;
+  playing=true; updateCtrls();
+  timer=setInterval(function(){goStep(curStep+1,true);},1100/speed);
+}
+function stopPlay(){
+  playing=false; if(timer){clearInterval(timer);timer=null;} updateCtrls();
+}
+function togglePlay(){ if(playing) stopPlay(); else startPlay(); }
+
+/* ── 계산 ── */
+function doCalc(){
+  var N=parseInt($numN.value);
+  var ninesStr=$numNines.value.trim();
+  /* 9로만 구성되었는지 확인 */
+  if(isNaN(N)||N<1||!/^9+$/.test(ninesStr)){
+    alert('올바른 값을 입력하세요.\n• 곱해지는 수: 양의 정수\n• 곱하는 수: 9, 99, 999… 형태\n\nPlease enter valid values.\n• N: positive integer\n• 9…: 9, 99, 999…');
+    return;
+  }
+  stopPlay();
+  data=calcEkanyunena(N, ninesStr);
+  curStep=-1;
+  $ctrlPanel.style.display='block';
+  $stepBox.innerHTML=''; $result.innerHTML='';
+  snd('click'); logoGlow();
+  setTimeout(startPlay,200);
+}
+
+function updateSpeed(){
+  var v=parseInt($speedSlider.value);
+  speed=[0.5,0.75,1.0,1.5,2.0][v-1];
+  $speedVal.textContent=speed+'×';
+  if(playing){stopPlay();startPlay();}
+}
+
+/* ── 연습 문제 ── */
+var NINES_OPTIONS=['9','99','999','9999','99999'];
+function generateProblems(){
+  var probs=[];
+  for(var i=0;i<6;i++){
+    var ninesStr=NINES_OPTIONS[Math.floor(Math.random()*4)];
+    var k=ninesStr.length;
+    /* N이 k자리 이하인 수 */
+    var maxN=Math.pow(10,k)-1;
+    var minN=Math.max(2,Math.floor(maxN*0.1));
+    var N=Math.floor(Math.random()*(maxN-minN))+minN;
+    probs.push({N:N,ninesStr:ninesStr});
+  }
+  return probs;
+}
+function renderProblems(){
+  var probs=generateProblems();
+  var h='';
+  probs.forEach(function(p){
+    h+='<button class="ex-btn" data-n="'+p.N+'" data-v="'+p.ninesStr+'">'+p.N+' × '+p.ninesStr+'</button>';
+  });
+  $exGrid.innerHTML=h;
+  $exGrid.querySelectorAll('.ex-btn').forEach(function(btn){
+    btn.onclick=function(){
+      $numN.value=btn.dataset.n; $numNines.value=btn.dataset.v;
+      /* 9 빠른선택 버튼 동기화 */
+      $('ninesRow').querySelectorAll('.nine-btn').forEach(function(b){
+        b.classList.toggle('active',b.dataset.v===btn.dataset.v);
+      });
+      stopPlay(); $ctrlPanel.style.display='none';
+      $stepBox.innerHTML=''; $result.innerHTML='';
+      data=null; snd('click');
+    };
+  });
+}
+
+/* ── 유틸 ── */
+function openNewTab(){
+  var blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+  window.open(URL.createObjectURL(blob),'_blank');
+  toast('새 탭에서 열렸습니다 · Opened in new tab');
+}
+function copyCode(){
+  navigator.clipboard.writeText(document.documentElement.outerHTML).then(function(){
+    toast('코드 복사 완료 · Code copied');
+  });
+}
+function showPreview(){
+  if(!data){ toast('먼저 계산을 실행하세요 · Run calculation first'); return; }
+  $modalBody.innerHTML=render(data,data.steps.length-1);
+  $previewModal.classList.add('show');
+}
+function copyResult(){
+  if(!data){ toast('먼저 계산을 실행하세요 · Run calculation first'); return; }
+  navigator.clipboard.writeText(getResultText()).then(function(){
+    toast('결과 복사 완료 · Result copied');
+  });
+}
+
+/* ── 이벤트 ── */
+$calcBtn.onclick=doCalc;
+$btnFirst.onclick=function(){stopPlay();snd('click');goStep(0,false);};
+$btnPrev.onclick =function(){stopPlay();snd('click');goStep(curStep-1,false);};
+$btnPlay.onclick =function(){snd('click');togglePlay();};
+$btnNext.onclick =function(){stopPlay();goStep(curStep+1,true);};
+$btnLast.onclick =function(){stopPlay();goStep(data.steps.length-1,true);};
+$speedSlider.oninput=updateSpeed;
+$soundChk.onchange=function(){soundOn=$soundChk.checked;$soundToggle.classList.toggle('muted',!soundOn);};
+
+$exToggle.onclick=function(){
+  exOpen=!exOpen;
+  $exGrid.classList.toggle('open',exOpen);
+  $exToggle.querySelector('.ko').textContent=exOpen?'연습 문제 닫기 ▲':'연습 문제 ▼';
+};
+$exRandom.onclick=function(){
+  renderProblems();
+  if(!exOpen){exOpen=true;$exGrid.classList.add('open');$exToggle.querySelector('.ko').textContent='연습 문제 닫기 ▲';}
+  snd('click'); toast('새 문제 생성 완료 · New problems generated');
+};
+
+$btnNewTab.onclick=openNewTab;
+$btnCopyCode.onclick=copyCode;
+$btnPreview.onclick=function(){showPreview();$captureDropdown.classList.remove('active');};
+$btnCopyResult.onclick=function(){copyResult();$captureDropdown.classList.remove('active');};
+$modalClose.onclick=function(){$previewModal.classList.remove('show');};
+$modalCopy.onclick=function(){copyResult();$previewModal.classList.remove('show');};
+$previewModal.onclick=function(e){if(e.target===$previewModal)$previewModal.classList.remove('show');};
+$captureDropdown.querySelector('.util-btn').onclick=function(e){
+  e.stopPropagation();$captureDropdown.classList.toggle('active');
+};
+document.onclick=function(){$captureDropdown.classList.remove('active');};
+
+document.onkeydown=function(e){
+  if(!data) return;
+  if(e.key===' '){e.preventDefault();togglePlay();}
+  else if(e.key==='ArrowLeft') {stopPlay();goStep(curStep-1,false);}
+  else if(e.key==='ArrowRight'){stopPlay();goStep(curStep+1,true);}
+  else if(e.key==='Home'){stopPlay();goStep(0,false);}
+  else if(e.key==='End') {stopPlay();goStep(data.steps.length-1,false);}
+};
+
+document.getElementById('infoPanelToggle').onclick=function(){
+  var open=document.getElementById('infoPanelBody').classList.toggle('open');
+  this.classList.toggle('open',open);
+};
+
+logoGlow();
+renderProblems();
+})();
+</script>
+</body>
+</html>
