@@ -1,0 +1,33 @@
+name: 로또 데이터 자동 업데이트
+
+on:
+  # 매주 토요일 밤 9시 30분 (KST) = UTC 12:30 자동 실행
+  schedule:
+    - cron: '30 12 * * 6'
+  # 수동으로도 실행 가능
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 로또 데이터 업데이트
+        run: node update-lotto.js lotto645_f27.html
+
+      - name: 변경사항 커밋 & 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet && echo "변경 없음" || (
+            git add lotto645_f27.html
+            git commit -m "🤖 로또 데이터 자동 업데이트 $(date +'%Y-%m-%d')"
+            git push
+          )
