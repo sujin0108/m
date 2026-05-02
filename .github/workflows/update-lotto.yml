@@ -1,10 +1,8 @@
 name: 로또 데이터 자동 업데이트
 
 on:
-  # 매주 토요일 밤 9시 30분 (KST) = UTC 12:30 자동 실행
   schedule:
     - cron: '30 12 * * 6'
-  # 수동으로도 실행 가능
   workflow_dispatch:
 
 jobs:
@@ -19,15 +17,28 @@ jobs:
         with:
           node-version: '20'
 
+      - name: API 접속 테스트
+        run: |
+          echo "=== 직접 접속 테스트 ==="
+          curl -s -L --max-time 10 \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=1217" \
+            | head -c 300
+          echo ""
+          echo "=== allorigins 프록시 테스트 ==="
+          curl -s -L --max-time 10 \
+            "https://api.allorigins.win/get?url=https%3A%2F%2Fwww.dhlottery.co.kr%2Fcommon.do%3Fmethod%3DgetLottoNumber%26drwNo%3D1217" \
+            | head -c 300
+
       - name: 로또 데이터 업데이트
         run: node update-lotto.js lotto645_f33.html
 
-      - name: 변경사항 커밋 & 푸시
+      - name: 변경사항 커밋 및 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git diff --quiet && echo "변경 없음" || (
-            git add lotto645_f27.html
+            git add lotto645_f33.html
             git commit -m "🤖 로또 데이터 자동 업데이트 $(date +'%Y-%m-%d')"
             git push
           )
