@@ -39,7 +39,7 @@ function daysAgo(n) {
 async function wamisFetch(url) {
   const res = await fetch(url, {
     headers: { 'Accept': 'application/json' },
-    signal: AbortSignal.timeout(4000)
+    signal: AbortSignal.timeout(1500)
   });
   if (!res.ok) throw new Error(`WAMIS HTTP ${res.status}`);
   return res.json();
