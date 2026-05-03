@@ -167,14 +167,23 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
   const path = (req.url || '/').replace(/^\/api/, '') || '/';
+
+  // POST 처리 (저수지 등록)
+  if (req.method === 'POST' && path === '/reservoir/submit') {
+    return res.status(200).json({ ok: true, message: '등록되었습니다.' });
+  }
+
   try {
     let body;
     if (path === '/all' || path === '/')       body = await handleAll();
     else if (path.startsWith('/dam/'))          body = await handleDam(path.split('/')[2]);
     else if (path.startsWith('/history/'))      body = await handleHistory(path.split('/')[2]);
     else if (path === '/world')                 body = { dams: [] };
-    else if (path === '/hv_compare/' + path.split('/')[2]) body = { data: [] };
-    else return res.status(404).json({ error: 'Not found' });
+    else if (path.startsWith('/hv_compare/'))  body = { data: [] };
+    else if (path === '/reservoir/list')        body = { list: [], stats: { count:0, total_volume:0 } };
+    else if (path === '/reservoir/stats')       body = { count:0, total_volume:0 };
+    else if (path === '/pre_release')           body = { result: null };
+    else return res.status(200).json({ ok: true });
     return res.status(200).json(body);
   } catch(e) {
     return res.status(500).json({ error: e.message });
