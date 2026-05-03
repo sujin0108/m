@@ -1533,8 +1533,8 @@ input[type="checkbox"][style*="display:none"] {
       </div>
       <div class="summary-card">
         <div class="summary-label"><span class="lbl-ko">데이터 출처</span><br><span class="lbl-en">Data Source</span></div>
-        <div><span class="summary-value" style="font-size:22px;color:var(--accent3)">WAMIS</span></div>
-        <div class="summary-sub"><span class="lbl-ko">환경부 국가수자원관리종합정보시스템</span><span class="lbl-en" style="display:none;">Ministry of Environment, Korea</span></div>
+        <div><span class="summary-value" style="font-size:22px;color:var(--accent3)">K-water</span></div>
+        <div class="summary-sub"><span class="lbl-ko">한국수자원공사 공공데이터포털</span><span class="lbl-en" style="display:none;">Korea Water Resources Corporation</span></div>
       </div>
     </div>
 
@@ -2794,9 +2794,9 @@ input[type="checkbox"][style*="display:none"] {
         <div>
           <div style="font-family:var(--font-disp);font-size:17px;color:var(--accent3);margin-bottom:6px;">왜 저수지 등록이 중요한가요? <span class="en-sub">Why Register a Reservoir?</span></div>
           <p style="font-size:12px;color:var(--text2);line-height:1.9;margin:0;">
-            한국에는 공식 WAMIS 데이터에 없는 <strong style="color:var(--accent)">소규모 저수지·농업용 보</strong>가 수만 개 존재해요.<br>
+            한국에는 공식 K-water 데이터에 없는 <strong style="color:var(--accent)">소규모 저수지·농업용 보</strong>가 수만 개 존재해요.<br>
             여러분이 직접 측정·등록한 데이터가 쌓이면 전국 수자원 지도가 완성됩니다.<br>
-            <span style="font-size:11px;color:var(--text3);font-style:italic;">Tens of thousands of small reservoirs and irrigation ponds are missing from WAMIS. Your measurements help complete the national water map.</span><br>
+            <span style="font-size:11px;color:var(--text3);font-style:italic;">Tens of thousands of small reservoirs and irrigation ponds are missing from K-water. Your measurements help complete the national water map.</span><br>
             <strong style="color:var(--accent3)">📚 학교 과학 탐구 · 환경 동아리 · 지역 시민 과학</strong><br><span class="en-sub">Science class · Eco clubs · Citizen science</span>
           </p>
         </div>
@@ -3207,7 +3207,7 @@ input[type="checkbox"][style*="display:none"] {
             <div style="padding:10px;background:rgba(255,184,0,0.06);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.7;">
               <strong style="color:var(--gold);">📊 탐구 보고서 활용</strong><br>
               • 등록 결과 → 보고서용 PDF 생성<br>
-              • WAMIS 공식 댐 데이터와 비교<br>
+              • K-water 공식 댐 데이터와 비교<br>
               • 기후변화에 따른 수위 변화 추적
             </div>
           </div>
@@ -3288,7 +3288,7 @@ input[type="checkbox"][style*="display:none"] {
            data-en="Real-time Dam Monitoring &amp; Education Platform">
         전국 댐 실시간 모니터링 &amp; 교육 플랫폼
       </div>
-      <div style="font-size:10px;color:var(--text3);font-family:var(--font-num);">v3.0 · WAMIS · © 2026</div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--font-num);">v3.0 · K-water · © 2026</div>
     </div>
   </div>
 </footer>
@@ -4099,8 +4099,8 @@ async function openDamModal(damId) {
 
   document.getElementById('modal-title').textContent = d.info.name;
   document.getElementById('modal-sub').textContent = isEN
-    ? `${d.info.river} | Full capacity ${d.info.full} M.ton | ${d.realtime.is_mock ? '⚠️ Demo data' : '✅ WAMIS Live'}`
-    : `${d.info.river} | 만수위 ${d.info.full} 백만톤 | ${d.realtime.is_mock ? '⚠️ 모의 데이터' : '✅ WAMIS 실시간'}`;
+    ? `${d.info.river} | Full capacity ${d.info.full} M.ton | ${d.realtime.is_mock ? '⚠️ Demo data' : '✅ K-water Live'}`
+    : `${d.info.river} | 만수위 ${d.info.full} 백만톤 | ${d.realtime.is_mock ? '⚠️ 모의 데이터' : '✅ K-water 실시간'}`;
 
   document.getElementById('d-rate').textContent  = d.realtime.storage_rate;
   document.getElementById('d-level').textContent = d.realtime.level.toFixed(2);
@@ -5864,7 +5864,7 @@ function generateReport() {
 
       <!-- 푸터 -->
       <div style="border-top:1px solid #ddd;padding-top:10px;font-size:10px;color:#999;text-align:center;">
-        댐워치(DamWatch) · NAEMANG2943 · SJL0108 · 데이터 출처: WAMIS (환경부)
+        댐워치(DamWatch) · NAEMANG2943 · SJL0108 · 데이터 출처: K-water (한국수자원공사)
       </div>
     </div>
   `;
