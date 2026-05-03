@@ -3618,6 +3618,81 @@ input[type="checkbox"][style*="display:none"] {
 // 상태
 // ═══════════════════════════════════════
 const API = '';
+const KWATER_KEY = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378';
+const KWATER_URL = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition';
+
+// 브라우저에서 직접 K-water API 호출 (한국 IP에서 CORS 허용)
+async function fetchKwaterDirect() {
+  const url = `${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  const code = json?.response?.header?.resultCode;
+  if (code && code !== '00') throw new Error('API code: ' + code);
+  const items = json?.response?.body?.items?.item;
+  if (!items) throw new Error('no items');
+  return Array.isArray(items) ? items : [items];
+}
+
+const DAM_META_CLIENT = {
+  soyang:    { name:'소양강댐', river:'북한강', full:2900,  lat:37.9833, lng:127.7167 },
+  chungju:   { name:'충주댐',   river:'남한강', full:2750,  lat:37.0167, lng:128.0167 },
+  daecheong: { name:'대청댐',   river:'금강',   full:1490,  lat:36.4833, lng:127.5000 },
+  andong:    { name:'안동댐',   river:'낙동강', full:1248,  lat:36.5833, lng:128.8167 },
+  hwacheon:  { name:'화천댐',   river:'북한강', full:1018,  lat:38.1000, lng:127.7000 },
+  yongdam:   { name:'용담댐',   river:'금강',   full:815,   lat:35.9667, lng:127.5500 },
+  hapcheon:  { name:'합천댐',   river:'황강',   full:790,   lat:35.7500, lng:128.0833 },
+  imha:      { name:'임하댐',   river:'반변천', full:595,   lat:36.6000, lng:129.0167 },
+  seomjin:   { name:'섬진강댐', river:'섬진강', full:466,   lat:35.5667, lng:127.2333 },
+  juam:      { name:'주암댐',   river:'보성강', full:457,   lat:35.0000, lng:127.2167 },
+  paldang:   { name:'팔당댐',   river:'한강',   full:244,   lat:37.5333, lng:127.3167 },
+  yeongju:   { name:'영주댐',   river:'내성천', full:181.6, lat:36.8667, lng:128.5167 },
+  boryeong:  { name:'보령댐',   river:'웅천천', full:116.9, lat:36.3333, lng:126.7000 },
+  miryang:   { name:'밀양댐',   river:'밀양강', full:73.6,  lat:35.5333, lng:128.7500 },
+  buan:      { name:'부안댐',   river:'백천',   full:50,    lat:35.7833, lng:126.7333 },
+  janghung:  { name:'장흥댐',   river:'탐진강', full:43.7,  lat:34.7167, lng:126.9167 },
+};
+
+function matchDamName(apiName, metaName) {
+  const a = (apiName||'').replace('댐','').trim();
+  const b = metaName.replace('댐','').trim();
+  return a && b && (a.includes(b) || b.includes(a));
+}
+
+function itemToFlat(id, meta, item) {
+  const rate = parseFloat(item.rrt||item.strgrt||0);
+  const alert = rate >= 95 ? {code:3,level:'danger',label:'경보'} : rate >= 80 ? {code:2,level:'warning',label:'주의'} : {code:0,level:'normal',label:'정상'};
+  const now = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return {
+    id, ...meta,
+    level:        parseFloat(item.swl||item.wl||0),
+    volume:       parseFloat(item.rsv||item.strgqy||0),
+    storage_rate: rate,
+    inflow:       parseFloat(item.inf||item.inflw||0),
+    outflow:      parseFloat(item.tof||item.totspit||0),
+    time: `${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}${p(now.getHours())}`,
+    is_mock: false, alert,
+    realtime: { level:parseFloat(item.swl||item.wl||0), volume:parseFloat(item.rsv||item.strgqy||0), storage_rate:rate, inflow:parseFloat(item.inf||item.inflw||0), outflow:parseFloat(item.tof||item.totspit||0), is_mock:false }
+  };
+}
+
+let _kwaterCache = null;
+let _kwaterCacheTime = 0;
+
+async function tryKwaterDirect() {
+  const now = Date.now();
+  if (_kwaterCache && now - _kwaterCacheTime < 5*60*1000) return _kwaterCache;
+  try {
+    const items = await fetchKwaterDirect();
+    _kwaterCache = items;
+    _kwaterCacheTime = now;
+    return items;
+  } catch(e) {
+    console.log('[K-water direct] failed:', e.message);
+    return null;
+  }
+}
 
 // 파일로 직접 열거나 서버 없을 때 → API 호출 건너뜀
 const NO_SERVER = (location.protocol === 'file:' || location.hostname === '');
@@ -3966,9 +4041,31 @@ function setLang(l) {
 // 대시보드 로드
 // ═══════════════════════════════════════
 async function loadDashboard() {
-  let data = await apiFetch('/api/all');
+  // 1. 브라우저에서 직접 K-water API 시도
+  const kwItems = await tryKwaterDirect();
+  let data = null;
 
-  // 백엔드 없으면 내장 모의 데이터 사용
+  if (kwItems) {
+    const dams = Object.entries(DAM_META_CLIENT).map(([id, meta]) => {
+      const item = kwItems.find(i => matchDamName(i.damNm||i.damname||'', meta.name));
+      if (!item) return null;
+      return itemToFlat(id, meta, item);
+    }).filter(Boolean);
+
+    if (dams.length > 0) {
+      data = {
+        dams,
+        updated: new Date().toISOString(),
+        total_storage:  dams.reduce((a,d) => a+d.volume, 0),
+        total_capacity: dams.reduce((a,d) => a+d.full, 0),
+      };
+    }
+  }
+
+  // 2. 실패시 서버 API 시도
+  if (!data) data = await apiFetch('/api/all');
+
+  // 3. 최종 fallback: 모의 데이터
   if (!data) {
     data = {
       dams: MOCK_DAMS,
