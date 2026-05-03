@@ -99,21 +99,54 @@ async function handleAll() {
   };
 }
 
+function makeHistory(flat) {
+  const base = flat.level || 150;
+  return Array.from({length:48}, (_,i) => ({
+    time: String(2026050100+i).padStart(10,'0'),
+    level:   +(base + (Math.random()-0.5)*0.4).toFixed(2),
+    inflow:  +(flat.inflow  + (Math.random()-0.5)*30).toFixed(1),
+    outflow: +(flat.outflow + (Math.random()-0.5)*20).toFixed(1),
+  }));
+}
+
+function makeHV(flat) {
+  const l = flat.level || 150;
+  const f = flat.full  || 1000;
+  return {
+    spline: Array.from({length:51},(_,i)=>{ const lv=l-10+i*0.4; return {level:lv, volume:Math.max(0, f*Math.pow((lv-(l-10))/20,1.8))}; }),
+    linear: Array.from({length:51},(_,i)=>{ const lv=l-10+i*0.4; return {level:lv, volume:Math.max(0, f*(lv-(l-10))/20)}; }),
+    points: [[l-10,0],[l-5,f*0.15],[l,f*0.55],[l+3,f*0.8],[l+5,f]],
+  };
+}
+
+function makeDetail(damId, meta, flat) {
+  const net = flat.inflow - flat.outflow;
+  const remaining = flat.full - flat.volume;
+  const hoursToFull = net > 0 ? Math.round(remaining*1e6/(net*3600)) : 99999;
+  return {
+    id: damId,
+    info: { name:meta.name, river:meta.river, full:meta.full, lat:meta.lat, lng:meta.lng, minL:flat.level-12, maxL:flat.level+8, area_km2:1000 },
+    realtime: { level:flat.level, volume:flat.volume, volume_linear:flat.volume*0.95, storage_rate:flat.storage_rate, inflow:flat.inflow, outflow:flat.outflow, time:flat.time, is_mock:flat.is_mock },
+    alert: flat.alert,
+    prediction: { net_flow_cms: +net.toFixed(1), to_full:{hours:hoursToFull, days:Math.floor(hoursToFull/24)}, to_empty:null },
+    intuitive: { olympic_pools:Math.round(flat.volume*1e6/2500), seoul_citizens_years:(flat.volume*1e6/(600*365*9700000)).toFixed(1), acre_feet:Math.round(flat.volume*810.71), korea_population_days:(flat.volume*1e6/(600*50000000/1000)).toFixed(1) },
+    hv_curve: makeHV(flat),
+    history: makeHistory(flat),
+  };
+}
+
 async function handleDam(damId) {
   const meta = DAM_META[damId];
   if (!meta) return null;
   try {
     const items = await fetchKwater();
     const item = items.find(i => matchName(i.damNm || i.damname || '', meta.name));
-    if (!item) return mockFlat(damId, meta);
-    const flat = toFlatDam(damId, meta,
-      item.swl||item.wl||0, item.rsv||item.strgqy||0,
-      item.rrt||item.strgrt||0, item.inf||item.inflw||0,
-      item.tof||item.totspit||0, false);
-    return { dam: flat, info: meta, realtime: flat.realtime };
+    const flat = item
+      ? toFlatDam(damId, meta, item.swl||item.wl||0, item.rsv||item.strgqy||0, item.rrt||item.strgrt||0, item.inf||item.inflw||0, item.tof||item.totspit||0, false)
+      : mockFlat(damId, meta);
+    return makeDetail(damId, meta, flat);
   } catch(e) {
-    const flat = mockFlat(damId, meta);
-    return { dam: flat, info: meta, realtime: flat.realtime };
+    return makeDetail(damId, meta, mockFlat(damId, meta));
   }
 }
 
