@@ -1,5 +1,4 @@
 {
-  "regions": ["icn1"],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" }
   ]
