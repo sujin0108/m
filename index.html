@@ -7329,6 +7329,7 @@ async function loadCrowdData() {
       `);
       const m = L.marker([r.lat, r.lng], { icon })
         .addTo(crowdMap)
+        .bindTooltip(`📍 ${r.name}`, { permanent: false, direction: 'top', offset: [0, -8], className: 'dam-tooltip' })
         .bindPopup(popup);
 
       // 클릭 시 팝업 열기
@@ -8267,6 +8268,7 @@ function toggleCrowdLayer() {
       const milTon = res.result ? res.result.million_ton : (res.mil_ton || 0);
       const addressTxt = res.address ? `<br><span style="font-size:11px;color:#aaa;">${res.address}</span>` : '';
       L.marker([res.lat, res.lng], { icon })
+        .bindTooltip(`📍 ${res.name}`, { permanent: false, direction: 'top', offset: [0, -8], className: 'dam-tooltip' })
         .bindPopup(`<div style="font-family:sans-serif;"><strong>📍 ${res.name}</strong>${addressTxt}<br>저수량: <strong style="color:#00c8ff;">${Number(milTon).toFixed(4)} 백만톤</strong></div>`)
         .addTo(crowdDamLayer);
     });
