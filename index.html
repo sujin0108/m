@@ -7244,10 +7244,11 @@ async function loadCrowdData() {
   const stats = await apiFetch('/api/reservoir/stats');
   const list  = await apiFetch('/api/reservoir/list');
 
-  // 통계
-  const total   = stats ? stats.total_registered   : localData.length;
-  const vol     = stats ? stats.total_volume_million_ton : localData.reduce((s,r)=>s+(r.mil_ton||0),0).toFixed(4);
-  const contrib = stats ? stats.contributors        : localData.length;
+  // 통계 — 서버가 0이면 로컬 데이터 사용
+  const serverTotal = stats ? stats.total_registered : 0;
+  const total   = serverTotal > 0 ? serverTotal : localData.length;
+  const vol     = serverTotal > 0 ? stats.total_volume_million_ton : localData.reduce((s,r)=>s+(r.mil_ton||0),0).toFixed(4);
+  const contrib = serverTotal > 0 ? stats.contributors : localData.length;
 
   document.getElementById('cs-total').textContent   = total;
   document.getElementById('cs-vol').textContent     = vol;

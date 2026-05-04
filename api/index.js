@@ -179,7 +179,7 @@ export default async function handler(req, res) {
     else if (path.startsWith('/dam/'))          body = await handleDam(path.split('/')[2]);
     else if (path.startsWith('/history/'))      body = await handleHistory(path.split('/')[2]);
     else if (path === '/world')                 body = { dams: [] };
-    else if (path.startsWith('/hv_compare/'))  body = { data: [] };
+    // hv_compare: let frontend use inline calc
     else if (path === '/reservoir/list')        body = { reservoirs: [] };
     else if (path === '/reservoir/stats')       body = { total_registered:0, total_volume_million_ton:0, contributors:0 };
     else return res.status(404).json({ error: 'Not found' });
