@@ -7331,10 +7331,9 @@ async function loadCrowdData() {
         .addTo(crowdMap)
         .bindPopup(popup);
 
-      // 클릭 시 자동 확대 + 팝업 열기
+      // 클릭 시 팝업 열기
       m.on('click', function() {
-        crowdMap.flyTo([r.lat, r.lng], 14, { duration: 1.2, easeLinearity: 0.3 });
-        setTimeout(() => m.openPopup(), 800);
+        m.openPopup();
       });
       crowdMarkers.push(m);
     });
@@ -8265,8 +8264,10 @@ function toggleCrowdLayer() {
         html: `<div style="width:12px;height:12px;background:#00ffc8;border:2px solid #fff;border-radius:2px;transform:rotate(45deg);"></div>`,
         iconSize:[12,12], iconAnchor:[6,6],
       });
+      const milTon = res.result ? res.result.million_ton : (res.mil_ton || 0);
+      const addressTxt = res.address ? `<br><span style="font-size:11px;color:#aaa;">${res.address}</span>` : '';
       L.marker([res.lat, res.lng], { icon })
-        .bindPopup(`<strong>${res.name}</strong><br>${res.result.million_ton.toFixed(4)} ${currentLang === 'en' ? 'M.ton' : '백만톤'}`)
+        .bindPopup(`<div style="font-family:sans-serif;"><strong>📍 ${res.name}</strong>${addressTxt}<br>저수량: <strong style="color:#00c8ff;">${Number(milTon).toFixed(4)} 백만톤</strong></div>`)
         .addTo(crowdDamLayer);
     });
     crowdDamLayer.addTo(map);
