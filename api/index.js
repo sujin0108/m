@@ -180,8 +180,8 @@ export default async function handler(req, res) {
     else if (path.startsWith('/history/'))      body = await handleHistory(path.split('/')[2]);
     else if (path === '/world')                 body = { dams: [] };
     else if (path.startsWith('/hv_compare/'))  body = { data: [] };
-    else if (path === '/reservoir/list')        body = { list: [], stats: { count:0, total_volume:0 } };
-    else if (path === '/reservoir/stats')       body = { count:0, total_volume:0 };
+    else if (path === '/reservoir/list')        body = { reservoirs: [] };
+    else if (path === '/reservoir/stats')       body = { total_registered:0, total_volume_million_ton:0, contributors:0 };
     else return res.status(200).json({ ok: true });
     return res.status(200).json(body);
   } catch(e) {
