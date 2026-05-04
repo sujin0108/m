@@ -3621,17 +3621,26 @@ const API = '';
 const KWATER_KEY = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378';
 const KWATER_URL = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition';
 
-// 브라우저에서 직접 K-water API 호출 (한국 IP에서 CORS 허용)
+// K-water API 호출 (CORS 프록시 경유)
 async function fetchKwaterDirect() {
-  const url = `${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  const code = json?.response?.header?.resultCode;
-  if (code && code !== '00') throw new Error('API code: ' + code);
-  const items = json?.response?.body?.items?.item;
-  if (!items) throw new Error('no items');
-  return Array.isArray(items) ? items : [items];
+  const target = encodeURIComponent(`${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`);
+  const proxies = [
+    `https://corsproxy.io/?${target}`,
+    `https://api.allorigins.win/raw?url=${target}`,
+  ];
+  for (const url of proxies) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const code = json?.response?.header?.resultCode;
+      if (code && code !== '00') continue;
+      const items = json?.response?.body?.items?.item;
+      if (!items) continue;
+      return Array.isArray(items) ? items : [items];
+    } catch(e) { continue; }
+  }
+  throw new Error('All proxies failed');
 }
 
 const DAM_META_CLIENT = {
