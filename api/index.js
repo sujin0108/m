@@ -182,7 +182,7 @@ export default async function handler(req, res) {
     else if (path.startsWith('/hv_compare/'))  body = { data: [] };
     else if (path === '/reservoir/list')        body = { reservoirs: [] };
     else if (path === '/reservoir/stats')       body = { total_registered:0, total_volume_million_ton:0, contributors:0 };
-    else return res.status(200).json({ ok: true });
+    else return res.status(404).json({ error: 'Not found' });
     return res.status(200).json(body);
   } catch(e) {
     return res.status(500).json({ error: e.message });
