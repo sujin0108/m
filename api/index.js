@@ -182,7 +182,6 @@ export default async function handler(req, res) {
     else if (path.startsWith('/hv_compare/'))  body = { data: [] };
     else if (path === '/reservoir/list')        body = { list: [], stats: { count:0, total_volume:0 } };
     else if (path === '/reservoir/stats')       body = { count:0, total_volume:0 };
-    else if (path === '/pre_release')           body = { result: null };
     else return res.status(200).json({ ok: true });
     return res.status(200).json(body);
   } catch(e) {
