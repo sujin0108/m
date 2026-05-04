@@ -3625,8 +3625,10 @@ const KWATER_URL = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition';
 async function fetchKwaterDirect() {
   const target = encodeURIComponent(`${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`);
   const proxies = [
-    `https://corsproxy.io/?${target}`,
     `https://api.allorigins.win/raw?url=${target}`,
+    `https://corsproxy.io/?${target}`,
+    `https://proxy.cors.sh/${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`,
+    `https://thingproxy.freeboard.io/fetch/${KWATER_URL}/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`,
   ];
   for (const url of proxies) {
     try {
