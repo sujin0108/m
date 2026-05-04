@@ -5368,7 +5368,7 @@ let _worldDamsCache = null;
 async function fetchWorldDams() {
   if (_worldDamsCache) return _worldDamsCache;
   const data = await apiFetch('/api/world');
-  _worldDamsCache = data ? data.dams : MOCK_WORLD;
+  _worldDamsCache = (data && data.dams && data.dams.length > 0) ? data.dams : MOCK_WORLD;
   return _worldDamsCache;
 }
 
@@ -8243,7 +8243,11 @@ function toggleCrowdLayer() {
   showMapNotice(currentLang === 'en' ? '📍 Loading registered reservoirs...' : '📍 등록 저수지 확인 중...');
 
   apiFetch('/api/reservoir/list').then(data => {
-    const list = data ? data.reservoirs : [];
+    let serverList = data ? data.reservoirs : [];
+    // localStorage 데이터도 병합
+    let localData = [];
+    try { localData = JSON.parse(localStorage.getItem('crowd_reservoirs') || '[]'); } catch(e) {}
+    const list = serverList.length > 0 ? serverList : localData;
     if (list.length === 0) {
       showMapNotice(currentLang === 'en'
         ? '📍 No reservoirs registered yet — add one in the Register tab!'
