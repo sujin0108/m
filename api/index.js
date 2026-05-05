@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://naiuaecbapaxonhvlfops.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_lkGwItPBk5fxTGL8EUipCg_rT9W2U3U'
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_lkGwItPBk5fxTGL8EUipCg_rT9W2U3U'
 const KWATER_KEY   = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378'
 const KWATER_BASE  = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition'
 
