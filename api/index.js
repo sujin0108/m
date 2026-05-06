@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://naiuaecbapaxsnhvlfops.supabase.co'
+const SUPABASE_URL = 'https://naiuecbapaxsnhvlfops.supabase.co'
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || ''
 const KWATER_KEY   = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378'
 const KWATER_BASE  = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition'
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
   // DEBUG: check env vars and Supabase
   if (req.url && req.url.includes('/api/debug')) {
     const key = process.env.SUPABASE_SERVICE_KEY || ''
-    const url = 'https://naiuaecbapaxsnhvlfops.supabase.co/rest/v1/dam_realtime?select=dam_id,level,storage_rate&limit=3'
+    const url = 'https://naiuecbapaxsnhvlfops.supabase.co/rest/v1/dam_realtime?select=dam_id,level,storage_rate&limit=3'
     let sbResult = null
     let sbError = null
     try {
