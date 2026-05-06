@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://naiuaecbapaxonhvlfops.supabase.co'
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_lkGwItPBk5fxTGL8EUipCg_rT9W2U3U'
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || ''
 const KWATER_KEY   = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378'
 const KWATER_BASE  = 'https://apis.data.go.kr/B500001/dam/sluicePresentCondition'
 
@@ -142,6 +142,13 @@ async function handleDam(damId) {
 }
 
 export default async function handler(req, res) {
+  // DEBUG: check env vars
+  if (req.url && req.url.includes('/api/debug')) {
+    return res.status(200).json({
+      has_key: !!process.env.SUPABASE_SERVICE_KEY,
+      key_prefix: process.env.SUPABASE_SERVICE_KEY ? process.env.SUPABASE_SERVICE_KEY.slice(0,15) : 'none'
+    })
+  }
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Content-Type', 'application/json')
   const path = (req.url || '/').replace(/^\/api/, '') || '/'
