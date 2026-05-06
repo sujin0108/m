@@ -34,7 +34,7 @@ function mockFlat(id, meta) {
 
 // 1. Supabase에서 읽기
 async function fetchFromSupabase() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/dam_realtime?select=*`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/dam_realtime?select=*&order=dam_id`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
