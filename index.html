@@ -4251,8 +4251,11 @@ async function openDamModal(damId) {
   updateSimulation();
 
   switchDetailTab('realtime');
-  renderHistoryChart(d.history);
-  renderHVChart(d.hv_curve);
+  // history는 별도 API로 로드
+  apiFetch(`/api/history/${damId}`).then(hist => {
+    if (hist) renderHistoryChart(hist);
+  });
+  if (d.hv_curve) renderHVChart(d.hv_curve);
 
   // What-If 슬라이더 초기값 설정 후 계산
   const wiOut = document.getElementById('wi-out');
