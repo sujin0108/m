@@ -91,6 +91,10 @@ async function fetchFromKwater() {
 }
 
 function rowToFlat(id, meta, row) {
+  // volume이 1이면 storage_rate로 계산
+  if (row.volume <= 1 && row.storage_rate > 0) {
+    row = {...row, volume: +(meta.full * row.storage_rate / 100).toFixed(1)}
+  }
   const rate = row.storage_rate || 0
   const alert = rate >= 95 ? {code:3,label:'경보'} : rate >= 80 ? {code:2,label:'주의'} : {code:0,label:'정상'}
   const now = new Date()
@@ -132,9 +136,18 @@ async function handleDam(damId) {
   try {
     const rows = await fetchFromSupabase()
     const row = rows.find(r => r.dam_id === damId)
-    if (!row) return { dam: mockFlat(damId, meta), info: meta, realtime: mockFlat(damId, meta).realtime }
-    const flat = rowToFlat(damId, meta, row)
-    return { dam: flat, info: meta, realtime: flat.realtime }
+    const flat = row ? rowToFlat(damId, meta, row) : mockFlat(damId, meta)
+    
+    // H-V 곡선 생성
+    const level = flat.level || 150
+    const full = meta.full
+    const hv_curve = {
+      spline: Array.from({length:51},(_,i)=>{ const lv=level-10+i*0.4; return {level:lv, volume:Math.max(0, full*Math.pow(Math.max(0,(lv-(level-10))/20),1.8))} }),
+      linear: Array.from({length:51},(_,i)=>{ const lv=level-10+i*0.4; return {level:lv, volume:Math.max(0, full*(lv-(level-10))/20)} }),
+      points: [[level-10,0],[level-5,full*0.15],[level,flat.volume||full*0.5],[level+3,full*0.8],[level+5,full]],
+    }
+    
+    return { dam: flat, info: meta, realtime: flat.realtime, hv_curve }
   } catch(e) {
     const flat = mockFlat(damId, meta)
     return { dam: flat, info: meta, realtime: flat.realtime }
