@@ -142,11 +142,21 @@ async function handleDam(damId) {
 }
 
 export default async function handler(req, res) {
-  // DEBUG: check env vars
+  // DEBUG: check env vars and Supabase
   if (req.url && req.url.includes('/api/debug')) {
+    const key = process.env.SUPABASE_SERVICE_KEY || ''
+    const url = 'https://naiuaecbapaxonhvlfops.supabase.co/rest/v1/dam_realtime?select=dam_id,level,storage_rate&limit=3'
+    let sbResult = null
+    let sbError = null
+    try {
+      const r = await fetch(url, { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } })
+      sbResult = { status: r.status, data: await r.json() }
+    } catch(e) { sbError = e.message }
     return res.status(200).json({
-      has_key: !!process.env.SUPABASE_SERVICE_KEY,
-      key_prefix: process.env.SUPABASE_SERVICE_KEY ? process.env.SUPABASE_SERVICE_KEY.slice(0,15) : 'none'
+      has_key: !!key,
+      key_prefix: key.slice(0,15),
+      supabase: sbResult,
+      supabase_error: sbError
     })
   }
   res.setHeader('Access-Control-Allow-Origin', '*')
