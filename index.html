@@ -4206,6 +4206,20 @@ async function openDamModal(damId) {
   if (!d.realtime) d.realtime = { level:0, volume:0, storage_rate:0, inflow:0, outflow:0, is_mock:true };
   if (!d.info) d.info = d.dam || {};
   if (!d.alert) d.alert = { level:'normal', code:0, label:'정상' };
+  // intuitive 계산
+  if (!d.intuitive) {
+    const vol = d.realtime.volume || 0;
+    d.intuitive = {
+      olympic_pools: Math.round(vol * 1e6 / 2500),
+      seoul_citizens_years: (vol * 1e6 / (600 * 365 * 9700000)).toFixed(1),
+      acre_feet: Math.round(vol * 810.71),
+    };
+  }
+  // prediction 계산
+  if (!d.prediction) {
+    const net = (d.realtime.inflow || 0) - (d.realtime.outflow || 0);
+    d.prediction = { net_flow_cms: +net.toFixed(1), to_full: null, to_empty: null };
+  }
   currentDam = d;
 
   const isEN = currentLang === 'en';
