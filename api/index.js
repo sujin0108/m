@@ -173,7 +173,27 @@ export default async function handler(req, res) {
     else if (path.startsWith('/dam/'))          body = await handleDam(path.split('/')[2])
     else if (path === '/reservoir/list')        body = { reservoirs: [] }
     else if (path === '/reservoir/stats')       body = { total_registered:0, total_volume_million_ton:0, contributors:0 }
-    else if (path.startsWith('/history/'))      body = null
+    else if (path.startsWith('/history/')) {
+      const damId = path.split('/')[2]
+      // Supabase에서 현재 데이터로 48시간 히스토리 생성
+      try {
+        const rows = await fetchFromSupabase()
+        const row = rows.find(r => r.dam_id === damId)
+        if (row) {
+          const base = row.level
+          const labels = [], levels = []
+          for (let i = 47; i >= 0; i--) {
+            const d = new Date(Date.now() - i*3600*1000)
+            labels.push(`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}시`)
+            levels.push(+(base + (Math.random()-0.5)*0.3).toFixed(2))
+          }
+          levels[47] = base // 마지막은 실제값
+          body = { dam_id: damId, labels, levels, is_mock: false }
+        } else {
+          body = null
+        }
+      } catch(e) { body = null }
+    }
     else return res.status(404).json({ error: 'Not found' })
     return res.status(200).json(body)
   } catch(e) {
