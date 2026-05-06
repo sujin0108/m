@@ -4272,17 +4272,25 @@ async function openDamModal(damId) {
   switchDetailTab('realtime');
   // history는 별도 API로 로드
   apiFetch(`/api/history/${damId}`).then(hist => {
-    if (hist) renderHistoryChart(hist);
-    else {
+    if (hist && hist.labels) {
+      // {labels, levels} 형식 → [{time, level, inflow, outflow}] 변환
+      const histArr = hist.labels.map((label, i) => ({
+        time: label.replace(/[/ ]/g,'').replace('시','00'),
+        level: hist.levels[i] || 0,
+        inflow: d.realtime.inflow || 0,
+        outflow: d.realtime.outflow || 0,
+      }));
+      renderHistoryChart(histArr);
+    } else {
       // fallback: mock history
       const base = d.realtime.level || 150;
-      const labels = [], levels = [];
+      const arr = [];
       for (let i = 47; i >= 0; i--) {
         const dt = new Date(Date.now() - i*3600*1000);
-        labels.push(`${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}시`);
-        levels.push(+(base + (Math.random()-0.5)*0.3).toFixed(2));
+        const p = n => String(n).padStart(2,'0');
+        arr.push({ time:`${p(dt.getMonth()+1)}${p(dt.getDate())}${p(dt.getHours())}00`, level:+(base + (Math.random()-0.5)*0.3).toFixed(2), inflow:d.realtime.inflow||0, outflow:d.realtime.outflow||0 });
       }
-      renderHistoryChart({ dam_id: damId, labels, levels, is_mock: true });
+      renderHistoryChart(arr);
     }
   });
   if (d.hv_curve) renderHVChart(d.hv_curve);
