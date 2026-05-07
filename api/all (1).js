@@ -65,7 +65,6 @@ function addMeta(rows) {
 }
 
 async function fetchKwater() {
-  // ① 운영 URL (operation명 포함)
   const url = `https://apis.data.go.kr/B500001/dam/sluicePresentCondition/sluicePresentConditionlist?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`
   const res  = await fetch(url)
   const text = await res.text()
@@ -74,13 +73,6 @@ async function fetchKwater() {
   const raw  = json?.response?.body?.items?.item
   if (!raw) throw new Error('K-water 데이터 없음')
   return Array.isArray(raw) ? raw : [raw]
-}
-
-async function loadSupabase(supabase, maxAgeHours = 1) {
-  if (!supabase) return null
-  const since = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000).toISOString()
-  const { data } = await supabase.from('dam_realtime').select('*').gte('updated_at', since)
-  return data && data.length >= 10 ? data : null
 }
 
 async function saveSupabase(supabase, rows) {
@@ -94,8 +86,27 @@ module.exports = async (req, res) => {
   const supabase = (SUPABASE_URL && SUPABASE_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_KEY) : null
 
-  // ★ 디버그: ?raw=1 이면 K-water 원본 댐 이름 반환
-  if (req.query?.raw === '1') {
+  // ?debug=1 — Supabase 연결 진단
+  if (req.query && req.query.debug === '1') {
+    const info = {
+      has_supabase_url: !!SUPABASE_URL,
+      has_supabase_key: !!SUPABASE_KEY,
+      supabase_client:  !!supabase,
+      url_preview: SUPABASE_URL ? SUPABASE_URL.slice(0, 40) + '...' : 'MISSING',
+    }
+    if (supabase) {
+      try {
+        const { count, error } = await supabase
+          .from('dam_realtime').select('*', { count: 'exact', head: true })
+        info.db_row_count = count
+        info.db_error     = error ? error.message : null
+      } catch(e) { info.db_error = e.message }
+    }
+    return res.status(200).json(info)
+  }
+
+  // ?raw=1 — K-water 원본 댐 이름 목록
+  if (req.query && req.query.raw === '1') {
     try {
       const items = await fetchKwater()
       return res.status(200).json({ count: items.length, names: items.map(i => i.damNm).sort() })
@@ -107,11 +118,14 @@ module.exports = async (req, res) => {
   let rows   = null
   let source = 'unknown'
 
-  // 1) Supabase 1시간 캐시 확인
-  try {
-    const cached = await loadSupabase(supabase, 1)
-    if (cached) { rows = cached; source = 'supabase_cache_1h' }
-  } catch(e) {}
+  // 1) Supabase 1시간 캐시
+  if (supabase) {
+    try {
+      const since = new Date(Date.now() - 3600000).toISOString()
+      const { data } = await supabase.from('dam_realtime').select('*').gte('updated_at', since)
+      if (data && data.length >= 10) { rows = data; source = 'supabase_cache_1h' }
+    } catch(e) {}
+  }
 
   // 2) K-water 직접 호출
   if (!rows) {
@@ -135,16 +149,22 @@ module.exports = async (req, res) => {
       saveSupabase(supabase, toSave).catch(() => {})
       source = 'kwater_live'
     } catch(e) {
-      // 3) K-water 실패 → Supabase 전체 데이터 (날짜 무관)
-      try {
-        if (supabase) {
-          const { data: stale } = await supabase.from('dam_realtime').select('*')
-          if (stale && stale.length >= 5) { rows = stale; source = 'supabase_cache_stale' }
-        }
-      } catch(e2) {}
+      // 3) K-water 실패 → Supabase 전체 (날짜 무관)
+      if (supabase) {
+        try {
+          const { data } = await supabase.from('dam_realtime').select('*')
+          if (data && data.length >= 5) { rows = data; source = 'supabase_cache_stale' }
+        } catch(e2) {}
+      }
 
       if (!rows) {
-        return res.status(503).json({ error: 'K-water API 호출 실패', detail: e.message })
+        return res.status(503).json({
+          error:           'K-water API 호출 실패',
+          detail:          e.message,
+          supabase_ok:     !!supabase,
+          supabase_url_ok: !!SUPABASE_URL,
+          supabase_key_ok: !!SUPABASE_KEY,
+        })
       }
     }
   }
@@ -154,10 +174,10 @@ module.exports = async (req, res) => {
   }
 
   return res.status(200).json({
-    dams:    rows,
+    dams:           rows,
     source,
-    count:   rows.length,
-    updated: new Date().toISOString(),
+    count:          rows.length,
+    updated:        new Date().toISOString(),
     total_storage:  rows.reduce((s, d) => s + (d.volume || 0), 0),
     total_capacity: rows.reduce((s, d) => s + (d.full   || 0), 0),
   })
