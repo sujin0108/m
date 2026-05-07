@@ -135,11 +135,12 @@ module.exports = async (req, res) => {
       saveSupabase(supabase, toSave).catch(() => {})
       source = 'kwater_live'
     } catch(e) {
-      // 3) K-water 실패 → Supabase 오래된 캐시 사용 (최대 30일)
-      //    ★ 수정: 24시간 → 720시간(30일)으로 확대
+      // 3) K-water 실패 → Supabase 전체 데이터 (날짜 무관)
       try {
-        const stale = await loadSupabase(supabase, 720)
-        if (stale) { rows = stale; source = 'supabase_cache_stale' }
+        if (supabase) {
+          const { data: stale } = await supabase.from('dam_realtime').select('*')
+          if (stale && stale.length >= 5) { rows = stale; source = 'supabase_cache_stale' }
+        }
       } catch(e2) {}
 
       if (!rows) {
