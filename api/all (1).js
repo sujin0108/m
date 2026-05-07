@@ -65,10 +65,11 @@ function addMeta(rows) {
 }
 
 async function fetchKwater() {
-  const url = `https://apis.data.go.kr/B500001/dam/sluicePresentCondition/?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`
+  // ① 운영 URL (operation명 포함)
+  const url = `https://apis.data.go.kr/B500001/dam/sluicePresentCondition/sluicePresentConditionlist?serviceKey=${KWATER_KEY}&numOfRows=100&pageNo=1&_type=json`
   const res  = await fetch(url)
   const text = await res.text()
-  if (!text.startsWith('{') && !text.startsWith('[')) throw new Error('K-water 응답 오류: ' + text.slice(0, 80))
+  if (!text.startsWith('{') && !text.startsWith('[')) throw new Error('K-water 응답 파싱 실패: ' + text.slice(0, 80))
   const json = JSON.parse(text)
   const raw  = json?.response?.body?.items?.item
   if (!raw) throw new Error('K-water 데이터 없음')
@@ -134,9 +135,10 @@ module.exports = async (req, res) => {
       saveSupabase(supabase, toSave).catch(() => {})
       source = 'kwater_live'
     } catch(e) {
-      // 3) K-water 실패 → Supabase 오래된 캐시라도 사용 (최대 24시간)
+      // 3) K-water 실패 → Supabase 오래된 캐시 사용 (최대 30일)
+      //    ★ 수정: 24시간 → 720시간(30일)으로 확대
       try {
-        const stale = await loadSupabase(supabase, 24)
+        const stale = await loadSupabase(supabase, 720)
         if (stale) { rows = stale; source = 'supabase_cache_stale' }
       } catch(e2) {}
 
@@ -150,5 +152,12 @@ module.exports = async (req, res) => {
     rows = addMeta(rows)
   }
 
-  return res.status(200).json({ dams: rows, source, count: rows.length })
+  return res.status(200).json({
+    dams:    rows,
+    source,
+    count:   rows.length,
+    updated: new Date().toISOString(),
+    total_storage:  rows.reduce((s, d) => s + (d.volume || 0), 0),
+    total_capacity: rows.reduce((s, d) => s + (d.full   || 0), 0),
+  })
 }
