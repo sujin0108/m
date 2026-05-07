@@ -1,7 +1,7 @@
 // api/all.js — K-water 직접 호출 + Supabase 캐시
 const { createClient } = require('@supabase/supabase-js')
 
-const KWATER_KEY   = '48e9f3d3e090aecd6846658182a05ac05fb3f7bf144a761005e67ade749b4378'
+const KWATER_KEY   = 'adf383b5707d32def18d17ddec442b29ca7284cdd59370986fc5fa9868ecab35'
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -86,35 +86,6 @@ module.exports = async (req, res) => {
   const supabase = (SUPABASE_URL && SUPABASE_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_KEY) : null
 
-  // ?debug=1 — Supabase 연결 진단
-  if (req.query && req.query.debug === '1') {
-    const info = {
-      has_supabase_url: !!SUPABASE_URL,
-      has_supabase_key: !!SUPABASE_KEY,
-      supabase_client:  !!supabase,
-      url_preview: SUPABASE_URL ? SUPABASE_URL.slice(0, 40) + '...' : 'MISSING',
-    }
-    if (supabase) {
-      try {
-        const { count, error } = await supabase
-          .from('dam_realtime').select('*', { count: 'exact', head: true })
-        info.db_row_count = count
-        info.db_error     = error ? error.message : null
-      } catch(e) { info.db_error = e.message }
-    }
-    return res.status(200).json(info)
-  }
-
-  // ?raw=1 — K-water 원본 댐 이름 목록
-  if (req.query && req.query.raw === '1') {
-    try {
-      const items = await fetchKwater()
-      return res.status(200).json({ count: items.length, names: items.map(i => i.damNm).sort() })
-    } catch(e) {
-      return res.status(500).json({ error: e.message })
-    }
-  }
-
   let rows   = null
   let source = 'unknown'
 
@@ -149,29 +120,20 @@ module.exports = async (req, res) => {
       saveSupabase(supabase, toSave).catch(() => {})
       source = 'kwater_live'
     } catch(e) {
-      // 3) K-water 실패 → Supabase 전체 (날짜 무관)
+      // 3) K-water 실패시 Supabase 전체 데이터 (날짜 무관)
       if (supabase) {
         try {
           const { data } = await supabase.from('dam_realtime').select('*')
           if (data && data.length >= 5) { rows = data; source = 'supabase_cache_stale' }
         } catch(e2) {}
       }
-
       if (!rows) {
-        return res.status(503).json({
-          error:           'K-water API 호출 실패',
-          detail:          e.message,
-          supabase_ok:     !!supabase,
-          supabase_url_ok: !!SUPABASE_URL,
-          supabase_key_ok: !!SUPABASE_KEY,
-        })
+        return res.status(503).json({ error: 'K-water API 호출 실패', detail: e.message })
       }
     }
   }
 
-  if (source !== 'kwater_live') {
-    rows = addMeta(rows)
-  }
+  if (source !== 'kwater_live') rows = addMeta(rows)
 
   return res.status(200).json({
     dams:           rows,
