@@ -553,6 +553,16 @@ const DAM_META = {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 안전한 숫자 파싱 (K-water는 1,000 이상 값에 천 단위 쉼표 사용)
+// 예: "1,679.234" → 1679.234 (parseFloat만 쓰면 1로 오인됨)
+// ═══════════════════════════════════════════════════════════════════
+function num(v) {
+  if (v === null || v === undefined || v === '') return 0
+  const n = parseFloat(String(v).replace(/,/g, '').trim())
+  return Number.isFinite(n) ? n : 0
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // K-water API: 단일 댐 호출
 // ═══════════════════════════════════════════════════════════════════
 async function fetchOneDam(damCode) {
@@ -589,12 +599,12 @@ async function fetchOneDam(damCode) {
     const latest = arr[arr.length - 1]
 
     return {
-      level:        parseFloat(latest.lowlevel)   || 0,  // 댐수위 (EL.m)
-      volume:       parseFloat(latest.rsvwtqy)    || 0,  // 저수량 (백만㎥)
-      storage_rate: parseFloat(latest.rsvwtrt)    || 0,  // 저수율 (%)
-      inflow:       parseFloat(latest.inflowqy)   || 0,  // 유입량 (㎥/s)
-      outflow:      parseFloat(latest.totdcwtrqy) || 0,  // 총방류량 (㎥/s)
-      rainfall:     parseFloat(latest.rf)         || 0,  // 강우량 (mm)
+      level:        num(latest.lowlevel),    // 댐수위 (EL.m)
+      volume:       num(latest.rsvwtqy),     // 저수량 (백만㎥)
+      storage_rate: num(latest.rsvwtrt),     // 저수율 (%)
+      inflow:       num(latest.inflowqy),    // 유입량 (㎥/s)
+      outflow:      num(latest.totdcwtrqy),  // 총방류량 (㎥/s)
+      rainfall:     num(latest.rf),          // 강우량 (mm)
       observed_at:  String(latest.obsrdt || '').trim(),
     }
   } catch (e) {
