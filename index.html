@@ -4925,11 +4925,11 @@ function openContribForm(damId, type) {
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:18px;font-style:italic;">
         ${isEN
-          ? '🔧 Backend integration in progress — this is a UI preview. Your submission will be wired up soon.'
-          : '🔧 백엔드 연결 작업 중 — 현재는 UI 미리보기입니다. 곧 실제로 저장되도록 작업합니다.'}
+          ? '🌐 Your submission will be saved and shown to others. Please be respectful.'
+          : '🌐 등록한 사진·코멘트는 다른 사람에게도 보입니다. 서로 존중하는 내용으로 부탁드려요.'}
       </div>
 
-      <form onsubmit="event.preventDefault(); previewContribSubmit('${damId}', '${type}');">
+      <form onsubmit="event.preventDefault(); submitContribForm('${damId}', '${type}');">
         ${isPhoto ? `
         <div style="margin-bottom:14px;">
           <label style="font-size:12px;color:var(--text2);font-weight:600;display:block;margin-bottom:6px;">
@@ -4971,7 +4971,7 @@ function openContribForm(damId, type) {
           <button type="submit"
                   style="flex:2;background:linear-gradient(135deg,#00d488,#00aa66);border:none;
                          color:#000;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
-            ${isEN ? '🚀 Preview Submit' : '🚀 미리보기 제출'}
+            ${isEN ? '🚀 Submit' : '🚀 등록하기'}
           </button>
         </div>
       </form>
@@ -4986,21 +4986,132 @@ function closeContribForm() {
 }
 
 function previewContribSubmit(damId, type) {
+  // 이 함수는 더 이상 사용 안 함 — submitContribForm으로 대체됨
+  return submitContribForm(damId, type);
+}
+
+// ⭐ 실제 백엔드 (api/contrib.js)로 전송
+async function submitContribForm(damId, type) {
   const isEN = currentLang === 'en';
-  closeContribForm();
-  // 일시적 알림 (toast)
+  const overlay = document.getElementById('contrib-form-overlay');
+  if (!overlay) return;
+
+  // 폼 요소들 찾기
+  const fileInput = overlay.querySelector('input[type="file"]');
+  const noteInput = overlay.querySelector('textarea');
+  const nicknameInput = overlay.querySelector('input[type="text"]');
+  const submitBtn = overlay.querySelector('button[type="submit"]');
+
+  const note = noteInput?.value?.trim() || '';
+  const nickname = nicknameInput?.value?.trim() || '익명';
+
+  // 유효성 검사
+  if (type === 'photo' && (!fileInput || !fileInput.files || !fileInput.files[0])) {
+    showToast(isEN ? '⚠️ Please choose a photo' : '⚠️ 사진을 선택해 주세요', 'error');
+    return;
+  }
+  if (type === 'note' && note.length === 0) {
+    showToast(isEN ? '⚠️ Please write a note' : '⚠️ 코멘트를 입력해 주세요', 'error');
+    return;
+  }
+
+  // 버튼 비활성화 + 로딩
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.6';
+    submitBtn.innerHTML = isEN ? '⏳ Uploading...' : '⏳ 업로드 중...';
+  }
+
+  let photo_base64 = null;
+
+  // 사진을 base64로 변환
+  if (type === 'photo' && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(isEN ? '⚠️ Photo too big (max 5MB)' : '⚠️ 사진이 너무 큼 (최대 5MB)', 'error');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+      return;
+    }
+    try {
+      photo_base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } catch (e) {
+      showToast(isEN ? '⚠️ Failed to read photo' : '⚠️ 사진 읽기 실패', 'error');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+      return;
+    }
+  }
+
+  // 백엔드 API 호출
+  try {
+    const res = await fetch('/api/contrib', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dam_id: damId,
+        type,
+        photo_base64,
+        note,
+        nickname,
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      // 백엔드 에러 (Supabase 설정 미완 등)
+      const errMsg = data?.error || (isEN ? 'Upload failed' : '업로드 실패');
+      showToast(`⚠️ ${errMsg}`, 'error', 6000);
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+      return;
+    }
+
+    // 성공!
+    closeContribForm();
+    showToast(
+      isEN ? '✅ Thank you! Your submission is saved.' : '✅ 감사합니다! 등록되었습니다.',
+      'success',
+      4000
+    );
+
+    // 갤러리 새로고침 (다음 단계에서 구현)
+    // refreshContribGallery(damId);
+  } catch (e) {
+    showToast(`⚠️ ${e.message}`, 'error', 6000);
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+  }
+}
+
+// ─── 토스트 알림 (재사용 가능) ───
+function showToast(message, type = 'info', duration = 3000) {
+  // 기존 토스트 제거
+  const old = document.getElementById('contrib-toast');
+  if (old) old.remove();
+
+  const bg = {
+    success: 'rgba(0,212,136,0.95)',
+    error:   'rgba(255,80,80,0.95)',
+    info:    'rgba(0,150,255,0.95)',
+  }[type] || 'rgba(0,150,255,0.95)';
+
+  const fg = type === 'success' ? '#000' : '#fff';
+
   const toast = document.createElement('div');
+  toast.id = 'contrib-toast';
   toast.style.cssText = `
     position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
-    background:rgba(0,212,136,0.95);color:#000;padding:14px 22px;border-radius:10px;
-    font-size:13px;font-weight:600;z-index:10001;box-shadow:0 4px 20px rgba(0,212,136,0.4);
+    background:${bg};color:${fg};padding:14px 22px;border-radius:10px;
+    font-size:13px;font-weight:600;z-index:10001;
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
     max-width:90vw;text-align:center;line-height:1.5;
   `;
-  toast.innerHTML = isEN
-    ? '✅ Preview only — backend not connected yet.<br><span style="font-weight:400;font-size:11px;">Your submission would be saved once wiring is complete.</span>'
-    : '✅ 미리보기입니다 — 아직 백엔드와 연결되지 않았어요.<br><span style="font-weight:400;font-size:11px;">곧 실제로 저장되도록 작업합니다.</span>';
+  toast.innerHTML = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
+  setTimeout(() => toast.remove(), duration);
 }
 
 async function openDamModal(damId) {
@@ -5938,7 +6049,7 @@ function renderDamIntro(damId) {
           </button>
         </div>
         <div style="font-size:10px;color:var(--text3);margin-top:8px;font-style:italic;text-align:center;">
-          ${isEN ? "🔧 Backend integration in progress — UI preview" : "🔧 백엔드 연결 작업 중 — UI 미리보기"}
+          ${isEN ? "🌐 Your photo helps other learners — please share a clear shot" : "🌐 정상님 사진이 다른 학생·시민에게 큰 도움이 됩니다 — 댐 전체가 보이는 사진으로!"}
         </div>
       </div>
 
