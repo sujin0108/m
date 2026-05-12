@@ -4890,6 +4890,201 @@ function renderDamGrid(dams) {
 // ═══════════════════════════════════════
 // 댐 상세 모달
 // ═══════════════════════════════════════
+// ─── 사용자 토큰 — 본인 식별용 (localStorage에 자동 저장) ───
+// 같은 브라우저에서는 본인으로 인식 → 자기 글 삭제 가능
+// 다른 브라우저/사람은 타인 → 삭제 못 함
+function getUserToken() {
+  try {
+    let token = localStorage.getItem('damwatch_user_token');
+    if (!token) {
+      // 새 토큰 생성 (랜덤 + 시각 — 충분히 unique)
+      token = 'u_' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem('damwatch_user_token', token);
+    }
+    return token;
+  } catch (e) {
+    // localStorage 차단된 환경 (private mode 등)
+    return 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+  }
+}
+
+// ─── 본인 작성 contrib id 기록 (localStorage) — 갤러리에서 본인 표시 ───
+function getMyContribIds() {
+  try {
+    const raw = localStorage.getItem('damwatch_my_contribs');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function addMyContribId(id) {
+  try {
+    const ids = getMyContribIds();
+    if (!ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem('damwatch_my_contribs', JSON.stringify(ids.slice(-200)));
+    }
+  } catch (e) {}
+}
+function removeMyContribId(id) {
+  try {
+    const ids = getMyContribIds().filter(x => x !== id);
+    localStorage.setItem('damwatch_my_contribs', JSON.stringify(ids));
+  } catch (e) {}
+}
+
+// ─── HTML escape (XSS 방지) ───
+function escapeHTML(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ─── 날짜 포맷 (예: "3시간 전", "2일 전") ───
+function formatRelativeTime(isoString) {
+  if (!isoString) return '';
+  const now = Date.now();
+  const then = new Date(isoString).getTime();
+  if (isNaN(then)) return '';
+  const diffSec = Math.floor((now - then) / 1000);
+  const isEN = currentLang === 'en';
+  if (diffSec < 60)    return isEN ? 'just now' : '방금';
+  if (diffSec < 3600)  return Math.floor(diffSec/60)   + (isEN ? 'm ago' : '분 전');
+  if (diffSec < 86400) return Math.floor(diffSec/3600) + (isEN ? 'h ago' : '시간 전');
+  if (diffSec < 2592000) return Math.floor(diffSec/86400) + (isEN ? 'd ago' : '일 전');
+  return new Date(isoString).toLocaleDateString();
+}
+
+// ─── 갤러리: 댐별 contribs 불러와서 카드로 표시 ───
+async function refreshContribGallery(damId) {
+  const container = document.getElementById('contrib-gallery-' + damId);
+  if (!container) return;
+  const isEN = currentLang === 'en';
+  const myIds = getMyContribIds();
+
+  try {
+    const res = await fetch(`/api/contrib?dam_id=${encodeURIComponent(damId)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      container.innerHTML = `<div style="font-size:11px;color:#ff6666;text-align:center;padding:12px;">⚠️ ${escapeHTML(data?.error || 'load failed')}</div>`;
+      return;
+    }
+
+    const contribs = data.contribs || [];
+    if (contribs.length === 0) {
+      container.innerHTML = `
+        <div style="background:rgba(150,150,200,0.05);border:1px dashed rgba(150,150,200,0.2);
+                    border-radius:10px;padding:18px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:6px;">🌱</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;">
+            ${isEN
+              ? "Be the first to share!"
+              : "아직 등록된 글이 없어요. 첫 번째로 다녀온 이야기를 남겨주세요!"}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // 갤러리 헤더 + 카드 리스트
+    const headerHTML = `
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin:14px 4px 8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--accent3);">
+          📚 ${isEN ? "Visitors' Photos & Notes" : '다른 사람들의 사진·방문기'}
+          <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px;">${contribs.length}${isEN ? '' : '건'}</span>
+        </div>
+      </div>
+    `;
+
+    const cardsHTML = contribs.map(c => {
+      const isMine = myIds.includes(c.id);
+      const isPhoto = c.type === 'photo' && c.photo_url;
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
+                    margin-bottom:10px;overflow:hidden;${isMine ? 'border-color:rgba(0,212,136,0.5);' : ''}">
+          ${isPhoto ? `
+            <div style="position:relative;width:100%;background:#000;">
+              <img src="${escapeHTML(c.photo_url)}" alt=""
+                   style="width:100%;max-height:240px;object-fit:contain;display:block;cursor:zoom-in;"
+                   onclick="openImageViewer('${escapeHTML(c.photo_url)}')"
+                   onerror="this.style.display='none'">
+            </div>
+          ` : ''}
+          <div style="padding:10px 12px 12px;">
+            ${c.note ? `
+              <div style="font-size:12.5px;color:var(--text);line-height:1.55;margin-bottom:6px;word-break:break-word;">
+                ${escapeHTML(c.note)}
+              </div>
+            ` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="font-size:10.5px;color:var(--text3);">
+                <span style="color:${isMine ? '#00d488' : 'var(--text2)'};font-weight:600;">
+                  ${isMine ? '🙋 ' : ''}${escapeHTML(c.nickname || '익명')}
+                </span>
+                <span style="margin:0 4px;">·</span>
+                <span>${formatRelativeTime(c.created_at)}</span>
+              </div>
+              ${isMine ? `
+                <button onclick="deleteMyContrib(${c.id}, '${damId}')"
+                        style="background:rgba(255,80,80,0.12);border:1px solid rgba(255,80,80,0.3);
+                               color:#ff8080;font-size:10px;padding:4px 9px;border-radius:6px;cursor:pointer;
+                               white-space:nowrap;">
+                  🗑️ ${isEN ? 'Delete' : '삭제'}
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = headerHTML + cardsHTML;
+  } catch (e) {
+    container.innerHTML = `<div style="font-size:11px;color:#ff6666;text-align:center;padding:12px;">⚠️ ${escapeHTML(e.message)}</div>`;
+  }
+}
+
+// ─── 본인 contrib 삭제 ───
+async function deleteMyContrib(id, damId) {
+  const isEN = currentLang === 'en';
+  if (!confirm(isEN
+      ? 'Delete this post? This cannot be undone.'
+      : '이 글을 삭제할까요? 되돌릴 수 없어요.')) {
+    return;
+  }
+  try {
+    const token = getUserToken();
+    const res = await fetch(`/api/contrib?id=${id}&token=${encodeURIComponent(token)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(`⚠️ ${data?.error || (isEN ? 'Delete failed' : '삭제 실패')}`, 'error', 5000);
+      return;
+    }
+    removeMyContribId(id);
+    showToast(isEN ? '🗑️ Deleted' : '🗑️ 삭제되었어요', 'success');
+    refreshContribGallery(damId);
+  } catch (e) {
+    showToast(`⚠️ ${e.message}`, 'error', 5000);
+  }
+}
+
+// ─── 큰 이미지 뷰어 (클릭 시 확대) ───
+function openImageViewer(url) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10002;
+    display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;
+  `;
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  document.body.appendChild(overlay);
+}
+
 // ─── 학생·일반인 참여: 사진/방문기 폼 (UI 미리보기, 백엔드 연결 예정) ───
 function openContribForm(damId, type) {
   const isEN = currentLang === 'en';
@@ -4956,10 +5151,15 @@ function openContribForm(damId, type) {
 
         <div style="margin-bottom:18px;">
           <label style="font-size:12px;color:var(--text2);font-weight:600;display:block;margin-bottom:6px;">
-            🙋 ${isEN ? 'Nickname (optional)' : '닉네임 (선택)'}
+            🙋 ${isEN ? 'Nickname (required)' : '닉네임 (필수)'} <span style="color:#ff6666;">*</span>
           </label>
-          <input type="text" maxlength="30" class="form-input"
-                 placeholder="${isEN ? 'e.g. Sci. Club, Anonymous' : '예: ○○중 과학탐구반 / 익명'}">
+          <input type="text" maxlength="30" class="form-input" required
+                 placeholder="${isEN ? 'e.g. Sci. Club, Anonymous' : '예: ○○중 과학탐구반 / 익명도 가능'}">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;font-style:italic;">
+            ${isEN
+              ? '💡 Required to encourage responsible posting (no real name needed)'
+              : '💡 무례한 글 방지를 위해 필수입니다 (실명 아니어도 OK)'}
+          </div>
         </div>
 
         <div style="display:flex;gap:8px;">
@@ -4990,7 +5190,7 @@ function previewContribSubmit(damId, type) {
   return submitContribForm(damId, type);
 }
 
-// ⭐ 실제 백엔드 (api/contrib.js)로 전송
+// ⭐ 실제 백엔드 (api/contrib.js)로 전송 — v1.2: 닉네임 필수 + 토큰 함께 전송
 async function submitContribForm(damId, type) {
   const isEN = currentLang === 'en';
   const overlay = document.getElementById('contrib-form-overlay');
@@ -5003,9 +5203,14 @@ async function submitContribForm(damId, type) {
   const submitBtn = overlay.querySelector('button[type="submit"]');
 
   const note = noteInput?.value?.trim() || '';
-  const nickname = nicknameInput?.value?.trim() || '익명';
+  const nickname = nicknameInput?.value?.trim() || '';
 
   // 유효성 검사
+  if (!nickname) {
+    showToast(isEN ? '⚠️ Please enter a nickname' : '⚠️ 닉네임을 입력해 주세요', 'error');
+    nicknameInput?.focus();
+    return;
+  }
   if (type === 'photo' && (!fileInput || !fileInput.files || !fileInput.files[0])) {
     showToast(isEN ? '⚠️ Please choose a photo' : '⚠️ 사진을 선택해 주세요', 'error');
     return;
@@ -5057,32 +5262,40 @@ async function submitContribForm(damId, type) {
         photo_base64,
         note,
         nickname,
+        author_token: getUserToken(),   // ⭐ v1.2: 본인 식별 토큰
       })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      // 백엔드 에러 (Supabase 설정 미완 등)
       const errMsg = data?.error || (isEN ? 'Upload failed' : '업로드 실패');
       showToast(`⚠️ ${errMsg}`, 'error', 6000);
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 등록하기'; }
       return;
     }
 
     // 성공!
     closeContribForm();
+
+    // ⭐ 본인이 올린 contrib id 기록 (갤러리에서 본인 표시·삭제 가능)
+    if (data?.contrib?.id) {
+      addMyContribId(data.contrib.id);
+    }
+
     showToast(
       isEN ? '✅ Thank you! Your submission is saved.' : '✅ 감사합니다! 등록되었습니다.',
       'success',
       4000
     );
 
-    // 갤러리 새로고침 (다음 단계에서 구현)
-    // refreshContribGallery(damId);
+    // ⭐ 갤러리 새로고침
+    if (typeof refreshContribGallery === 'function') {
+      refreshContribGallery(damId);
+    }
   } catch (e) {
     showToast(`⚠️ ${e.message}`, 'error', 6000);
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 제출'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.innerHTML = isEN ? '🚀 Submit' : '🚀 등록하기'; }
   }
 }
 
@@ -6053,6 +6266,13 @@ function renderDamIntro(damId) {
         </div>
       </div>
 
+      <!-- ⭐ 갤러리: 다른 사람들의 사진·방문기 -->
+      <div id="contrib-gallery-${damId}" style="margin-top:6px;">
+        <div style="font-size:13px;color:var(--text3);text-align:center;padding:14px;font-style:italic;">
+          ⏳ ${isEN ? 'Loading...' : '불러오는 중...'}
+        </div>
+      </div>
+
       <!-- 헤더 -->
       <div style="background:linear-gradient(135deg,rgba(0,80,200,0.12),rgba(0,200,255,0.06));
                   border:1px solid rgba(0,150,255,0.2);border-radius:10px;padding:16px;">
@@ -6120,6 +6340,13 @@ function renderDamIntro(damId) {
 
     </div>
   `;
+
+  // ⭐ 갤러리 자동 로드 (DOM 그려진 직후)
+  setTimeout(() => {
+    if (typeof refreshContribGallery === 'function') {
+      refreshContribGallery(damId);
+    }
+  }, 50);
 }
 
 // ── 세계 댐 소개 팝업 ──
