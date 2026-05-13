@@ -309,11 +309,13 @@
       <div class="stat"><div class="label">TOTAL</div><div class="val" id="stat-total">–</div></div>
       <div class="stat ok"><div class="label">VISIBLE</div><div class="val" id="stat-visible">–</div></div>
       <div class="stat warn"><div class="label">HIDDEN</div><div class="val" id="stat-hidden">–</div></div>
+      <div class="stat danger"><div class="label">REPORTED</div><div class="val" id="stat-reported">–</div></div>
       <div class="stat"><div class="label">PHOTOS</div><div class="val" id="stat-photos">–</div></div>
     </div>
 
     <div class="filters" id="filters">
       <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="reported">🚩 신고됨</button>
       <button class="filter-btn" data-filter="visible">표시 중</button>
       <button class="filter-btn" data-filter="hidden">숨김</button>
       <button class="filter-btn" data-filter="photo">사진만</button>
@@ -427,16 +429,20 @@ function renderStats() {
   const hidden = allContribs.filter(c => c.is_hidden).length;
   const visible = total - hidden;
   const photos = allContribs.filter(c => c.type === 'photo').length;
+  const reported = allContribs.filter(c => (c.report_count || 0) > 0).length;
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-visible').textContent = visible;
   document.getElementById('stat-hidden').textContent = hidden;
   document.getElementById('stat-photos').textContent = photos;
+  const reportedEl = document.getElementById('stat-reported');
+  if (reportedEl) reportedEl.textContent = reported;
 }
 
 function renderList() {
   const list = document.getElementById('contrib-list');
   const filtered = allContribs.filter(c => {
     if (currentFilter === 'all') return true;
+    if (currentFilter === 'reported') return (c.report_count || 0) > 0;
     if (currentFilter === 'visible') return !c.is_hidden;
     if (currentFilter === 'hidden') return c.is_hidden;
     if (currentFilter === 'photo') return c.type === 'photo';
@@ -459,7 +465,7 @@ function renderList() {
       : `<button class="hide-btn" onclick="setHidden(${c.id}, true)">🙈 숨기기</button>`;
 
     return `
-      <div class="card ${c.is_hidden ? 'hidden-card' : ''}">
+      <div class="card ${c.is_hidden ? 'hidden-card' : ''}" ${c.report_count > 0 ? 'style="border-color:rgba(255,100,120,0.5);"' : ''}>
         ${photoHTML}
         <div class="body">
           <div class="meta">
@@ -470,6 +476,7 @@ function renderList() {
             <span>·</span>
             <span>${formatTime(c.created_at)}</span>
             ${c.is_hidden ? '<span style="color:var(--warn);">· 🙈 숨김 상태</span>' : ''}
+            ${c.report_count > 0 ? `<span style="color:var(--danger);font-weight:700;">· 🚩 신고 ${c.report_count}건</span>` : ''}
           </div>
           <div class="nickname">🙋 ${escapeHTML(c.nickname || '익명')}</div>
           ${c.note ? `<div class="note">${escapeHTML(c.note)}</div>` : ''}
