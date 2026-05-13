@@ -1,22 +1,18 @@
-// api/contrib.js — 학생·일반인 참여 + 관리자 페이지 v1.3 (2026-05)
+// api/contrib.js — 학생·일반인 참여 v1.4 (2026-05)
 //
-// v1.3 변경:
-//   - GET ?admin_pin=XXX → 모든 contribs 반환 (숨김 포함, 모든 댐, 관리자 전용)
-//   - PATCH ?id=X&admin_pin=XXX&action=hide|unhide → 숨김/복원 (soft delete)
-//   - DELETE는 기존과 동일 (본인 토큰 또는 관리자 PIN)
-//
-// 환경변수:
-//   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (필수)
-//   - ADMIN_PIN (관리자 비밀번호 — 길고 추측 어려운 문자열 권장)
+// v1.4 변경:
+//   - POST ?action=report → 신고 (report_count +1), 5번 이상 신고 시 자동 숨김
+//   - 신고 시 same author_token이면 1번만 카운트 (자기 신고 방지)
+//   - admin GET 응답에 report_count 포함
 //
 // 엔드포인트:
-//   GET    /api/contrib?dam_id=soyang             → 공개 목록 (숨김 제외)
-//   GET    /api/contrib?admin_pin=XXX             → 관리자: 모든 글 (숨김 포함)
-//   POST   /api/contrib                            → 새 글 등록
-//   PATCH  /api/contrib?id=N&admin_pin=XXX&action=hide   → 숨김
-//   PATCH  /api/contrib?id=N&admin_pin=XXX&action=unhide → 복원
-//   DELETE /api/contrib?id=N&token=XXX            → 본인 삭제
-//   DELETE /api/contrib?id=N&admin_pin=XXX        → 관리자 삭제
+//   GET    /api/contrib?dam_id=soyang             → 공개 (숨김 제외)
+//   GET    /api/contrib?admin_pin=XXX             → 관리자: 모든 글
+//   POST   /api/contrib                            → 새 글
+//   POST   /api/contrib?action=report&id=N         → 신고 (body: author_token)
+//   PATCH  /api/contrib?id=N&admin_pin=XXX&action=hide|unhide → 숨김/복원
+//   DELETE /api/contrib?id=N&token=XXX             → 본인 삭제
+//   DELETE /api/contrib?id=N&admin_pin=XXX         → 관리자 삭제
 
 const { createClient } = require('@supabase/supabase-js')
 
@@ -29,6 +25,7 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_NOTE_LENGTH = 200
 const MAX_NICKNAME_LENGTH = 30
+const AUTO_HIDE_THRESHOLD = 5  // 신고 5번이면 자동 숨김
 const SPAM_KEYWORDS = ['spam', '광고', 'viagra', 'casino', '도박']
 
 function sanitize(text, maxLen) {
@@ -56,13 +53,10 @@ module.exports = async (req, res) => {
 
   // ═══════════════════════════════════════════════════════════
   // GET
-  //   - admin_pin 있으면 → 관리자: 모든 글 (숨김 포함)
-  //   - dam_id 있으면    → 공개: 그 댐의 표시 가능한 글만
   // ═══════════════════════════════════════════════════════════
   if (req.method === 'GET') {
     const adminPin = sanitize(req.query?.admin_pin, 100)
 
-    // 관리자 모드
     if (adminPin) {
       if (!ADMIN_PIN) return res.status(403).json({ error: 'ADMIN_PIN 환경변수 미설정' })
       if (adminPin !== ADMIN_PIN) return res.status(403).json({ error: '비밀번호가 틀렸어요' })
@@ -70,17 +64,22 @@ module.exports = async (req, res) => {
       try {
         const { data, error } = await supabase
           .from('contribs')
-          .select('id, dam_id, type, photo_url, note, nickname, author_token, is_hidden, created_at')
+          .select('id, dam_id, type, photo_url, note, nickname, author_token, is_hidden, report_count, created_at')
+          .order('report_count', { ascending: false })  // 신고 많은 글 우선
           .order('created_at', { ascending: false })
           .limit(500)
-        if (error) throw error
+        if (error) {
+          if (error.code === '42703') {
+            return res.status(500).json({ error: 'report_count 컬럼 없음 — ALTER TABLE 실행 필요' })
+          }
+          throw error
+        }
         return res.status(200).json({ contribs: data || [], admin: true })
       } catch (e) {
         return res.status(500).json({ error: e.message })
       }
     }
 
-    // 공개 모드
     const damId = req.query?.dam_id || req.query?.damId
     if (!damId) return res.status(400).json({ error: 'dam_id 필수' })
 
@@ -106,9 +105,63 @@ module.exports = async (req, res) => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // POST: 새 글 등록 (닉네임 + 토큰 필수)
+  // POST: 새 글 등록 OR 신고 (action=report)
   // ═══════════════════════════════════════════════════════════
   if (req.method === 'POST') {
+    const action = sanitize(req.query?.action, 20)
+
+    // ──── 신고 처리 ────
+    if (action === 'report') {
+      try {
+        const id = parseInt(req.query?.id, 10)
+        const body = req.body || {}
+        const reporterToken = sanitize(body.author_token, 100)
+
+        if (!id) return res.status(400).json({ error: 'id 필수' })
+        if (!reporterToken) return res.status(400).json({ error: '토큰 필수' })
+
+        // 자기 글 신고 방지
+        const { data: contrib, error: fetchErr } = await supabase
+          .from('contribs')
+          .select('id, author_token, report_count, is_hidden')
+          .eq('id', id)
+          .single()
+
+        if (fetchErr) {
+          if (fetchErr.code === 'PGRST116') return res.status(404).json({ error: '존재하지 않는 글' })
+          throw fetchErr
+        }
+
+        if (contrib.author_token === reporterToken) {
+          return res.status(400).json({ error: '본인 글은 신고할 수 없어요' })
+        }
+
+        const newCount = (contrib.report_count || 0) + 1
+        const autoHide = newCount >= AUTO_HIDE_THRESHOLD
+
+        const { error: updErr } = await supabase
+          .from('contribs')
+          .update({
+            report_count: newCount,
+            is_hidden: contrib.is_hidden || autoHide,
+          })
+          .eq('id', id)
+
+        if (updErr) throw updErr
+
+        return res.status(200).json({
+          message: autoHide
+            ? '🚩 신고 접수됨 (자동 숨김 처리)'
+            : '🚩 신고가 접수됐어요. 관리자가 검토합니다.',
+          report_count: newCount,
+          auto_hidden: autoHide,
+        })
+      } catch (e) {
+        return res.status(500).json({ error: e.message })
+      }
+    }
+
+    // ──── 새 글 등록 ────
     try {
       const body = req.body || {}
       const dam_id = sanitize(body.dam_id, 50)
@@ -156,13 +209,13 @@ module.exports = async (req, res) => {
 
       const { data, error } = await supabase
         .from('contribs')
-        .insert({ dam_id, type, photo_url, note, nickname, author_token, is_hidden: false })
+        .insert({ dam_id, type, photo_url, note, nickname, author_token, is_hidden: false, report_count: 0 })
         .select('id, dam_id, type, photo_url, note, nickname, created_at')
         .single()
 
       if (error) {
         if (error.code === '42P01') return res.status(500).json({ error: 'contribs 테이블 없음' })
-        if (error.code === '42703') return res.status(500).json({ error: 'author_token 컬럼 없음' })
+        if (error.code === '42703') return res.status(500).json({ error: 'author_token 또는 report_count 컬럼 없음 — ALTER TABLE 필요' })
         throw error
       }
 
@@ -173,7 +226,7 @@ module.exports = async (req, res) => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // PATCH: 관리자 — 숨김/복원 (soft delete)
+  // PATCH: 관리자 — 숨김/복원 (+ 신고 카운트 리셋)
   // ═══════════════════════════════════════════════════════════
   if (req.method === 'PATCH') {
     try {
@@ -191,11 +244,15 @@ module.exports = async (req, res) => {
 
       const newHidden = (action === 'hide')
 
+      const updatePayload = { is_hidden: newHidden }
+      // unhide 시 신고 카운트도 리셋 (관리자가 검토 완료한 것이므로)
+      if (!newHidden) updatePayload.report_count = 0
+
       const { data, error } = await supabase
         .from('contribs')
-        .update({ is_hidden: newHidden })
+        .update(updatePayload)
         .eq('id', id)
-        .select('id, is_hidden')
+        .select('id, is_hidden, report_count')
         .single()
 
       if (error) {
@@ -204,7 +261,7 @@ module.exports = async (req, res) => {
       }
 
       return res.status(200).json({
-        message: newHidden ? '🙈 숨김 처리됨' : '👁️ 다시 표시됨',
+        message: newHidden ? '🙈 숨김 처리됨' : '👁️ 다시 표시됨 (신고 카운트 초기화)',
         contrib: data,
       })
     } catch (e) {
@@ -213,7 +270,7 @@ module.exports = async (req, res) => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // DELETE: 본인(토큰) 또는 관리자(PIN) 삭제
+  // DELETE: 본인 또는 관리자 삭제
   // ═══════════════════════════════════════════════════════════
   if (req.method === 'DELETE') {
     try {
@@ -242,7 +299,6 @@ module.exports = async (req, res) => {
         return res.status(403).json({ error: '권한 없음' })
       }
 
-      // 사진 파일 삭제 (있는 경우)
       if (contrib.photo_url) {
         const match = contrib.photo_url.match(/dam-photos\/(.+)$/)
         if (match) {
