@@ -276,8 +276,24 @@
   <div id="login-screen" class="login-box">
     <h2>🛡️ 댐워치 관리자</h2>
     <p>관리자 비밀번호를 입력해 주세요.<br>(Vercel 환경변수 <code style="color:var(--accent);font-family:monospace;font-size:11px;">ADMIN_PIN</code>에 설정한 값)</p>
-    <input type="password" id="pin-input" placeholder="비밀번호" autofocus
-           onkeydown="if(event.key==='Enter')tryLogin()">
+    <div style="font-size:10.5px;color:var(--warn);margin-bottom:14px;background:rgba(255,170,68,0.08);padding:6px 10px;border-radius:6px;border:1px solid rgba(255,170,68,0.2);">
+      💡 비밀번호는 보통 영문이에요. 입력 전 <strong>한/영 키</strong> 한 번 누르고, 👁️ 버튼으로 확인하세요.
+    </div>
+    <div style="position:relative;margin-bottom:12px;">
+      <input type="password" id="pin-input" placeholder="비밀번호" autofocus
+             style="margin-bottom:0;padding-right:48px;"
+             onkeydown="if(event.key==='Enter')tryLogin()">
+      <!-- 비밀번호 보기/숨기기 토글 -->
+      <button type="button" onclick="togglePinVisibility()" aria-label="비밀번호 보기"
+              style="position:absolute;right:6px;top:50%;transform:translateY(-50%);
+                     background:none;border:none;color:var(--text2);font-size:20px;
+                     cursor:pointer;padding:6px 10px;line-height:1;user-select:none;
+                     border-radius:6px;transition:background 0.15s;"
+              onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+              onmouseout="this.style.background='none'">
+        <span id="eye-icon">👁️</span>
+      </button>
+    </div>
     <button onclick="tryLogin()">🔓 들어가기</button>
     <div class="login-error" id="login-err"></div>
   </div>
@@ -311,6 +327,21 @@
 <script>
 let allContribs = [];
 let currentFilter = 'all';
+
+// ─── 비밀번호 보기/숨기기 토글 ───
+function togglePinVisibility() {
+  const input = document.getElementById('pin-input');
+  const icon = document.getElementById('eye-icon');
+  if (!input || !icon) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    icon.textContent = '👁️';
+  }
+  input.focus();
+}
 
 // ─── 로그인 ───
 function getStoredPin() {
