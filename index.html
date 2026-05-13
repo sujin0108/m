@@ -5034,7 +5034,17 @@ async function refreshContribGallery(damId) {
                                white-space:nowrap;">
                   🗑️ ${isEN ? 'Delete' : '삭제'}
                 </button>
-              ` : ''}
+              ` : `
+                <button onclick="reportContrib(${c.id}, '${damId}')"
+                        style="background:rgba(255,170,68,0.08);border:1px solid rgba(255,170,68,0.25);
+                               color:#ffaa44;font-size:10px;padding:4px 9px;border-radius:6px;cursor:pointer;
+                               white-space:nowrap;opacity:0.7;"
+                        onmouseover="this.style.opacity='1'"
+                        onmouseout="this.style.opacity='0.7'"
+                        title="${isEN ? 'Report inappropriate content' : '부적절한 내용 신고'}">
+                  🚩 ${isEN ? 'Report' : '신고'}
+                </button>
+              `}
             </div>
           </div>
         </div>
@@ -5068,6 +5078,49 @@ async function deleteMyContrib(id, damId) {
     removeMyContribId(id);
     showToast(isEN ? '🗑️ Deleted' : '🗑️ 삭제되었어요', 'success');
     refreshContribGallery(damId);
+  } catch (e) {
+    showToast(`⚠️ ${e.message}`, 'error', 5000);
+  }
+}
+
+// ─── 다른 사람 글 신고 ───
+async function reportContrib(id, damId) {
+  const isEN = currentLang === 'en';
+  if (!confirm(isEN
+      ? 'Report this post as inappropriate?\n\nThe admin will review it. False reports may be ignored.'
+      : '이 글을 부적절하다고 신고할까요?\n\n관리자가 검토해요. 장난성 신고는 무시될 수 있어요.')) {
+    return;
+  }
+
+  // 이미 신고했는지 localStorage로 체크 (중복 신고 방지)
+  let reported = [];
+  try { reported = JSON.parse(localStorage.getItem('damwatch_reported') || '[]'); } catch (e) {}
+  if (reported.includes(id)) {
+    showToast(isEN ? '⚠️ Already reported' : '⚠️ 이미 신고하셨어요', 'error', 3000);
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/contrib?action=report&id=${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author_token: getUserToken() }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(`⚠️ ${data?.error || (isEN ? 'Report failed' : '신고 실패')}`, 'error', 5000);
+      return;
+    }
+    // localStorage에 기록 (중복 신고 방지)
+    reported.push(id);
+    try { localStorage.setItem('damwatch_reported', JSON.stringify(reported.slice(-100))); } catch (e) {}
+
+    showToast(data?.message || (isEN ? '🚩 Reported. Admin will review.' : '🚩 신고됐어요. 관리자가 검토해요.'),
+              'success', 4000);
+    if (data?.auto_hidden) {
+      // 5번 이상이라 자동 숨김 처리됨 — 갤러리 새로고침
+      refreshContribGallery(damId);
+    }
   } catch (e) {
     showToast(`⚠️ ${e.message}`, 'error', 5000);
   }
