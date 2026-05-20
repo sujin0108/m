@@ -11569,7 +11569,14 @@ function ensureMapPanel() {
   `;
   grid.parentNode.insertBefore(panelEl, grid);
   panelEl.querySelector('#bmp-close').addEventListener('click', () => {
+    // 닫기 전, 원래 보던 위치(showBasinMap에서 저장한 값)로 부드럽게 복귀
+    const prevY = parseInt(panelEl.dataset.prevScrollY || '', 10);
     panelEl.style.display = 'none';
+    if (!isNaN(prevY)) {
+      setTimeout(() => {
+        window.scrollTo({ top: prevY, behavior: 'smooth' });
+      }, 50);
+    }
   });
   return panelEl;
 }
@@ -12003,7 +12010,9 @@ function showBasinMap(basin) {
 
   // ⭐ 패널이 새로 열린 경우에만 부드럽게 스크롤 — 지도 전체와 범례 버튼이 한 화면에 들어오도록
   //   (이미 보고 있던 패널을 다른 수계로 갱신할 때는 스크롤 안 함 — 시점 보존)
+  //   동시에 원래 보던 위치를 저장 — X 닫기 시 그 위치로 복귀
   if (wasHidden) {
+    panelEl.dataset.prevScrollY = String(window.scrollY || window.pageYOffset || 0);
     setTimeout(() => {
       try {
         panelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
