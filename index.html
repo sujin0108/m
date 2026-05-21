@@ -1392,6 +1392,21 @@ input[type="checkbox"][style*="display:none"] {
   padding: 3px 0;
 }
 .qrich-row b { color: var(--text); font-weight: 700; }
+
+/* ── Step 6-C: 음소거 토글 버튼 ── */
+#quiz-sound-toggle:hover {
+  background: rgba(0,200,255,0.15) !important;
+  border-color: var(--accent) !important;
+  transform: scale(1.04);
+}
+#quiz-sound-toggle.sound-off {
+  background: rgba(255,68,68,0.08) !important;
+  border-color: rgba(255,68,68,0.3) !important;
+  color: var(--text3) !important;
+}
+#quiz-sound-toggle.sound-off:hover {
+  background: rgba(255,68,68,0.15) !important;
+}
 .quiz-review-item {
   background: var(--surface);
   border-left: 3px solid var(--warning);
@@ -3622,6 +3637,16 @@ h3 .en-para, h4 .en-para,
 
       <!-- ── 시작 화면 (카테고리 선택) ── -->
       <div id="quiz-start" class="quiz-screen">
+        <!-- Step 6-C: 음소거 토글 (도서관·교실용) -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <button id="quiz-sound-toggle" onclick="toggleQuizSound()" type="button"
+                  style="background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.25);color:var(--accent);
+                         font-family:var(--font-ko);font-size:11px;font-weight:600;
+                         padding:6px 12px;border-radius:20px;cursor:pointer;
+                         display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;">
+            🔊 <span style="font-size:11px;">소리 켜짐</span>
+          </button>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;" class="quiz-cat-grid">
           <button class="quiz-cat-btn active" data-cat="all" onclick="selectQuizCategory(this)">
             <div style="font-size:24px;">🌈</div>
@@ -3643,10 +3668,20 @@ h3 .en-para, h4 .en-para,
             <div style="font-size:13px;font-weight:700;margin-top:4px;">세계 댐</div>
             <div style="font-size:10px;color:var(--text3);font-style:italic;">World</div>
           </button>
-          <button class="quiz-cat-btn" data-cat="rate" onclick="selectQuizCategory(this)" style="grid-column:1/-1;">
+          <button class="quiz-cat-btn" data-cat="rate" onclick="selectQuizCategory(this)">
             <div style="font-size:24px;">💧</div>
-            <div style="font-size:13px;font-weight:700;margin-top:4px;">현재 저수율 추측</div>
-            <div style="font-size:10px;color:var(--text3);font-style:italic;">Storage Rate (live data)</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">현재 저수율</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">Live Rate</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="units" onclick="selectQuizCategory(this)">
+            <div style="font-size:24px;">📏</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">단위·계산</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">Units/Math</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="history" onclick="selectQuizCategory(this)" style="grid-column:1/-1;">
+            <div style="font-size:24px;">📚</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">역사·사례 (교과서 연계)</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">History · Textbook Cases</div>
           </button>
         </div>
 
@@ -3725,6 +3760,16 @@ h3 .en-para, h4 .en-para,
 
         <!-- 학습 카드: 틀린 문제 복습 -->
         <div id="quiz-review" style="margin-bottom:14px;"></div>
+
+        <!-- ── Step 6-C: 내보내기 / 인증서 (학교 제출용) ── -->
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button onclick="exportQuizResultPDF()" style="flex:1;min-width:140px;background:rgba(0,255,200,0.08);border:1px solid var(--accent3);color:var(--accent3);font-family:var(--font-ko);font-size:12px;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;">
+            📄 결과 보고서<br><span class="en-sub" style="font-size:10px;">Export PDF</span>
+          </button>
+          <button id="quiz-cert-btn" onclick="exportQuizCertificate()" style="flex:1;min-width:140px;background:rgba(255,184,0,0.08);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ko);font-size:12px;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;">
+            🎓 인증서 발급<br><span class="en-sub" style="font-size:10px;">Certificate</span>
+          </button>
+        </div>
 
         <div style="display:flex;gap:10px;">
           <button onclick="quizBackToStart()" style="flex:1;background:rgba(0,200,255,0.1);border:1px solid var(--accent);color:var(--accent);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
@@ -11732,7 +11777,113 @@ let quizState = {
   correct: 0,
   wrongHistory: [],   // 틀린 문제 복습용
   answered: false,
+  retrying: false,
 };
+
+// ═══════════════════════════════════════════════════════════════
+// 🎵 Step 6-C: Web Audio API 사운드 엔진
+// ─────────────────────────────────────────────────────────────
+// 외부 파일 0개 — 코드 안에서 직접 음 생성
+// localStorage로 음소거 설정 저장 (도서관·교실 대비)
+// ═══════════════════════════════════════════════════════════════
+let quizAudioCtx = null;
+let quizSoundEnabled = true;
+
+// 초기화 — localStorage에서 음소거 설정 로드
+(function initQuizSoundPref(){
+  try {
+    const v = localStorage.getItem('damwatch_quiz_sound');
+    if (v === 'off') quizSoundEnabled = false;
+  } catch(e) {}
+})();
+
+// AudioContext lazy init (사용자 인터랙션 후에만 동작)
+function _ensureAudioCtx() {
+  if (quizAudioCtx) return quizAudioCtx;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) quizAudioCtx = new AC();
+  } catch(e) { return null; }
+  return quizAudioCtx;
+}
+
+// 한 음 재생 (주파수, 길이, 파형, 음량, 지연)
+function _playTone(freq, duration, type, vol, delay) {
+  if (!quizSoundEnabled) return;
+  const ctx = _ensureAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  const t = ctx.currentTime + (delay || 0);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol || 0.15, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.02);
+}
+
+// 상황별 사운드 (도-레-미... 음계 주파수: C5=523, D5=587, E5=659, G5=784, A5=880, C6=1047)
+function playQuizSound(kind) {
+  if (!quizSoundEnabled) return;
+  switch(kind) {
+    case 'correct': // 정답: 도-미-솔 상승 (밝고 짧게)
+      _playTone(523, 0.12, 'sine', 0.18, 0);
+      _playTone(659, 0.12, 'sine', 0.18, 0.08);
+      _playTone(784, 0.28, 'sine', 0.18, 0.16);
+      break;
+    case 'wrong': // 오답: 부드러운 하강 (좌절감 없는 단음)
+      _playTone(330, 0.15, 'sine', 0.13, 0);
+      _playTone(246, 0.30, 'sine', 0.13, 0.13);
+      break;
+    case 'perfect': // 100%: 4음 팡파레
+      _playTone(523, 0.10, 'triangle', 0.16, 0);
+      _playTone(784, 0.10, 'triangle', 0.16, 0.10);
+      _playTone(1047, 0.10, 'triangle', 0.16, 0.20);
+      _playTone(1319, 0.45, 'triangle', 0.20, 0.30);
+      break;
+    case 'celebrate': // 80%+: 환호 3음
+      _playTone(659, 0.10, 'sine', 0.16, 0);
+      _playTone(880, 0.10, 'sine', 0.16, 0.10);
+      _playTone(1047, 0.35, 'sine', 0.18, 0.20);
+      break;
+    case 'good': // 60%+: 부드러운 2음
+      _playTone(659, 0.15, 'sine', 0.14, 0);
+      _playTone(880, 0.25, 'sine', 0.14, 0.13);
+      break;
+    case 'click': // 짧은 클릭음
+      _playTone(900, 0.05, 'square', 0.06, 0);
+      break;
+    case 'start': // 퀴즈 시작
+      _playTone(523, 0.08, 'sine', 0.12, 0);
+      _playTone(784, 0.12, 'sine', 0.12, 0.07);
+      break;
+  }
+}
+
+// 음소거 토글 (사용자 시작 화면 버튼)
+function toggleQuizSound() {
+  quizSoundEnabled = !quizSoundEnabled;
+  try { localStorage.setItem('damwatch_quiz_sound', quizSoundEnabled ? 'on' : 'off'); } catch(e) {}
+  _updateSoundToggleUI();
+  if (quizSoundEnabled) playQuizSound('click');  // 켤 때 테스트음
+}
+function _updateSoundToggleUI() {
+  const btn = document.getElementById('quiz-sound-toggle');
+  if (!btn) return;
+  const isEN = (currentLang === 'en');
+  if (quizSoundEnabled) {
+    btn.innerHTML = `🔊 <span style="font-size:11px;">${isEN ? 'Sound On' : '소리 켜짐'}</span>`;
+    btn.classList.remove('sound-off');
+  } else {
+    btn.innerHTML = `🔇 <span style="font-size:11px;">${isEN ? 'Muted' : '음소거'}</span>`;
+    btn.classList.add('sound-off');
+  }
+}
 
 // ── 카테고리 라벨 ──
 const QUIZ_CAT_LABELS = {
@@ -11741,6 +11892,8 @@ const QUIZ_CAT_LABELS = {
   type:     { ko:'댐 종류',          en:'Dam Type',      icon:'🏗️' },
   world:    { ko:'세계 댐',          en:'World Dams',    icon:'🌍' },
   rate:     { ko:'실시간 저수율',    en:'Live Rate',     icon:'💧' },
+  units:    { ko:'단위·계산',        en:'Units/Math',    icon:'📏' },
+  history:  { ko:'역사·사례',        en:'History',       icon:'📚' },
 };
 
 // ── 카테고리 선택 ──
@@ -11759,6 +11912,8 @@ function initQuizModule() {
 
   // 최고 기록 표시
   renderQuizBestRecords();
+  // 사운드 토글 UI 동기화
+  _updateSoundToggleUI();
 }
 
 function renderQuizBestRecords() {
@@ -11766,7 +11921,7 @@ function renderQuizBestRecords() {
   let records = {};
   try { records = JSON.parse(localStorage.getItem('damwatch_quiz_best') || '{}'); } catch(e) {}
 
-  const order = ['all','location','type','world','rate'];
+  const order = ['all','location','type','world','rate','units','history'];
   const html = order.map(cat => {
     const rec = records[cat];
     const label = QUIZ_CAT_LABELS[cat];
@@ -12027,6 +12182,8 @@ function _buildQuizSet(category, n) {
     type:     genQuestionType,
     world:    genQuestionWorld,
     rate:     genQuestionRate,
+    units:    genQuestionUnits,
+    history:  genQuestionHistory,
   };
 
   let pool;
@@ -12054,6 +12211,133 @@ function _buildQuizSet(category, n) {
   return questions;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 📊 Step 6-C: 전문 문제 — 단위 변환 (계산력 측정)
+// ═══════════════════════════════════════════════════════════════
+const UNIT_QUESTIONS = [
+  { q: '1 백만톤(million ton)은 몇 m³(세제곱미터)일까요?',
+    qEN: 'How many cubic meters in 1 million tons of water?',
+    opts: ['100,000 m³', '1,000,000 m³', '10,000,000 m³', '100,000,000 m³'],
+    ans: 1, // 1 million tons = 1 million m³ (물의 비중 ≈ 1)
+    explainShort: '물 1 백만톤 = <b>1,000,000 m³</b> (1톤 = 약 1 m³, 물의 비중이 거의 1이라서)',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 단위 비교</span> 물 1톤 ≈ 1 m³ (가로·세로·높이 1m 정육면체). 그래서 \'백만톤\'과 \'백만 m³\'는 같은 양이에요. 댐 용량을 말할 때 두 단위가 혼용되는 이유예요.</div><div class="qrich-detail">📌 1억 m³ = 100 백만톤 = 0.1 km³ — 소양강댐(29억 톤)은 약 2.9 km³</div>'
+  },
+  { q: '소양강댐 저수량 29억 톤은 몇 km³일까요?',
+    qEN: 'Soyanggang Dam holds 2.9 billion tons. How many km³?',
+    opts: ['0.29 km³', '2.9 km³', '29 km³', '290 km³'],
+    ans: 1,
+    explainShort: '29억 톤 = 29 × 10⁸ 톤 = 29 × 10⁸ m³ = <b>2.9 km³</b> (1 km³ = 10⁹ m³)',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 km³(세제곱킬로미터)</span> 가로·세로·높이 1km씩의 거대한 정육면체 부피. 1 km³ = 10억 m³ = 10억 톤.</div><div class="qrich-detail">📌 비교: 백두산 천지(약 0.2 km³), 한강 1년 유량(약 30 km³). 소양강댐은 천지의 약 15배!</div>'
+  },
+  { q: '올림픽 수영장(50m × 25m × 2m = 2,500 m³) 기준, 1 백만톤 = 몇 개 수영장?',
+    qEN: '1 million tons = how many Olympic pools (50×25×2m)?',
+    opts: ['약 100개', '약 400개', '약 1,000개', '약 4,000개'],
+    ans: 1,
+    explainShort: '1,000,000 m³ ÷ 2,500 m³ = <b>약 400개</b> 올림픽 수영장',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 시각화 단위</span> 학생이 머릿속에 그릴 수 있는 \'올림픽 수영장\'으로 환산하면 댐의 거대함이 실감 나요.</div><div class="qrich-detail">📌 충주댐(27.5억 톤) = 약 110만 개 수영장 ≈ 한국 모든 학교 수영장 합친 양보다 훨씬 많음</div>'
+  },
+  { q: '저수율이란? (수식 정의)',
+    qEN: 'What is "storage rate"?',
+    opts: [
+      '현재 저수량 ÷ 만수 저수량 × 100',
+      '유입량 ÷ 방류량 × 100',
+      '댐 높이 ÷ 강 깊이 × 100',
+      '인근 인구 ÷ 댐 용량 × 100'
+    ],
+    ans: 0,
+    explainShort: '저수율 = <b>(현재 저수량 ÷ 만수 저수량) × 100%</b>',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 저수율(貯水率)이란?</span> 댐이 \'얼마나 차 있는지\'를 백분율로 표시한 값. 100%가 만수, 0%가 완전 비어있음.</div><div class="qrich-detail">📌 가뭄 단계: 90%+ 만수기 · 50~90% 평수기 · 30~50% 갈수 주의 · 30% 이하 가뭄 경계</div>'
+  },
+];
+function genQuestionUnits() {
+  if (UNIT_QUESTIONS.length < 1) return null;
+  const q = _pickRandom(UNIT_QUESTIONS);
+  const isEN = (currentLang === 'en');
+  return {
+    cat: 'units',
+    catLabel: isEN ? '📏 UNITS' : '📏 단위·계산',
+    q: isEN ? (q.qEN || q.q) : q.q,
+    opts: q.opts,
+    ans: q.ans,
+    hint: isEN ? 'Hint: water density ≈ 1 ton/m³' : '힌트: 물의 비중은 약 1 (1톤 ≈ 1 m³)',
+    explainShort: q.explainShort,
+    explainRich: q.rich || '',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📚 Step 6-C: 전문 문제 — 역사·사례 분석 (한국 교과서 연계)
+// ═══════════════════════════════════════════════════════════════
+const HISTORY_QUESTIONS = [
+  { q: '한국 최초의 다목적댐은? (1965년 완공)',
+    qEN: 'What was Korea\'s first multipurpose dam? (completed 1965)',
+    opts: ['소양강댐', '섬진강댐', '안동댐', '대청댐'],
+    ans: 1,
+    explainShort: '<b>섬진강댐(1965)</b>이 한국 최초의 다목적댐이에요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 한국 댐 역사</span> 섬진강댐은 1965년 박정희 정부의 \'1차 경제개발 5개년 계획\' 일환으로 건설된 한국 최초의 다목적댐이에요. 호남 지방의 농업·전력 수요에 응답했어요.</div><div class="qrich-detail">📌 시기별: 1세대(1965~70년대, 섬진강·소양강·안동) → 2세대(1980년대, 충주·대청·합천) → 3세대(2000년대, 용담·한탄강)</div>',
+  },
+  { q: '평화의댐(1989)이 건설된 직접적 이유는?',
+    qEN: 'Why was the "Peace Dam" (1989) built?',
+    opts: [
+      '한강 수도권 전력 공급',
+      '북한 금강산댐 방류 위협 대비',
+      '낙동강 가뭄 대응',
+      '4대강 수질 개선'
+    ],
+    ans: 1,
+    explainShort: '북한이 \'금강산댐\'을 지어 의도적으로 물을 흘려보낼 수 있다는 위협에 대비해 건설됐어요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 평화의댐</span> 1980년대 말 북한이 임남(금강산)댐을 건설하면서 \'서울 침수 위협\' 논란이 일었고, 한국은 국민 모금으로 평화의댐을 만들었어요. 평소엔 거의 비어있는 홍수조절 전용댐.</div><div class="qrich-detail">📌 강원도 화천군 위치, 한국 댐 중 유일하게 \'평화\'라는 이름을 가진 정치적 상징성 큰 댐</div>',
+  },
+  { q: '4대강 사업(2009~2012)으로 만들어진 보(洑)는 총 몇 개?',
+    qEN: 'How many weirs were built in the 4-Rivers Project (2009-2012)?',
+    opts: ['8개', '12개', '16개', '20개'],
+    ans: 2,
+    explainShort: '한강·낙동강·금강·영산강에 총 <b>16개의 보</b>가 건설됐어요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 4대강 사업</span> 이명박 정부의 22조 원 규모 국책 사업. 4대강에 16개 보를 만들고, 4대강 본류를 정비해 \'홍수 방지·수자원 확보·수질 개선\'을 목표로 했어요.</div><div class="qrich-detail">📌 강별 보 개수: 한강 3개(이포·여주·강천) · 낙동강 8개(상주·낙단·구미·칠곡·강정고령·달성·합천창녕·창녕함안) · 금강 3개(세종·공주·백제) · 영산강 2개(승촌·죽산). 환경 영향 논란 지속</div>',
+  },
+  { q: '2002년 태풍 \'루사\'로 댐 관리의 중요성이 부각된 사건은?',
+    qEN: 'Which event highlighted dam management in 2002?',
+    opts: [
+      '소양강댐 비상 방류',
+      '한탄강 일대 대규모 침수',
+      '낙동강하굿둑 파괴',
+      '대청댐 수질 오염'
+    ],
+    ans: 1,
+    explainShort: '태풍 루사로 한탄강 일대가 큰 침수 피해를 입었어요. 이 사건으로 <b>홍수조절 전용댐(한탄강댐, 2016)</b>이 새로 건설됐어요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 태풍 루사 (2002.8.31)</span> 한국에 1일 강수량 870.5mm라는 기록적 폭우를 쏟아부었어요. 강원도 강릉이 최대 피해 지역. 사망 246명, 재산 피해 5조 원 이상.</div><div class="qrich-detail">📌 교훈: 기후변화로 \'극단적 강수\' 빈도 증가 → 다목적댐의 홍수조절 한계 → 평소에 비워두는 전용댐의 필요성 제기</div>',
+  },
+  { q: '한국에서 발전 용량이 가장 큰 단일 댐은?',
+    qEN: 'Which Korean dam has the largest single power capacity?',
+    opts: ['소양강댐', '충주댐', '대청댐', '안동댐'],
+    ans: 1,
+    explainShort: '<b>충주댐(412MW)</b>이 단일 댐 기준 한국 최대 발전 용량이에요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 수력발전 비교</span> 충주댐(412MW) > 소양강댐(200MW) > 안동댐(90MW). MW는 메가와트로, 1MW = 약 1,000가구 동시 전력 공급.</div><div class="qrich-detail">📌 한국 수력 비중: 전체 전력의 약 1.4% (대부분은 화력·원자력). 수력은 \'친환경 + 즉시 대응\'이 장점이라 비상시 가치 큼</div>',
+  },
+  { q: '한국 4대 하굿둑이 아닌 것은?',
+    qEN: 'Which is NOT one of Korea\'s 4 estuary barrages?',
+    opts: ['낙동강하굿둑', '금강하굿둑', '한강하굿둑', '영산강하굿둑'],
+    ans: 2,
+    explainShort: '<b>한강하굿둑은 없어요</b>. 한강은 분단 상황(임진강 합류부가 군사분계선)으로 하굿둑 건설이 불가능해요.',
+    rich: '<div class="qrich-def"><span class="qrich-tag">💡 한국 4대 하굿둑</span> 낙동강(1987, 부산) · 금강(1990, 군산) · 영산강(1981, 목포) · 삽교천방조제(1979, 충남). 한강은 군사적 이유로 제외.</div><div class="qrich-detail">📌 하굿둑의 그림자: 회유성 어류(연어·뱀장어)가 못 올라와 생태계 단절 발생. 최근 일부 하굿둑 개방 논의 중</div>',
+  },
+];
+function genQuestionHistory() {
+  if (HISTORY_QUESTIONS.length < 1) return null;
+  const q = _pickRandom(HISTORY_QUESTIONS);
+  const isEN = (currentLang === 'en');
+  return {
+    cat: 'history',
+    catLabel: isEN ? '📚 HISTORY' : '📚 역사·사례',
+    q: isEN ? (q.qEN || q.q) : q.q,
+    opts: q.opts,
+    ans: q.ans,
+    hint: isEN ? 'Hint: Recall textbook content' : '힌트: 사회·역사 교과서에 자주 나오는 내용이에요',
+    explainShort: q.explainShort,
+    explainRich: q.rich || '',
+  };
+}
+
 // ─────────────────────────────────────────────────────────────
 // 퀴즈 시작 / 진행 / 종료
 // ─────────────────────────────────────────────────────────────
@@ -12073,11 +12357,13 @@ function startQuiz() {
     correct: 0,
     wrongHistory: [],
     answered: false,
+    retrying: false,
   };
   document.getElementById('quiz-start').style.display  = 'none';
   document.getElementById('quiz-play').style.display   = 'block';
   document.getElementById('quiz-result').style.display = 'none';
   document.getElementById('quiz-total-num').textContent = '10';
+  playQuizSound('start');  // 🎵 시작음
   renderQuizQuestion();
 }
 
@@ -12116,6 +12402,9 @@ function answerQuiz(selectedIdx) {
   const isCorrect = (selectedIdx === q.ans);
   const isEN = (currentLang === 'en');
   const isRetry = quizState.retrying === true;  // 다시 시도 모드인지
+
+  // 🎵 정답/오답 효과음
+  playQuizSound(isCorrect ? 'correct' : 'wrong');
 
   // 모든 버튼 비활성 + 정답·오답 표시
   document.querySelectorAll('.quiz-option-btn').forEach((btn, idx) => {
@@ -12250,15 +12539,29 @@ function finishQuiz() {
 
   // 결과 이모지 + 메시지
   let emoji, title, subtitle;
-  if (accuracy === 100)     { emoji='🏆'; title=isEN?'PERFECT!':'완벽 정답!';        subtitle=isEN?'You\'re a dam expert!':'당신은 댐 박사!'; }
-  else if (accuracy >= 80)  { emoji='🎉'; title=isEN?'Excellent!':'훌륭해요!';        subtitle=isEN?'Great knowledge!':'정말 잘했어요'; }
-  else if (accuracy >= 60)  { emoji='👍'; title=isEN?'Good Job!':'잘했어요!';         subtitle=isEN?'Solid effort!':'더 도전해 봐요'; }
+  if (accuracy === 100)     { emoji='🏆'; title=isEN?'PERFECT!':'완벽 정답!';        subtitle=isEN?'You\'re a dam expert!':'당신은 댐 박사!'; playQuizSound('perfect'); }
+  else if (accuracy >= 80)  { emoji='🎉'; title=isEN?'Excellent!':'훌륭해요!';        subtitle=isEN?'Great knowledge!':'정말 잘했어요'; playQuizSound('celebrate'); }
+  else if (accuracy >= 60)  { emoji='👍'; title=isEN?'Good Job!':'잘했어요!';         subtitle=isEN?'Solid effort!':'더 도전해 봐요'; playQuizSound('good'); }
   else if (accuracy >= 40)  { emoji='💪'; title=isEN?'Keep Going!':'한 번 더!';       subtitle=isEN?'You can do better!':'다음엔 더 잘할 수 있어요'; }
   else                      { emoji='📚'; title=isEN?'Study More!':'공부 더 해요';    subtitle=isEN?'Read the education modules!':'교육 모듈을 먼저 둘러보세요'; }
 
   document.getElementById('quiz-result-emoji').textContent     = emoji;
   document.getElementById('quiz-result-title').textContent     = title;
   document.getElementById('quiz-result-subtitle').textContent  = subtitle;
+
+  // 인증서 버튼 잠금/활성화 (80%+ 기준)
+  const certBtn = document.getElementById('quiz-cert-btn');
+  if (certBtn) {
+    if (accuracy >= 80) {
+      certBtn.style.opacity = '1';
+      certBtn.style.cursor = 'pointer';
+      certBtn.title = isEN ? 'Eligible for certificate!' : '인증서 발급 가능!';
+    } else {
+      certBtn.style.opacity = '0.45';
+      certBtn.style.cursor = 'not-allowed';
+      certBtn.title = isEN ? `Requires 80%+ (current: ${accuracy}%)` : `80% 이상 필요 (현재: ${accuracy}%)`;
+    }
+  }
 
   // 최고 점수 갱신
   let records = {};
@@ -12319,6 +12622,236 @@ function quizBackToStart() {
   document.getElementById('quiz-play').style.display   = 'none';
   document.getElementById('quiz-result').style.display = 'none';
   renderQuizBestRecords();
+  _updateSoundToggleUI();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📄 Step 6-C: 결과 보고서 PDF 내보내기 (학교 제출용)
+// ─────────────────────────────────────────────────────────────
+// window.print()로 PDF 저장 — 외부 라이브러리 없음, 한글 완벽 지원
+// ═══════════════════════════════════════════════════════════════
+function exportQuizResultPDF() {
+  const isEN = (currentLang === 'en');
+  const name = prompt(isEN ? 'Enter your name (for the report):' : '이름을 입력해주세요 (보고서에 표시):', '');
+  if (name === null) return;  // 취소
+  const studentName = (name || '').trim() || (isEN ? '(no name)' : '(이름 미입력)');
+
+  const total = quizState.questions.length;
+  const correct = quizState.correct;
+  const score = quizState.score;
+  const accuracy = Math.round(correct / total * 100);
+  const today = new Date().toLocaleDateString(isEN ? 'en-US' : 'ko-KR', { year:'numeric', month:'long', day:'numeric' });
+  const catLabel = QUIZ_CAT_LABELS[quizState.category]
+    ? (isEN ? QUIZ_CAT_LABELS[quizState.category].en : QUIZ_CAT_LABELS[quizState.category].ko)
+    : '-';
+
+  const wrongRows = quizState.wrongHistory.length === 0
+    ? `<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">${isEN?'All correct! Nothing to review.':'전부 맞았어요!'}</td></tr>`
+    : quizState.wrongHistory.map((w, i) => `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #ddd;font-size:11px;vertical-align:top;">${i+1}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;font-size:11px;line-height:1.6;">
+            <b>${w.q}</b><br>
+            <span style="color:#c00;">${isEN?'My answer':'내 답'}: ${w.selected}</span> →
+            <span style="color:#080;font-weight:bold;">${isEN?'Correct':'정답'}: ${w.correct}</span>
+            <div style="margin-top:4px;color:#444;">${w.explainShort||''}</div>
+          </td>
+        </tr>`).join('');
+
+  const win = window.open('', '_blank', 'width=820,height=900');
+  if (!win) { alert(isEN ? 'Popup blocked. Please allow popups.' : '팝업이 차단됐어요. 팝업 허용 후 다시 시도해주세요.'); return; }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="${isEN?'en':'ko'}"><head><meta charset="utf-8">
+<title>${isEN?'DamWatch Quiz Report':'댐워치 퀴즈 결과 보고서'} - ${studentName}</title>
+<style>
+  @page { margin: 18mm; size: A4; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #222; line-height: 1.5; margin: 0; padding: 20px; background: #fff; }
+  .report-header { border-bottom: 3px solid #0066cc; padding-bottom: 12px; margin-bottom: 20px; }
+  .report-title { font-size: 22px; font-weight: 800; color: #0066cc; margin: 0; }
+  .report-sub { font-size: 11px; color: #666; margin-top: 4px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .info-row { font-size: 13px; }
+  .info-row .lbl { font-size: 10px; color: #888; letter-spacing: 0.5px; }
+  .info-row .val { font-weight: 700; color: #222; }
+  .score-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .score-card { border: 2px solid #ddd; border-radius: 10px; padding: 14px; text-align: center; }
+  .score-card .num { font-size: 32px; font-weight: 800; color: #0066cc; }
+  .score-card .lbl2 { font-size: 11px; color: #666; margin-top: 4px; }
+  .score-card.gold { border-color: #ffb800; }
+  .score-card.gold .num { color: #d97a00; }
+  .score-card.green { border-color: #2c9d4d; }
+  .score-card.green .num { color: #2c9d4d; }
+  h2 { font-size: 15px; color: #0066cc; border-left: 4px solid #0066cc; padding-left: 8px; margin: 20px 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: #f0f6ff; padding: 8px; text-align: left; border-bottom: 2px solid #0066cc; font-size: 11px; }
+  .footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 10px; color: #888; text-align: center; }
+  .grade-badge { display:inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  @media print { body { padding: 0; } }
+</style>
+</head><body>
+  <div class="report-header">
+    <h1 class="report-title">💧 ${isEN?'DamWatch Quiz Report':'댐워치 퀴즈 결과 보고서'}</h1>
+    <div class="report-sub">DamWatch v3.0 · ${isEN?'Real-time Korean Dam Monitor & Education':'전국 댐 실시간 모니터링 & 교육 플랫폼'}</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-row"><div class="lbl">${isEN?'NAME':'이름'}</div><div class="val">${studentName}</div></div>
+    <div class="info-row"><div class="lbl">${isEN?'DATE':'응시일'}</div><div class="val">${today}</div></div>
+    <div class="info-row"><div class="lbl">${isEN?'CATEGORY':'카테고리'}</div><div class="val">${catLabel}</div></div>
+    <div class="info-row"><div class="lbl">${isEN?'GRADE':'등급'}</div><div class="val">
+      <span class="grade-badge" style="background:${accuracy>=80?'#e8f5e9':accuracy>=60?'#fff8e1':'#fde7e7'};color:${accuracy>=80?'#2c9d4d':accuracy>=60?'#d97a00':'#c00'};">
+        ${accuracy===100?'🏆 PERFECT':accuracy>=80?'🎉 EXCELLENT':accuracy>=60?'👍 GOOD':accuracy>=40?'💪 OK':'📚 STUDY MORE'}
+      </span>
+    </div></div>
+  </div>
+
+  <div class="score-cards">
+    <div class="score-card gold"><div class="num">${score}</div><div class="lbl2">${isEN?'POINTS':'점수'}</div></div>
+    <div class="score-card green"><div class="num">${correct}/${total}</div><div class="lbl2">${isEN?'CORRECT':'정답 수'}</div></div>
+    <div class="score-card"><div class="num">${accuracy}%</div><div class="lbl2">${isEN?'ACCURACY':'정답률'}</div></div>
+  </div>
+
+  <h2>📝 ${isEN?'Review of Wrong Answers':'틀린 문제 복습'}</h2>
+  <table>
+    <thead><tr>
+      <th width="40">#</th>
+      <th>${isEN?'Question & Explanation':'문제 · 해설'}</th>
+    </tr></thead>
+    <tbody>${wrongRows}</tbody>
+  </table>
+
+  <div class="footer">
+    DamWatch v3.0 — NAEMANG2943 · SJL0108 ·
+    ${isEN?'Data: K-water (Korea Water Resources Corporation)':'데이터 출처: K-water (한국수자원공사)'}
+    <br>${isEN?'Generated':'생성일'}: ${new Date().toLocaleString(isEN?'en-US':'ko-KR')}
+  </div>
+
+  <\script>
+    window.addEventListener('load', () => setTimeout(() => window.print(), 600));
+  <\/script>
+</body></html>`);
+  win.document.close();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🎓 Step 6-C: 인증서 발급 (80%+ 시 "댐 지킴이 인증")
+// ═══════════════════════════════════════════════════════════════
+function exportQuizCertificate() {
+  const isEN = (currentLang === 'en');
+  const total = quizState.questions.length;
+  const correct = quizState.correct;
+  const accuracy = Math.round(correct / total * 100);
+
+  if (accuracy < 80) {
+    alert(isEN
+      ? `🎓 Certificate requires 80%+ accuracy. (Your score: ${accuracy}%)\nTry again to earn one!`
+      : `🎓 인증서는 정답률 80% 이상에서 발급돼요. (현재: ${accuracy}%)\n다시 도전해 보세요!`);
+    return;
+  }
+
+  const name = prompt(isEN ? 'Enter your name (for the certificate):' : '이름을 입력해주세요 (인증서에 표시):', '');
+  if (name === null) return;
+  const studentName = (name || '').trim() || (isEN ? '(no name)' : '(이름 미입력)');
+
+  const today = new Date().toLocaleDateString(isEN ? 'en-US' : 'ko-KR', { year:'numeric', month:'long', day:'numeric' });
+  const certNo = 'DW-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const tier = accuracy === 100 ? (isEN?'GOLD':'금장') : accuracy >= 90 ? (isEN?'SILVER':'은장') : (isEN?'BRONZE':'동장');
+  const tierColor = accuracy === 100 ? '#d4af37' : accuracy >= 90 ? '#9aa0a6' : '#cd7f32';
+  const tierEmoji = accuracy === 100 ? '🏆' : accuracy >= 90 ? '🥈' : '🥉';
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { alert(isEN?'Popup blocked.':'팝업이 차단됐어요.'); return; }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="${isEN?'en':'ko'}"><head><meta charset="utf-8">
+<title>${isEN?'DamWatch Certificate':'댐워치 인증서'} - ${studentName}</title>
+<style>
+  @page { margin: 0; size: A4 landscape; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 20px; background: #f0f4f8; }
+  .cert { width: 100%; max-width: 1000px; margin: 0 auto; aspect-ratio: 1.414/1; background: #fff; padding: 40px 50px; border: 2px solid #0066cc; box-shadow: 0 10px 40px rgba(0,0,0,0.1); position: relative; }
+  .cert::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid ${tierColor}; pointer-events: none; }
+  .corner { position: absolute; width: 60px; height: 60px; border: 3px solid ${tierColor}; }
+  .corner.tl { top: 18px; left: 18px; border-right: none; border-bottom: none; }
+  .corner.tr { top: 18px; right: 18px; border-left: none; border-bottom: none; }
+  .corner.bl { bottom: 18px; left: 18px; border-right: none; border-top: none; }
+  .corner.br { bottom: 18px; right: 18px; border-left: none; border-top: none; }
+  .header { text-align: center; padding-top: 10px; }
+  .logo-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .logo-row svg { width: 50px; height: 50px; }
+  .brand { font-size: 18px; font-weight: 800; color: #0066cc; letter-spacing: 2px; }
+  .subtitle { font-size: 11px; color: #888; letter-spacing: 4px; margin-top: 2px; }
+  h1 { font-size: 42px; font-weight: 900; color: #0066cc; text-align: center; margin: 24px 0 6px; letter-spacing: 6px; }
+  .h1-en { font-size: 14px; color: #999; text-align: center; letter-spacing: 3px; margin-bottom: 18px; }
+  .body-text { text-align: center; font-size: 14px; line-height: 2; color: #444; margin: 16px 40px; }
+  .name-line { font-size: 32px; font-weight: 800; color: #0066cc; text-align: center; margin: 10px 0 18px; padding: 8px 0; border-bottom: 2px solid #0066cc; display: inline-block; min-width: 360px; }
+  .name-wrap { text-align: center; }
+  .badge { display: inline-block; background: ${tierColor}; color: #fff; padding: 6px 22px; border-radius: 30px; font-size: 16px; font-weight: 800; letter-spacing: 2px; margin: 12px 0; }
+  .stats { display: flex; justify-content: center; gap: 50px; margin-top: 16px; }
+  .stat { text-align: center; }
+  .stat .v { font-size: 24px; font-weight: 800; color: #0066cc; }
+  .stat .l { font-size: 10px; color: #888; letter-spacing: 1px; }
+  .footer { position: absolute; bottom: 40px; left: 0; right: 0; padding: 0 60px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #666; }
+  .seal { width: 80px; height: 80px; border: 3px solid ${tierColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; transform: rotate(-15deg); }
+  @media print { body { background: #fff; padding: 0; } .cert { box-shadow: none; border-width: 1px; } }
+</style>
+</head><body>
+  <div class="cert">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="header">
+      <div class="logo-row">
+        <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="37" fill="#fff" stroke="#0066cc" stroke-width="3"/><polygon points="16,55 27,28 53,28 64,55" fill="#0066cc"/><rect x="33" y="33" width="14" height="18" rx="2" fill="#fff"/><path d="M10,61 Q17,57 24,61 Q31,65 38,61 Q45,57 52,61 Q59,65 66,61 Q70,59 72,61" fill="none" stroke="#0066cc" stroke-width="2.5"/></svg>
+        <div>
+          <div class="brand">댐워치 | DamWatch v3.0</div>
+          <div class="subtitle">REAL-TIME KOREA DAM MONITOR</div>
+        </div>
+      </div>
+    </div>
+
+    <h1>${isEN?'CERTIFICATE':'댐 지킴이 인증서'}</h1>
+    <div class="h1-en">${isEN?'OF DAM GUARDIAN':'CERTIFICATE OF DAM GUARDIAN'}</div>
+
+    <div class="body-text">
+      ${isEN?'This certifies that':'이 인증서는'}
+    </div>
+    <div class="name-wrap">
+      <div class="name-line">${studentName}</div>
+    </div>
+    <div class="body-text">
+      ${isEN
+        ? `has successfully completed the DamWatch Knowledge Quiz<br>with an accuracy of <b>${accuracy}%</b> and earned the title of`
+        : `님이 댐워치 퀴즈를 성공적으로 완수하여<br>정답률 <b>${accuracy}%</b>로 다음 등급의 자격을 갖추었음을 인증합니다.`}
+    </div>
+
+    <div class="name-wrap">
+      <div class="badge">${tierEmoji} ${tier} ${isEN?'TIER':''}</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v">${quizState.score}</div><div class="l">${isEN?'POINTS':'점수'}</div></div>
+      <div class="stat"><div class="v">${correct}/${total}</div><div class="l">${isEN?'CORRECT':'정답'}</div></div>
+      <div class="stat"><div class="v">${accuracy}%</div><div class="l">${isEN?'ACCURACY':'정답률'}</div></div>
+    </div>
+
+    <div class="footer">
+      <div>
+        <div>${isEN?'Date Issued':'발급일'}: <b>${today}</b></div>
+        <div style="margin-top:4px;">${isEN?'Cert No.':'인증번호'}: <b style="font-family:monospace;">${certNo}</b></div>
+      </div>
+      <div class="seal">💧</div>
+      <div style="text-align:right;">
+        <div style="font-weight:700;">DamWatch</div>
+        <div style="font-size:9px;color:#999;">NAEMANG2943 · SJL0108</div>
+      </div>
+    </div>
+  </div>
+  <\script>window.addEventListener('load', () => setTimeout(() => window.print(), 600));<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 </script>
