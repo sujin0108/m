@@ -1286,6 +1286,12 @@ input[type="checkbox"][style*="display:none"] {
   40%  { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(0,204,102,0.25); }
   100% { transform: scale(1); }
 }
+@keyframes resumeToast {
+  0%   { opacity:0; transform:translate(-50%, -20px); }
+  10%  { opacity:1; transform:translate(-50%, 0); }
+  85%  { opacity:1; transform:translate(-50%, 0); }
+  100% { opacity:0; transform:translate(-50%, -20px); }
+}
 .quiz-feedback-ok {
   background: rgba(0,204,102,0.08);
   border: 1px solid rgba(0,204,102,0.3);
@@ -2153,7 +2159,7 @@ h3 .en-para, h4 .en-para,
       <div style="display:flex;align-items:baseline;gap:6px;">
         <span class="logo-text" data-ko="댐워치 | DamWatch" data-en="DamWatch | 댐워치">댐워치 | DamWatch</span>
         <span style="font-size:9px;font-family:var(--font-num);color:var(--accent2);letter-spacing:1px;opacity:0.8;">v3.0</span>
-        <span style="font-size:8px;font-family:monospace;color:#ffb800;background:rgba(255,184,0,0.15);padding:1px 4px;border-radius:3px;border:1px solid rgba(255,184,0,0.4);letter-spacing:0.5px;" title="새 파일 식별자 (이 글자 보이면 최신 파일)">b7-map-fix</span>
+        <span style="font-size:6px;font-family:monospace;color:var(--text3);opacity:0.35;letter-spacing:0.3px;" title="빌드 식별자 — 캐시 진단용">b7</span>
       </div>
       <span class="logo-sub" data-ko="실시간 댐 모니터·교육" data-en="Real-time Dam Monitor·Edu">실시간 댐 모니터·교육</span>
     </div>
@@ -11937,15 +11943,68 @@ function selectQuizCategory(btn) {
 
 // ── 모듈 초기 진입 시 ──
 function initQuizModule() {
-  // 시작 화면으로 리셋
+  // Step 6-F: 진행 중인 퀴즈가 있으면 그대로 이어서 풀기
+  const saved = _loadQuizProgress();
+  if (saved && saved.questions && saved.questions.length > 0 &&
+      saved.currentIdx >= 0 && saved.currentIdx < saved.questions.length) {
+    // 진행 중인 퀴즈 복원
+    quizState = Object.assign({
+      category:'all', questions:[], currentIdx:0, score:0,
+      correct:0, wrongHistory:[], answered:false, retrying:false,
+    }, saved);
+    document.getElementById('quiz-start').style.display  = 'none';
+    document.getElementById('quiz-play').style.display   = 'block';
+    document.getElementById('quiz-result').style.display = 'none';
+    document.getElementById('quiz-total-num').textContent = quizState.questions.length;
+    renderQuizQuestion();
+    _showResumeToast();
+    return;
+  }
+
+  // 새로 시작 화면 리셋
   document.getElementById('quiz-start').style.display  = 'block';
   document.getElementById('quiz-play').style.display   = 'none';
   document.getElementById('quiz-result').style.display = 'none';
-
-  // 최고 기록 표시
   renderQuizBestRecords();
-  // 사운드 토글 UI 동기화
   _updateSoundToggleUI();
+}
+
+// ── Step 6-F: 퀴즈 진행 상태 자동 저장/복원 (localStorage) ──
+function _saveQuizProgress() {
+  try {
+    // 진행 중인 경우만 저장
+    if (quizState.questions && quizState.questions.length > 0
+        && quizState.currentIdx < quizState.questions.length) {
+      localStorage.setItem('damwatch_quiz_progress', JSON.stringify(quizState));
+    }
+  } catch(e) {}
+}
+function _loadQuizProgress() {
+  try {
+    const raw = localStorage.getItem('damwatch_quiz_progress');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+function _clearQuizProgress() {
+  try { localStorage.removeItem('damwatch_quiz_progress'); } catch(e) {}
+}
+function _showResumeToast() {
+  // 상단에 잠깐 안내 (자동 사라짐)
+  const isEN = (currentLang === 'en');
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed;top:20px;left:50%;transform:translateX(-50%);
+    background:rgba(0,200,255,0.18);border:1px solid var(--accent);
+    color:var(--accent);font-family:var(--font-ko);font-size:12.5px;
+    font-weight:700;padding:10px 16px;border-radius:20px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.4);z-index:10000;
+    backdrop-filter:blur(8px);animation:resumeToast 3.5s ease-in-out forwards;
+  `;
+  toast.innerHTML = `🔄 ${isEN ? 'Resumed previous quiz' : '진행 중이던 퀴즈 이어서 풀기'}
+    <span style="font-size:10px;opacity:0.8;margin-left:6px;">(${quizState.currentIdx + 1}/${quizState.questions.length})</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
 }
 
 function renderQuizBestRecords() {
@@ -12227,16 +12286,25 @@ function _buildQuizSet(category, n) {
     pool = Object.values(generators);
   }
 
+  // 한 세션 내에서 같은 댐·같은 질문 절대 중복 안 나오게
   const questions = [];
+  const seenQuestions = new Set();   // 질문 텍스트 추적
+  const seenDams      = new Set();   // 댐 이름 추적
   let safety = 0;
-  while (questions.length < n && safety < n * 5) {
+  while (questions.length < n && safety < n * 12) {
     const gen = _pickRandom(pool);
     const q = gen();
     if (q) {
-      // 똑같은 댐 문제 두 번 연속 안 나오게
-      if (questions.length === 0 || questions[questions.length-1].q !== q.q) {
-        questions.push(q);
-      }
+      // 질문 텍스트로 중복 차단
+      if (seenQuestions.has(q.q)) { safety++; continue; }
+      // 댐 이름이 질문에 포함되어 있다면 (예: "소양강댐") 추출해서 댐 중복도 차단
+      const damMatch = q.q.match(/"([^"]+)"/);
+      const damName = damMatch ? damMatch[1] : null;
+      if (damName && seenDams.has(damName)) { safety++; continue; }
+
+      questions.push(q);
+      seenQuestions.add(q.q);
+      if (damName) seenDams.add(damName);
     }
     safety++;
   }
@@ -12395,7 +12463,8 @@ function startQuiz() {
   document.getElementById('quiz-play').style.display   = 'block';
   document.getElementById('quiz-result').style.display = 'none';
   document.getElementById('quiz-total-num').textContent = '10';
-  playQuizSound('start');  // 🎵 시작음
+  playQuizSound('start');
+  _saveQuizProgress();   // Step 6-F: 자동 저장
   renderQuizQuestion();
 }
 
@@ -12552,10 +12621,12 @@ function nextQuizQuestion() {
     return;
   }
   quizState.currentIdx++;
+  _saveQuizProgress();   // Step 6-F: 자동 저장
   renderQuizQuestion();
 }
 
 function finishQuiz() {
+  _clearQuizProgress();   // Step 6-F: 끝나면 진행 데이터 삭제
   document.getElementById('quiz-play').style.display   = 'none';
   document.getElementById('quiz-result').style.display = 'block';
 
@@ -12655,6 +12726,7 @@ function quizBackToStart() {
   document.getElementById('quiz-result').style.display = 'none';
   renderQuizBestRecords();
   _updateSoundToggleUI();
+  _clearQuizProgress();   // Step 6-F: 진행 데이터 클리어
 }
 
 // 결과 화면 → 교육 카드 그리드로 돌아가기 (퀴즈 모듈 닫음)
