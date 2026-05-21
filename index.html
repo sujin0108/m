@@ -1189,6 +1189,124 @@ input[type="checkbox"][style*="display:none"] {
   overflow-x: hidden;   /* 모바일 캔버스 넘침 방지 */
 }
 
+/* ═══════════════════════════════════════
+   Step 4: 댐 퀴즈 스타일
+   ═══════════════════════════════════════ */
+.quiz-cat-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  color: var(--text);
+  font-family: var(--font-ko);
+}
+.quiz-cat-btn:hover {
+  border-color: var(--gold);
+  background: rgba(255,184,0,0.06);
+  transform: translateY(-2px);
+}
+.quiz-cat-btn.active {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(255,184,0,0.18), rgba(255,140,0,0.08));
+  box-shadow: 0 4px 14px rgba(255,184,0,0.18);
+}
+.quiz-option-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-ko);
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+  width: 100%;
+}
+.quiz-option-btn:hover:not(.disabled):not(.correct):not(.wrong) {
+  border-color: var(--accent);
+  background: rgba(0,200,255,0.06);
+  transform: translateX(4px);
+}
+.quiz-option-btn .opt-letter {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  transition: all 0.2s;
+}
+.quiz-option-btn .opt-text {
+  flex: 1;
+  line-height: 1.4;
+}
+.quiz-option-btn.correct {
+  border-color: var(--ok);
+  background: rgba(0,204,102,0.12);
+  color: var(--ok);
+  font-weight: 700;
+  cursor: default;
+  animation: quizPulse 0.5s ease;
+}
+.quiz-option-btn.correct .opt-letter {
+  background: var(--ok); color: #fff;
+}
+.quiz-option-btn.wrong {
+  border-color: var(--danger);
+  background: rgba(255,68,68,0.10);
+  color: var(--danger);
+  cursor: default;
+}
+.quiz-option-btn.wrong .opt-letter {
+  background: var(--danger); color: #fff;
+}
+.quiz-option-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@keyframes quizPulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(0,204,102,0.25); }
+  100% { transform: scale(1); }
+}
+.quiz-feedback-ok {
+  background: rgba(0,204,102,0.08);
+  border: 1px solid rgba(0,204,102,0.3);
+  color: var(--text);
+}
+.quiz-feedback-no {
+  background: rgba(255,68,68,0.08);
+  border: 1px solid rgba(255,68,68,0.3);
+  color: var(--text);
+}
+.quiz-review-item {
+  background: var(--surface);
+  border-left: 3px solid var(--warning);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text2);
+}
+.quiz-review-item strong { color: var(--text); }
+.quiz-review-item .qrev-correct { color: var(--ok); }
+
+@media (max-width: 480px) {
+  .quiz-cat-grid { grid-template-columns: 1fr 1fr !important; }
+  .quiz-option-btn { font-size: 12.5px; padding: 12px 14px; }
+}
+
 /* 섹션 헤더 */
 .section-header {
   margin-bottom: 24px;
@@ -2717,6 +2835,16 @@ h3 .en-para, h4 .en-para,
           💡 예시: 2°C 시나리오 — 봄 가뭄 위험도와 여름 집중호우 강도 변화 시뮬레이션
         </div>
       </div>
+      <!-- ── Step 4: 댐 퀴즈 카드 (신규) ── -->
+      <div class="edu-card" onclick="openEduModule('quiz')"
+           style="background:linear-gradient(135deg,rgba(255,184,0,0.06),rgba(0,200,255,0.04));border:1px solid rgba(255,184,0,0.25);">
+        <div class="edu-card-icon">🎯</div>
+        <div class="edu-card-title" data-ko="댐 퀴즈 도전!" data-en="Dam Quiz Challenge!">댐 퀴즈 도전!</div>
+        <div class="edu-card-desc" data-ko="배운 걸 게임으로! 한국 댐 위치, 댐 종류, 세계 댐 상식, 저수율 추측까지 — 10문제로 실력 점검!" data-en="Turn what you learned into a game! Korea dam locations, types, world facts, storage rates — 10 questions to test your knowledge!">배운 걸 게임으로! 한국 댐 위치·종류, 세계 댐 상식, 저수율 추측까지 — 10문제로 실력 점검!</div>
+        <div style="margin-top:10px;padding:6px 8px;background:rgba(255,184,0,0.1);border-radius:6px;font-size:10px;color:var(--gold);">
+          🏆 최고 점수 기록 · 카테고리별 도전 가능 · 학교 수업·동아리 활동 추천
+        </div>
+      </div>
     </div>
 
     <div class="edu-module" id="edu-spline">
@@ -3374,6 +3502,135 @@ h3 .en-para, h4 .en-para,
         <h3>📌 우리가 할 수 있는 것 <span class="en-sub">What We Can Do</span></h3>
         <p>댐은 기후변화의 피해자이기도 하지만, 기후 적응의 핵심 인프라이기도 해요. 댐을 잘 관리하고 물을 아끼는 습관이 기후변화 적응의 시작이에요.<br>
         <span class="en-para">Dams are both victims of climate change and key infrastructure for adaptation. Real-time monitoring — the role of <strong style="color:var(--accent)">DamWatch</strong> — is how we stay ahead.</span></p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         Step 4: 댐 퀴즈 모듈
+         ═══════════════════════════════════════ -->
+    <div class="edu-module" id="edu-quiz">
+      <h2 style="font-family:var(--font-disp);font-size:22px;color:var(--gold);margin-bottom:6px;">
+        🎯 댐 퀴즈 도전! <span class="en-sub">Dam Quiz Challenge!</span>
+      </h2>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:20px;">
+        배운 걸 게임으로 점검해 봐요. 10문제 풀면 점수와 정답률이 나와요!<br>
+        <span class="en-para">10 questions on Korean dams, world dams, types, and storage rates. Test what you've learned!</span>
+      </p>
+
+      <!-- ── 시작 화면 (카테고리 선택) ── -->
+      <div id="quiz-start" class="quiz-screen">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;" class="quiz-cat-grid">
+          <button class="quiz-cat-btn active" data-cat="all" onclick="selectQuizCategory(this)">
+            <div style="font-size:24px;">🌈</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">전체 종합</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">All Mixed</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="location" onclick="selectQuizCategory(this)">
+            <div style="font-size:24px;">📍</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">댐 위치</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">Location</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="type" onclick="selectQuizCategory(this)">
+            <div style="font-size:24px;">🏗️</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">댐 종류</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">Type</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="world" onclick="selectQuizCategory(this)">
+            <div style="font-size:24px;">🌍</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">세계 댐</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">World</div>
+          </button>
+          <button class="quiz-cat-btn" data-cat="rate" onclick="selectQuizCategory(this)" style="grid-column:1/-1;">
+            <div style="font-size:24px;">💧</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px;">현재 저수율 추측</div>
+            <div style="font-size:10px;color:var(--text3);font-style:italic;">Storage Rate (live data)</div>
+          </button>
+        </div>
+
+        <!-- 최고 점수 -->
+        <div id="quiz-best-records" style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;padding:12px;margin-bottom:18px;">
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;font-family:var(--font-num);letter-spacing:0.5px;">
+            🏆 내 최고 기록 <span style="color:var(--text3);font-weight:400;">My Best Scores</span>
+          </div>
+          <div id="quiz-best-list" style="font-size:11px;color:var(--text2);line-height:1.8;">—</div>
+        </div>
+
+        <button class="calc-btn" onclick="startQuiz()" style="background:linear-gradient(135deg,#ffb800,#ff8c00);">
+          🚀 퀴즈 시작! <span class="en-sub" style="font-size:11px;opacity:0.85;">Start Quiz</span>
+        </button>
+      </div>
+
+      <!-- ── 문제 화면 ── -->
+      <div id="quiz-play" class="quiz-screen" style="display:none;">
+        <!-- 진행 바 -->
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:11px;color:var(--text3);font-family:var(--font-num);">
+          <span><span id="quiz-current-num">1</span> / <span id="quiz-total-num">10</span></span>
+          <span style="color:var(--gold);font-weight:700;">⭐ <span id="quiz-score">0</span> 점</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-bottom:18px;">
+          <div id="quiz-progress-bar" style="height:100%;width:10%;background:linear-gradient(90deg,#00c8ff,#ffb800);transition:width 0.4s;"></div>
+        </div>
+
+        <!-- 카테고리 + 문제 -->
+        <div id="quiz-question-card" style="background:linear-gradient(135deg,var(--surface),rgba(255,184,0,0.04));border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px;">
+          <div id="quiz-q-category" style="font-size:10px;color:var(--gold);font-family:var(--font-num);letter-spacing:1.5px;margin-bottom:8px;">QUESTION</div>
+          <div id="quiz-q-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.6;"></div>
+          <div id="quiz-q-hint" style="font-size:11px;color:var(--text3);margin-top:8px;font-style:italic;"></div>
+        </div>
+
+        <!-- 4지선다 -->
+        <div id="quiz-options" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+
+        <!-- 피드백 -->
+        <div id="quiz-feedback" style="display:none;padding:14px;border-radius:12px;margin-bottom:14px;font-size:13px;line-height:1.7;"></div>
+
+        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="calc-btn" style="display:none;">
+          ▶ 다음 문제 <span class="en-sub">Next Question</span>
+        </button>
+        <button onclick="abortQuiz()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:8px;border-radius:8px;cursor:pointer;">
+          ← 그만두기 / Quit
+        </button>
+      </div>
+
+      <!-- ── 결과 화면 ── -->
+      <div id="quiz-result" class="quiz-screen" style="display:none;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div id="quiz-result-emoji" style="font-size:64px;line-height:1;">🎉</div>
+          <div id="quiz-result-title" style="font-family:var(--font-disp);font-size:22px;color:var(--gold);margin:6px 0;">완료!</div>
+          <div id="quiz-result-subtitle" style="font-size:12px;color:var(--text3);"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
+          <div class="flow-item">
+            <div class="flow-value" id="quiz-result-score" style="color:var(--gold);font-size:28px;">—</div>
+            <div class="flow-label">점수 <span class="en-sub">Score</span></div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-value" id="quiz-result-correct" style="color:var(--ok);font-size:28px;">—</div>
+            <div class="flow-label">정답 <span class="en-sub">Correct</span></div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-value" id="quiz-result-accuracy" style="color:var(--accent);font-size:28px;">—</div>
+            <div class="flow-label">정답률 <span class="en-sub">Accuracy</span></div>
+          </div>
+        </div>
+
+        <div id="quiz-new-record" style="display:none;background:linear-gradient(135deg,rgba(255,184,0,0.18),rgba(255,140,0,0.1));border:1px solid var(--gold);border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
+          <div style="font-size:18px;">🎊 신기록!</div>
+          <div style="font-size:12px;color:var(--gold);margin-top:4px;">New Record!</div>
+        </div>
+
+        <!-- 학습 카드: 틀린 문제 복습 -->
+        <div id="quiz-review" style="margin-bottom:14px;"></div>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="quizBackToStart()" style="flex:1;background:rgba(0,200,255,0.1);border:1px solid var(--accent);color:var(--accent);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
+            🔄 다시 도전 <span class="en-sub" style="font-size:10px;">Try Again</span>
+          </button>
+          <button onclick="navigate('edu')" style="flex:1;background:rgba(255,184,0,0.1);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
+            📚 교육 메뉴 <span class="en-sub" style="font-size:10px;">Education Menu</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -8348,6 +8605,7 @@ function openEduModule(id) {
   if (id === 'floodarea') updateFloodArea();
   if (id === 'watermath') { updateWaterMath(); }
   if (id === 'climate')   { updateClimate(); }
+  if (id === 'quiz')      { initQuizModule(); }
 
   // 캔버스 렌더 후 스크롤 — 그래프가 완전히 그려진 뒤 화면에 보이게
   if (id === 'cross3d') {
@@ -9384,6 +9642,55 @@ function initCrowdMap() {
   }).addTo(crowdMap);
 }
 
+// ═══════════════════════════════════════
+// Step 3: 등록 저수지 통합 데이터 헬퍼
+// ─────────────────────────────────────
+// 서버(/api/reservoir/list) + 로컬(localStorage)을 합쳐 정규화.
+// "지도" 탭의 📍 등록 저수지 버튼과 "등록" 탭이 같은 데이터를 사용하도록 함.
+// ═══════════════════════════════════════
+async function _getCrowdReservoirs() {
+  // 1) localStorage 로컬 등록 데이터
+  let localData = [];
+  try { localData = JSON.parse(localStorage.getItem('crowd_reservoirs') || '[]'); } catch(e) {}
+
+  // 2) 서버 데이터 (실패해도 OK)
+  const serverData = await apiFetch('/api/reservoir/list');
+  const serverList = serverData ? (serverData.reservoirs || []) : [];
+
+  // 3) 정규화 — 필드명 통일 (milTon 으로)
+  //    서버: r.result.million_ton  /  로컬: r.mil_ton
+  const normalize = (r, source) => ({
+    name:          r.name || (currentLang === 'en' ? 'Unnamed' : '이름없음'),
+    lat:           r.lat,
+    lng:           r.lng,
+    address:       r.address || '',
+    measured_by:   r.measured_by || '',
+    registered_at: r.registered_at || '',
+    milTon:        r.result ? r.result.million_ton : (r.mil_ton || 0),
+    source,
+    raw:           r,
+  });
+
+  return [
+    ...serverList.map(r => normalize(r, 'server')),
+    ...localData.map(r => normalize(r, 'local')),
+  ];
+}
+
+// 지도 탭이 열려있고 📍 등록 저수지 레이어가 켜져있을 때만 새로고침.
+// (등록·삭제 후 자동으로 호출됨)
+async function refreshCrowdMapLayerIfActive() {
+  if (typeof map === 'undefined' || !map) return;
+  if (typeof crowdVisible === 'undefined' || !crowdVisible) return;
+  // 기존 레이어 비우고 다시 토글하면 새 데이터로 그려짐
+  if (typeof crowdDamLayer !== 'undefined' && crowdDamLayer) {
+    map.removeLayer(crowdDamLayer);
+    crowdDamLayer = null;
+  }
+  crowdVisible = false;          // 토글이 다시 true로 만들도록
+  await toggleCrowdLayer();
+}
+
 async function loadCrowdData() {
   // ── localStorage에서 로컬 등록 데이터 로드 ──
   let localData = [];
@@ -9624,6 +9931,19 @@ async function submitReservoir() {
       📐 형태계수 K=${k} | 오차범위 ±15%<br>
       ${lat && lng ? `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)} |` : '📍 GPS 미입력 |'} ${entry.registered_at}
     </div>
+    ${lat && lng ? `
+      <button onclick="goToMapWithCrowd(${lat},${lng})" style="
+        margin-top:14px;width:100%;
+        background:linear-gradient(135deg,rgba(0,200,255,0.18),rgba(0,255,200,0.12));
+        border:1px solid rgba(0,200,255,0.4);
+        color:var(--accent);font-family:var(--font-ko);font-size:12.5px;font-weight:600;
+        padding:10px;border-radius:10px;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        transition:all 0.2s;">
+        🗺️ ${isEN_c ? 'View on Korea-wide Map' : '전국 지도에서 보기'}
+        <span style="font-size:10px;opacity:0.75;font-style:italic;">${isEN_c ? '→ 📍 layer auto-on' : '→ 📍 레이어 자동 켜짐'}</span>
+      </button>
+    ` : ''}
   `;
 
   document.getElementById('cr-result').scrollIntoView({ behavior:'smooth' });
@@ -9641,12 +9961,38 @@ async function submitReservoir() {
   }, 3000);
 
   loadCrowdData();
+  // Step 3: 지도가 열려있고 등록 저수지 레이어가 켜져있다면 자동 새로고침
+  refreshCrowdMapLayerIfActive();
 
   } catch(err) {
     console.error('submitReservoir error:', err);
     // 오류 발생 시 즉시 버튼 복원
     if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = ''; }
   }
+}
+
+// ─── Step 3: 등록 후 "전국 지도에서 보기" 버튼 핸들러 ───
+// 지도 탭으로 이동 → 📍 등록 저수지 레이어 자동 켜짐 → 해당 좌표로 flyTo
+async function goToMapWithCrowd(lat, lng) {
+  // 1) 지도 탭으로 전환 (initMap이 처음 호출되면 자동 실행됨)
+  navigate('map');
+
+  // 2) 지도가 준비될 때까지 잠깐 기다린 후 레이어 켜기 + 이동
+  // initMap → renderMapMarkers → 약 200ms 후 안정화
+  setTimeout(async () => {
+    if (!map) return;
+    // 📍 등록 저수지 레이어가 꺼져 있으면 켜기
+    if (typeof crowdVisible !== 'undefined' && !crowdVisible) {
+      await toggleCrowdLayer();
+    } else {
+      // 이미 켜져 있다면 새로고침
+      await refreshCrowdMapLayerIfActive();
+    }
+    // 3) 등록한 위치로 부드럽게 이동
+    if (lat && lng) {
+      map.flyTo([lat, lng], 13, { duration: 1.6 });
+    }
+  }, 600);
 }
 
 // ── 새로고침 버튼용 별칭 ──
@@ -9692,6 +10038,8 @@ function removeDuplicateCrowdEntries() {
   try { localStorage.setItem('crowd_reservoirs', JSON.stringify(deduped)); } catch(e) {}
   alert(isEN_d ? `Removed ${removed} duplicate(s).` : `중복 항목 ${removed}개를 제거했습니다.`);
   loadCrowdData();
+  // Step 3: 지도 자동 새로고침
+  refreshCrowdMapLayerIfActive();
 }
 
 // ── 로컬 항목 삭제 ──
@@ -9704,6 +10052,8 @@ function deleteCrowdEntry(idx) {
   saved.splice(idx, 1);
   try { localStorage.setItem('crowd_reservoirs', JSON.stringify(saved)); } catch(e) {}
   loadCrowdData();
+  // Step 3: 지도 자동 새로고침
+  refreshCrowdMapLayerIfActive();
 }
 
 // ═══════════════════════════════════════
@@ -10389,7 +10739,7 @@ function toggleSupplyCities() {
 }
 
 // 등록 저수지
-function toggleCrowdLayer() {
+async function toggleCrowdLayer() {
   crowdVisible = !crowdVisible;
   const btn = document.getElementById('btn-crowd-map');
   if (btn) {
@@ -10406,36 +10756,75 @@ function toggleCrowdLayer() {
 
   showMapNotice(currentLang === 'en' ? '📍 Loading registered reservoirs...' : '📍 등록 저수지 확인 중...');
 
-  apiFetch('/api/reservoir/list').then(data => {
-    const list = data ? data.reservoirs : [];
-    if (list.length === 0) {
-      showMapNotice(currentLang === 'en'
-        ? '📍 No reservoirs registered yet — add one in the Register tab!'
-        : '📍 아직 등록된 저수지 없음 — 저수지 등록 탭에서 추가!');
-      crowdVisible = false;
-      if (btn) {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-checked', 'false');
-      }
-      return;
-    }
-    crowdDamLayer = L.layerGroup();
-    list.forEach(res => {
-      if (!res.lat || !res.lng) return;
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="width:12px;height:12px;background:#00ffc8;border:2px solid #fff;border-radius:2px;transform:rotate(45deg);"></div>`,
-        iconSize:[12,12], iconAnchor:[6,6],
-      });
-      L.marker([res.lat, res.lng], { icon })
-        .bindPopup(`<strong>${res.name}</strong><br>${res.result.million_ton.toFixed(4)} ${currentLang === 'en' ? 'M.ton' : '백만톤'}`)
-        .addTo(crowdDamLayer);
-    });
-    crowdDamLayer.addTo(map);
+  // Step 3: 서버 + localStorage 모두에서 데이터 가져오기
+  const merged = await _getCrowdReservoirs();
+  const validList = merged.filter(r => r.lat && r.lng);
+
+  if (validList.length === 0) {
     showMapNotice(currentLang === 'en'
-      ? `📍 ${list.length} reservoir(s) shown`
-      : `📍 등록 저수지 ${list.length}개 표시`);
+      ? '📍 No reservoirs yet — register one in the "Register" tab!'
+      : '📍 아직 등록된 저수지 없음 — "저수지 등록" 탭에서 추가하세요!');
+    crowdVisible = false;
+    if (btn) {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-checked', 'false');
+    }
+    return;
+  }
+
+  crowdDamLayer = L.layerGroup();
+  validList.forEach(r => {
+    const isLocal = (r.source === 'local');
+    // 로컬은 청록색 동그라미, 서버는 파란색 → 출처 한눈에 구분
+    const color = isLocal ? '#00ffc8' : '#00c8ff';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px ${color}aa;"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7],
+    });
+    const addressLine = r.address      ? `<div style="font-size:11px;color:#aaa;margin:2px 0;">${r.address}</div>` : '';
+    const byLine      = r.measured_by  ? `<div style="font-size:10px;color:#888;margin-top:2px;">측정자: ${r.measured_by}</div>` : '';
+    const dateLine    = r.registered_at? `<div style="font-size:10px;color:#888;">${r.registered_at}</div>` : '';
+    const sourceBadge = isLocal
+      ? `<span style="display:inline-block;background:rgba(0,255,200,0.15);border:1px solid rgba(0,255,200,0.4);color:#5eead4;font-size:9px;padding:1px 6px;border-radius:8px;margin-top:6px;font-weight:600;">🏠 ${currentLang==='en'?'My entry':'내 등록'}</span>`
+      : `<span style="display:inline-block;background:rgba(0,200,255,0.15);border:1px solid rgba(0,200,255,0.4);color:#67e8f9;font-size:9px;padding:1px 6px;border-radius:8px;margin-top:6px;font-weight:600;">☁️ ${currentLang==='en'?'Shared':'서버'}</span>`;
+    L.marker([r.lat, r.lng], { icon })
+      .bindPopup(`
+        <div style="font-family:sans-serif;line-height:1.6;min-width:180px;">
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px;">📍 ${r.name}</div>
+          ${addressLine}
+          <div style="font-size:12px;color:#ccc;">${currentLang==='en'?'Storage':'저수량'}: <strong style="color:${color};">${Number(r.milTon).toFixed(4)} ${currentLang==='en'?'M.ton':'백만톤'}</strong></div>
+          ${byLine}${dateLine}<br>${sourceBadge}
+        </div>
+      `)
+      .addTo(crowdDamLayer);
   });
+  crowdDamLayer.addTo(map);
+
+  // 마커 다 보이도록 화면 맞추기 (개수 ≥ 2일 때만)
+  if (validList.length >= 2) {
+    const bounds = L.latLngBounds(validList.map(r => [r.lat, r.lng]));
+    map.fitBounds(bounds, { padding:[40,40], maxZoom: 12 });
+  } else if (validList.length === 1) {
+    map.setView([validList[0].lat, validList[0].lng], 12);
+  }
+
+  // 출처별 카운트 안내
+  const localCount  = validList.filter(r => r.source === 'local').length;
+  const serverCount = validList.length - localCount;
+  let msg;
+  if (currentLang === 'en') {
+    msg = `📍 ${validList.length} reservoir(s) shown`;
+    if (localCount > 0 && serverCount > 0) msg += ` (🏠 ${localCount} local · ☁️ ${serverCount} shared)`;
+    else if (localCount > 0)                msg += ` (🏠 ${localCount} local)`;
+    else                                    msg += ` (☁️ ${serverCount} shared)`;
+  } else {
+    msg = `📍 등록 저수지 ${validList.length}개 표시`;
+    if (localCount > 0 && serverCount > 0) msg += ` (🏠 내 등록 ${localCount} · ☁️ 서버 ${serverCount})`;
+    else if (localCount > 0)                msg += ` (🏠 내 등록 ${localCount})`;
+    else                                    msg += ` (☁️ 서버 ${serverCount})`;
+  }
+  showMapNotice(msg);
 }
 
 // 지도 알림 토스트 — 안전하게
@@ -10975,6 +11364,477 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// Step 4: 댐 퀴즈 시스템
+// ─────────────────────────────────────────────────────────────
+// 4가지 카테고리: location(위치) · type(종류) · world(세계) · rate(저수율)
+// 한 세션 10문제 · localStorage 최고점 저장 · 정답률·복습 카드
+// ═══════════════════════════════════════════════════════════════
+
+let quizState = {
+  category: 'all',
+  questions: [],
+  currentIdx: 0,
+  score: 0,
+  correct: 0,
+  wrongHistory: [],   // 틀린 문제 복습용
+  answered: false,
+};
+
+// ── 카테고리 라벨 ──
+const QUIZ_CAT_LABELS = {
+  all:      { ko:'전체 종합',        en:'All Mixed',     icon:'🌈' },
+  location: { ko:'댐 위치',          en:'Dam Location',  icon:'📍' },
+  type:     { ko:'댐 종류',          en:'Dam Type',      icon:'🏗️' },
+  world:    { ko:'세계 댐',          en:'World Dams',    icon:'🌍' },
+  rate:     { ko:'실시간 저수율',    en:'Live Rate',     icon:'💧' },
+};
+
+// ── 카테고리 선택 ──
+function selectQuizCategory(btn) {
+  document.querySelectorAll('.quiz-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  quizState.category = btn.dataset.cat;
+}
+
+// ── 모듈 초기 진입 시 ──
+function initQuizModule() {
+  // 시작 화면으로 리셋
+  document.getElementById('quiz-start').style.display  = 'block';
+  document.getElementById('quiz-play').style.display   = 'none';
+  document.getElementById('quiz-result').style.display = 'none';
+
+  // 최고 기록 표시
+  renderQuizBestRecords();
+}
+
+function renderQuizBestRecords() {
+  const isEN = (currentLang === 'en');
+  let records = {};
+  try { records = JSON.parse(localStorage.getItem('damwatch_quiz_best') || '{}'); } catch(e) {}
+
+  const order = ['all','location','type','world','rate'];
+  const html = order.map(cat => {
+    const rec = records[cat];
+    const label = QUIZ_CAT_LABELS[cat];
+    if (!rec) {
+      return `<div style="display:flex;justify-content:space-between;color:var(--text3);">
+        <span>${label.icon} ${isEN ? label.en : label.ko}</span>
+        <span style="font-style:italic;">${isEN ? 'no record' : '기록 없음'}</span>
+      </div>`;
+    }
+    return `<div style="display:flex;justify-content:space-between;">
+      <span style="color:var(--text);">${label.icon} ${isEN ? label.en : label.ko}</span>
+      <span style="color:var(--gold);font-family:var(--font-num);font-weight:700;">
+        ${rec.score}${isEN ? 'pt' : '점'} <span style="opacity:0.6;font-size:10px;">(${rec.correct}/10)</span>
+      </span>
+    </div>`;
+  }).join('');
+  document.getElementById('quiz-best-list').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 문제 생성기 — 각 카테고리별
+// 모든 함수는 {q, opts, ans, hint, explain} 객체 반환
+// ans = opts 중 정답 인덱스 (0~3)
+// ─────────────────────────────────────────────────────────────
+function _shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function _pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// 한국 댐 풀 (모의 데이터 또는 실시간 합쳐 사용)
+function _getKoreanDamPool() {
+  const live = (typeof allDams !== 'undefined' && allDams.length > 0) ? allDams : null;
+  return live || (typeof MOCK_DAMS !== 'undefined' ? MOCK_DAMS : []);
+}
+
+// 카테고리 1: 위치 (이 댐은 어느 강에 있을까?)
+function genQuestionLocation() {
+  const pool = _getKoreanDamPool().filter(d => d.river);
+  if (pool.length < 4) return null;
+  const target = _pickRandom(pool);
+  const correctRiver = target.river;
+  // 오답: 다른 강 3개 무작위
+  const otherRivers = [...new Set(pool.map(d => d.river).filter(r => r !== correctRiver))];
+  const wrong = _shuffle(otherRivers).slice(0, 3);
+  const opts = _shuffle([correctRiver, ...wrong]);
+  const ans = opts.indexOf(correctRiver);
+  const isEN = (currentLang === 'en');
+  return {
+    cat: 'location',
+    catLabel: isEN ? '📍 LOCATION' : '📍 위치',
+    q: isEN ? `Which river is "${target.name}" on?` : `"${target.name}"은 어느 강에 있을까요?`,
+    opts, ans,
+    hint: isEN ? `Hint: It's in ${target.lat > 36.5 ? 'northern' : 'southern'} Korea.` : `힌트: 한반도 ${target.lat > 36.5 ? '북부' : '남부'}에 있어요.`,
+    explain: isEN
+      ? `"${target.name}" is on the ${correctRiver}.`
+      : `"${target.name}"은(는) ${correctRiver}에 있어요.`,
+  };
+}
+
+// 카테고리 2: 댐 종류 (이 댐은 무슨 종류?)
+const QUIZ_CAT_TYPE_LABELS = {
+  multipurpose:    { ko:'다목적댐',    en:'Multipurpose',     desc:'홍수 조절 + 용수 공급 + 발전 모두 수행하는 큰 댐' },
+  water_supply:    { ko:'용수전용댐',  en:'Water Supply',     desc:'공업·생활 용수만 공급하는 댐 (운문·달방 등)' },
+  flood_control:   { ko:'홍수조절댐',  en:'Flood Control',    desc:'평소엔 비어 있다가 홍수 때만 물을 가두는 댐' },
+  regulation:      { ko:'조정지댐',    en:'Regulation',       desc:'본댐 방류량을 미세 조절하는 작은 댐' },
+  weir:            { ko:'보',          en:'Weir',             desc:'4대강 사업으로 만든 16개의 낮은 댐' },
+  estuary_barrage: { ko:'하굿둑',      en:'Estuary Barrage',  desc:'강과 바다가 만나는 하구를 막는 시설' },
+};
+function genQuestionType() {
+  const pool = _getKoreanDamPool().filter(d => d.category && QUIZ_CAT_TYPE_LABELS[d.category]);
+  if (pool.length < 4) return null;
+  const target = _pickRandom(pool);
+  const correctType = target.category;
+  const otherTypes = Object.keys(QUIZ_CAT_TYPE_LABELS).filter(c => c !== correctType);
+  const wrong = _shuffle(otherTypes).slice(0, 3);
+  const isEN = (currentLang === 'en');
+  const labels = [correctType, ...wrong].map(c => isEN ? QUIZ_CAT_TYPE_LABELS[c].en : QUIZ_CAT_TYPE_LABELS[c].ko);
+  const opts = _shuffle(labels);
+  const ans = opts.indexOf(isEN ? QUIZ_CAT_TYPE_LABELS[correctType].en : QUIZ_CAT_TYPE_LABELS[correctType].ko);
+  return {
+    cat: 'type',
+    catLabel: isEN ? '🏗️ TYPE' : '🏗️ 종류',
+    q: isEN ? `What type of dam is "${target.name}"?` : `"${target.name}"은 어떤 종류의 댐일까요?`,
+    opts, ans,
+    hint: isEN ? `Hint: Capacity ${target.full?.toLocaleString() || '?'} M.ton.` : `힌트: 만수용량은 ${target.full?.toLocaleString() || '?'} 백만톤.`,
+    explain: isEN
+      ? `"${target.name}" is a ${QUIZ_CAT_TYPE_LABELS[correctType].en} dam. ${QUIZ_CAT_TYPE_LABELS[correctType].desc}`
+      : `"${target.name}"은(는) ${QUIZ_CAT_TYPE_LABELS[correctType].ko}이에요. ${QUIZ_CAT_TYPE_LABELS[correctType].desc}`,
+  };
+}
+
+// 카테고리 3: 세계 댐 (이 댐은 어느 나라?)
+function genQuestionWorld() {
+  const pool = (typeof MOCK_WORLD !== 'undefined') ? MOCK_WORLD : [];
+  if (pool.length < 4) return null;
+
+  const variant = Math.random() < 0.5 ? 'country' : 'river';
+  const target = _pickRandom(pool);
+  const isEN = (currentLang === 'en');
+
+  if (variant === 'country') {
+    const correct = target.country;
+    const others = [...new Set(pool.map(d => d.country).filter(c => c !== correct))];
+    const wrong = _shuffle(others).slice(0, 3);
+    const opts = _shuffle([correct, ...wrong]);
+    const ans = opts.indexOf(correct);
+    return {
+      cat: 'world',
+      catLabel: isEN ? '🌍 WORLD' : '🌍 세계 댐',
+      q: isEN ? `Which country has "${target.name}"?` : `"${target.name}"은 어느 나라에 있을까요?`,
+      opts, ans,
+      hint: isEN ? `Hint: ${target.info || 'Major dam in this region.'}` : `힌트: ${target.info || '이 지역의 주요 댐이에요.'}`,
+      explain: isEN
+        ? `"${target.name}" is in ${correct}, on the ${target.river}.`
+        : `"${target.name}"은(는) ${correct}에 있어요. ${target.river}에 위치.`,
+    };
+  } else {
+    const correct = target.river;
+    const others = [...new Set(pool.map(d => d.river).filter(r => r !== correct))];
+    const wrong = _shuffle(others).slice(0, 3);
+    const opts = _shuffle([correct, ...wrong]);
+    const ans = opts.indexOf(correct);
+    return {
+      cat: 'world',
+      catLabel: isEN ? '🌍 WORLD' : '🌍 세계 댐',
+      q: isEN ? `Which river is "${target.name}" on?` : `"${target.name}"은 어느 강에 있을까요?`,
+      opts, ans,
+      hint: isEN ? `Hint: This dam is in ${target.country}.` : `힌트: 이 댐은 ${target.country}에 있어요.`,
+      explain: isEN
+        ? `"${target.name}" is on the ${correct} in ${target.country}.`
+        : `"${target.name}"은(는) ${target.country}의 ${correct}에 있어요.`,
+    };
+  }
+}
+
+// 카테고리 4: 저수율 추측 (실시간 데이터 사용 — 매번 다른 문제)
+function genQuestionRate() {
+  const pool = _getKoreanDamPool().filter(d =>
+    d.is_live !== false &&
+    typeof d.storage_rate === 'number' &&
+    d.storage_rate > 0 && d.storage_rate <= 100
+  );
+  if (pool.length < 1) {
+    // 실시간 데이터 없으면 fallback: 모의 데이터로
+    return genQuestionType();
+  }
+
+  const target = _pickRandom(pool);
+  const actualRate = Math.round(target.storage_rate);
+  const isEN = (currentLang === 'en');
+
+  // 4지선다: 실제 값 + ±15, ±30 정도 차이
+  const offsets = _shuffle([-25, -10, 12, 28]);
+  const candidates = offsets.map(o => Math.max(5, Math.min(95, actualRate + o)));
+  // 정답을 추가하고 중복 제거
+  const unique = [...new Set([actualRate, ...candidates])].slice(0, 4);
+  // 부족하면 채움
+  while (unique.length < 4) {
+    const v = Math.max(5, Math.min(95, actualRate + (Math.random() * 60 - 30)));
+    if (!unique.includes(Math.round(v))) unique.push(Math.round(v));
+  }
+  const opts = _shuffle(unique.map(v => `${v}%`));
+  const ans = opts.indexOf(`${actualRate}%`);
+
+  return {
+    cat: 'rate',
+    catLabel: isEN ? '💧 STORAGE RATE' : '💧 저수율',
+    q: isEN
+      ? `What's the current storage rate of "${target.name}"?`
+      : `"${target.name}"의 현재 저수율은?`,
+    opts, ans,
+    hint: isEN
+      ? `Hint: Capacity ${target.full?.toLocaleString()} M.ton, current ${target.volume?.toLocaleString()} M.ton.`
+      : `힌트: 만수 ${target.full?.toLocaleString()}백만톤 중 현재 ${target.volume?.toLocaleString()}백만톤.`,
+    explain: isEN
+      ? `"${target.name}" is at ${actualRate}% (${target.volume} of ${target.full} M.ton). Source: K-water live data.`
+      : `"${target.name}"은(는) ${actualRate}% (${target.volume}/${target.full}백만톤). K-water 실시간 데이터.`,
+  };
+}
+
+// 문제 풀 생성
+function _buildQuizSet(category, n) {
+  const generators = {
+    location: genQuestionLocation,
+    type:     genQuestionType,
+    world:    genQuestionWorld,
+    rate:     genQuestionRate,
+  };
+
+  let pool;
+  if (category === 'all') {
+    pool = Object.values(generators);
+  } else if (generators[category]) {
+    pool = [generators[category]];
+  } else {
+    pool = Object.values(generators);
+  }
+
+  const questions = [];
+  let safety = 0;
+  while (questions.length < n && safety < n * 5) {
+    const gen = _pickRandom(pool);
+    const q = gen();
+    if (q) {
+      // 똑같은 댐 문제 두 번 연속 안 나오게
+      if (questions.length === 0 || questions[questions.length-1].q !== q.q) {
+        questions.push(q);
+      }
+    }
+    safety++;
+  }
+  return questions;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 퀴즈 시작 / 진행 / 종료
+// ─────────────────────────────────────────────────────────────
+function startQuiz() {
+  const questions = _buildQuizSet(quizState.category, 10);
+  if (questions.length < 10) {
+    alert(currentLang === 'en'
+      ? '⚠️ Not enough data to start. Try again later or pick another category.'
+      : '⚠️ 데이터가 부족해요. 다른 카테고리를 선택하거나 잠시 후 다시 시도해 보세요.');
+    return;
+  }
+  quizState = {
+    category: quizState.category,
+    questions,
+    currentIdx: 0,
+    score: 0,
+    correct: 0,
+    wrongHistory: [],
+    answered: false,
+  };
+  document.getElementById('quiz-start').style.display  = 'none';
+  document.getElementById('quiz-play').style.display   = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-total-num').textContent = '10';
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  const q = quizState.questions[quizState.currentIdx];
+  if (!q) return;
+
+  document.getElementById('quiz-current-num').textContent = quizState.currentIdx + 1;
+  document.getElementById('quiz-score').textContent       = quizState.score;
+  document.getElementById('quiz-progress-bar').style.width = ((quizState.currentIdx + 1) / 10 * 100) + '%';
+  document.getElementById('quiz-q-category').textContent  = q.catLabel;
+  document.getElementById('quiz-q-text').textContent      = q.q;
+  document.getElementById('quiz-q-hint').textContent      = q.hint || '';
+
+  // 옵션 렌더
+  const letters = ['A', 'B', 'C', 'D'];
+  const optsEl = document.getElementById('quiz-options');
+  optsEl.innerHTML = q.opts.map((opt, idx) => `
+    <button class="quiz-option-btn" data-idx="${idx}" onclick="answerQuiz(${idx})">
+      <span class="opt-letter">${letters[idx]}</span>
+      <span class="opt-text">${opt}</span>
+    </button>
+  `).join('');
+
+  // 피드백·다음 버튼 숨김
+  document.getElementById('quiz-feedback').style.display = 'none';
+  document.getElementById('quiz-next-btn').style.display = 'none';
+
+  quizState.answered = false;
+}
+
+function answerQuiz(selectedIdx) {
+  if (quizState.answered) return;
+  quizState.answered = true;
+  const q = quizState.questions[quizState.currentIdx];
+  const isCorrect = (selectedIdx === q.ans);
+  const isEN = (currentLang === 'en');
+
+  // 모든 버튼 비활성 + 정답·오답 표시
+  document.querySelectorAll('.quiz-option-btn').forEach((btn, idx) => {
+    if (idx === q.ans) btn.classList.add('correct');
+    else if (idx === selectedIdx) btn.classList.add('wrong');
+    else btn.classList.add('disabled');
+  });
+
+  // 점수 계산
+  if (isCorrect) {
+    quizState.correct++;
+    quizState.score += 10;
+  } else {
+    quizState.wrongHistory.push({
+      q: q.q,
+      selected: q.opts[selectedIdx],
+      correct: q.opts[q.ans],
+      explain: q.explain,
+    });
+  }
+  document.getElementById('quiz-score').textContent = quizState.score;
+
+  // 피드백
+  const fb = document.getElementById('quiz-feedback');
+  fb.className = isCorrect ? 'quiz-feedback-ok' : 'quiz-feedback-no';
+  fb.style.display = 'block';
+  fb.style.padding = '14px';
+  fb.style.borderRadius = '12px';
+  fb.style.marginBottom = '14px';
+  fb.innerHTML = isCorrect
+    ? `<strong style="color:var(--ok);">${isEN ? '✅ Correct!' : '✅ 정답!'}</strong><br>
+       <span style="font-size:12px;">${q.explain}</span>`
+    : `<strong style="color:var(--danger);">${isEN ? '❌ Wrong' : '❌ 틀렸어요'}</strong><br>
+       <span style="font-size:12px;">
+         ${isEN ? 'Correct answer:' : '정답:'} <strong style="color:var(--ok);">${q.opts[q.ans]}</strong><br>
+         ${q.explain}
+       </span>`;
+
+  // 다음 버튼 (마지막 문제면 결과로)
+  const nextBtn = document.getElementById('quiz-next-btn');
+  nextBtn.style.display = 'block';
+  if (quizState.currentIdx === quizState.questions.length - 1) {
+    nextBtn.innerHTML = isEN
+      ? `🏁 See Result <span class="en-sub">결과 보기</span>`
+      : `🏁 결과 보기 <span class="en-sub">See Result</span>`;
+  } else {
+    nextBtn.innerHTML = isEN
+      ? `▶ Next Question <span class="en-sub">다음 문제</span>`
+      : `▶ 다음 문제 <span class="en-sub">Next Question</span>`;
+  }
+}
+
+function nextQuizQuestion() {
+  if (quizState.currentIdx >= quizState.questions.length - 1) {
+    finishQuiz();
+    return;
+  }
+  quizState.currentIdx++;
+  renderQuizQuestion();
+}
+
+function finishQuiz() {
+  document.getElementById('quiz-play').style.display   = 'none';
+  document.getElementById('quiz-result').style.display = 'block';
+
+  const total = quizState.questions.length;
+  const correct = quizState.correct;
+  const score = quizState.score;
+  const accuracy = Math.round(correct / total * 100);
+  const isEN = (currentLang === 'en');
+
+  document.getElementById('quiz-result-score').textContent    = score;
+  document.getElementById('quiz-result-correct').textContent  = correct + '/' + total;
+  document.getElementById('quiz-result-accuracy').textContent = accuracy + '%';
+
+  // 결과 이모지 + 메시지
+  let emoji, title, subtitle;
+  if (accuracy === 100)     { emoji='🏆'; title=isEN?'PERFECT!':'완벽 정답!';        subtitle=isEN?'You\'re a dam expert!':'당신은 댐 박사!'; }
+  else if (accuracy >= 80)  { emoji='🎉'; title=isEN?'Excellent!':'훌륭해요!';        subtitle=isEN?'Great knowledge!':'정말 잘했어요'; }
+  else if (accuracy >= 60)  { emoji='👍'; title=isEN?'Good Job!':'잘했어요!';         subtitle=isEN?'Solid effort!':'더 도전해 봐요'; }
+  else if (accuracy >= 40)  { emoji='💪'; title=isEN?'Keep Going!':'한 번 더!';       subtitle=isEN?'You can do better!':'다음엔 더 잘할 수 있어요'; }
+  else                      { emoji='📚'; title=isEN?'Study More!':'공부 더 해요';    subtitle=isEN?'Read the education modules!':'교육 모듈을 먼저 둘러보세요'; }
+
+  document.getElementById('quiz-result-emoji').textContent     = emoji;
+  document.getElementById('quiz-result-title').textContent     = title;
+  document.getElementById('quiz-result-subtitle').textContent  = subtitle;
+
+  // 최고 점수 갱신
+  let records = {};
+  try { records = JSON.parse(localStorage.getItem('damwatch_quiz_best') || '{}'); } catch(e) {}
+  const prev = records[quizState.category];
+  const isNew = !prev || score > prev.score;
+  if (isNew) {
+    records[quizState.category] = { score, correct, total, date: new Date().toISOString().slice(0,10) };
+    try { localStorage.setItem('damwatch_quiz_best', JSON.stringify(records)); } catch(e) {}
+    document.getElementById('quiz-new-record').style.display = 'block';
+  } else {
+    document.getElementById('quiz-new-record').style.display = 'none';
+  }
+
+  // 틀린 문제 복습
+  const reviewEl = document.getElementById('quiz-review');
+  if (quizState.wrongHistory.length > 0) {
+    reviewEl.innerHTML = `
+      <div style="font-size:12px;color:var(--warning);font-weight:700;margin-bottom:8px;letter-spacing:0.5px;font-family:var(--font-num);">
+        📝 ${isEN ? `REVIEW (${quizState.wrongHistory.length} wrong)` : `복습 (틀린 문제 ${quizState.wrongHistory.length}개)`}
+      </div>
+      ${quizState.wrongHistory.map(w => `
+        <div class="quiz-review-item">
+          <strong>${w.q}</strong><br>
+          <span style="color:var(--danger);">${isEN ? 'Your answer:' : '내 답:'} ${w.selected}</span> →
+          <span class="qrev-correct">${isEN ? 'Correct:' : '정답:'} ${w.correct}</span><br>
+          <span style="color:var(--text3);font-style:italic;">${w.explain}</span>
+        </div>
+      `).join('')}
+    `;
+  } else {
+    reviewEl.innerHTML = `
+      <div style="background:rgba(0,204,102,0.08);border:1px solid rgba(0,204,102,0.3);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:14px;color:var(--ok);font-weight:600;">🌟 ${isEN ? 'All correct! Nothing to review.' : '전부 맞았어요! 복습할 게 없어요.'}</div>
+      </div>
+    `;
+  }
+}
+
+function abortQuiz() {
+  const isEN = (currentLang === 'en');
+  if (!confirm(isEN
+    ? 'Quit the quiz? Your progress will be lost.'
+    : '퀴즈를 그만둘까요? 현재 진행 상황은 사라져요.')) return;
+  quizBackToStart();
+}
+
+function quizBackToStart() {
+  document.getElementById('quiz-start').style.display  = 'block';
+  document.getElementById('quiz-play').style.display   = 'none';
+  document.getElementById('quiz-result').style.display = 'none';
+  renderQuizBestRecords();
+}
+
 </script>
 <script src="patch.js"></script>
 
