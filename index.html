@@ -153,49 +153,6 @@ header {
   opacity: 0.85;
 }
 
-/* ── Step 5: 제작자 뱃지 (헤더 우측 빈 공간 활용) ── */
-.creator-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: linear-gradient(135deg, rgba(0,200,255,0.06), rgba(0,255,200,0.04));
-  border: 1px solid rgba(0,200,255,0.22);
-  border-radius: 10px;
-  padding: 5px 10px;
-  flex-shrink: 0;
-  position: relative;
-}
-.creator-badge::before {
-  content: '✦';
-  position: absolute;
-  top: -6px; left: -6px;
-  background: var(--bg);
-  color: var(--gold);
-  font-size: 10px;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,184,0,0.4);
-}
-.creator-badge-label {
-  font-size: 8px;
-  color: var(--gold);
-  font-family: var(--font-num);
-  letter-spacing: 1.5px;
-  font-weight: 700;
-  margin-bottom: 2px;
-  text-transform: uppercase;
-}
-.creator-badge-ids {
-  font-size: 10px;
-  color: var(--accent);
-  font-family: var(--font-num);
-  letter-spacing: 0.8px;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
-}
-
 /* ── Step 5: 등록 페이지 지도 — Voyager 타일 다크 톤 보정 ── */
 /* 밝은 라이트 타일을 살짝 어둡게·채도 낮춰서 다크 앱과 어울리게 (강·도시 라벨은 유지) */
 .voyager-tinted {
@@ -1339,6 +1296,102 @@ input[type="checkbox"][style*="display:none"] {
   border: 1px solid rgba(255,68,68,0.3);
   color: var(--text);
 }
+
+/* ── Step 6-B: 풍부한 정답 해설 스타일 ── */
+.qfb-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.qfb-icon { font-size: 22px; }
+.qfb-title {
+  font-size: 15px; font-weight: 800;
+  font-family: var(--font-ko);
+}
+.qfb-ok .qfb-title { color: var(--ok); }
+.qfb-no .qfb-title { color: var(--danger); }
+.qfb-retry-badge {
+  font-size: 10px; color: var(--gold);
+  font-style: italic; opacity: 0.85;
+  margin-left: 4px;
+}
+.qfb-correct-line {
+  font-size: 13px; color: var(--text2);
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  background: rgba(0,204,102,0.06);
+  border-left: 3px solid var(--ok);
+  border-radius: 0 6px 6px 0;
+}
+.qfb-correct-line b { color: var(--ok); font-weight: 800; }
+.qfb-short {
+  font-size: 13px; color: var(--text);
+  margin-bottom: 10px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.qfb-short b { color: var(--accent); }
+.qfb-rich {
+  font-size: 12px; color: var(--text2);
+  line-height: 1.65;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.qrich-def {
+  background: rgba(0,200,255,0.06);
+  border: 1px solid rgba(0,200,255,0.2);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+.qrich-tag {
+  display: inline-block;
+  background: rgba(0,200,255,0.15);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-right: 6px;
+  letter-spacing: 0.3px;
+}
+.qrich-detail {
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(255,184,0,0.05);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.6;
+}
+.qrich-detail b { color: var(--gold); }
+.qrich-lore {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.qrich-title {
+  font-size: 12px;
+  color: var(--accent2);
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(0,255,200,0.2);
+}
+.qrich-row {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  padding: 3px 0;
+}
+.qrich-row b { color: var(--text); font-weight: 700; }
 .quiz-review-item {
   background: var(--surface);
   border-left: 3px solid var(--warning);
@@ -1457,12 +1510,6 @@ input[type="checkbox"][style*="display:none"] {
   .logo-text { font-size: 15px; }
   .logo-sub { font-size: 8.5px; margin-top: 2px; letter-spacing: 0; }
   .logo-icon svg { width: 30px; height: 30px; }
-
-  /* Step 5: 모바일에서 제작자 뱃지 컴팩트화 */
-  .creator-badge { padding: 3px 7px; border-radius: 7px; }
-  .creator-badge::before { width: 11px; height: 11px; font-size: 8px; top: -4px; left: -4px; }
-  .creator-badge-label { font-size: 7px; letter-spacing: 0.8px; margin-bottom: 1px; }
-  .creator-badge-ids { font-size: 8.5px; letter-spacing: 0; }
   .detail-tab { font-size: 10px !important; padding: 4px 6px !important; gap: 2px !important; }
   .section-title { font-size: 20px; }
   .map-container { height: 400px; }
@@ -2095,11 +2142,6 @@ h3 .en-para, h4 .en-para,
       <span class="logo-sub" data-ko="실시간 댐 모니터·교육" data-en="Real-time Dam Monitor·Edu">실시간 댐 모니터·교육</span>
     </div>
   </a>
-  <!-- ── 우측 제작자 뱃지 (Step 5: 빈 공간 채움 + 모바일에서도 보임) ── -->
-  <div class="creator-badge">
-    <div class="creator-badge-label" data-ko="제작" data-en="Made by">제작</div>
-    <div class="creator-badge-ids">NAEMANG2943<br>SJL0108</div>
-  </div>
   </div><!-- /header-row1 -->
   <div class="header-row2">
     <nav>
@@ -9695,16 +9737,112 @@ async function runPreReleaseSim() {
 let crowdMap = null;
 let crowdMarkers = [];
 
+// 한국 GeoJSON 캐시 (basinMap과 crowdMap이 같은 데이터 공유)
+let _koreaGeoJSONCache = null;
+
 function initCrowdMap() {
   if (crowdMap) return;
-  crowdMap = L.map('crowd-map', { center: [36.5, 127.8], zoom: 6, zoomControl: false });
-  // Step 5: 동네 저수지 등록용 — 밝고 친근한 지도 (강줄기·도시 경계 잘 보임)
-  // 다크 앱과 어울리도록 살짝 보정 (saturate/brightness 적용 — voyager-tinted 클래스)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
-    maxZoom: 19,
-    className: 'voyager-tinted'
-  }).addTo(crowdMap);
+
+  // 사용자 피드백: 대시보드의 깨끗한 한국 지도와 같은 스타일
+  // → 타일 없음, 베이지 배경 위에 한국 영토 + 강줄기 + 도 라벨만
+  crowdMap = L.map('crowd-map', {
+    zoomControl: false,
+    attributionControl: false,
+    scrollWheelZoom: true,
+    tap: true,
+    minZoom: 6, maxZoom: 12,
+    zoomSnap: 0.5, zoomDelta: 0.5,
+    // 한국 영토 밖으로 panning/zoom 못 나가도록 (독도까지 포함)
+    maxBounds: L.latLngBounds([31.5, 123.5], [39.8, 133.5]),
+    maxBoundsViscosity: 0.9,
+  }).setView([36.3, 127.8], 7);
+
+  // 작은 맵용 줌 클래스 (라벨 크기 조정)
+  function updateCrowdZoomClass() {
+    const z = crowdMap.getZoom();
+    const el = document.getElementById('crowd-map');
+    if (!el) return;
+    el.classList.remove('z-small','z-mid','z-large');
+    if (z <= 7) el.classList.add('z-small');
+    else if (z <= 9) el.classList.add('z-mid');
+    else el.classList.add('z-large');
+  }
+  crowdMap.on('zoomend', updateCrowdZoomClass);
+  setTimeout(updateCrowdZoomClass, 50);
+
+  // ① 한국 영토 GeoJSON (베이지 채색) — 캐시 사용
+  const applyProvinceLayer = (geojson) => {
+    const provinceLayer = L.geoJSON(geojson, {
+      style: {
+        fillColor: '#fce7e0',
+        fillOpacity: 1.0,
+        color: '#94a3b8',
+        weight: 0.7,
+        opacity: 0.8,
+      },
+      interactive: false,
+    }).addTo(crowdMap);
+    if (provinceLayer.bringToBack) provinceLayer.bringToBack();
+    // 도 이름 한국어 라벨
+    try { addProvinceLabels(geojson, crowdMap); } catch(e) {}
+  };
+
+  if (_koreaGeoJSONCache) {
+    applyProvinceLayer(_koreaGeoJSONCache);
+  } else {
+    fetch('https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2018/json/skorea-provinces-2018-geo.json')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(geojson => {
+        _koreaGeoJSONCache = geojson;
+        applyProvinceLayer(geojson);
+      })
+      .catch(e => console.info('[crowd-map] province skip:', e));
+  }
+
+  // ② 강줄기 (대시보드와 같은 KOREA_RIVERS 데이터)
+  if (typeof KOREA_RIVERS !== 'undefined') {
+    const riversLayer = L.layerGroup().addTo(crowdMap);
+    Object.values(KOREA_RIVERS).forEach(r => {
+      L.polyline(r.coords, {
+        color: '#7dd3fc',
+        weight: 1, opacity: 0.85,
+        smoothFactor: 1.5, lineCap:'round', lineJoin:'round',
+        interactive: false,
+      }).addTo(riversLayer);
+      // 강 이름 라벨
+      if (r.coords && r.coords.length >= 2) {
+        const mid = r.coords[Math.floor(r.coords.length / 2)];
+        L.marker(mid, {
+          icon: L.divIcon({
+            className: 'basin-river-label',
+            html: r.name,
+            iconSize: null,
+          }),
+          interactive: false, keyboard: false,
+        }).addTo(riversLayer);
+      }
+    });
+  }
+
+  // ③ 울릉도 + 독도 (GeoJSON에서 누락될 수 있어서 명시적 추가)
+  if (typeof _addIslandsToMap === 'function') {
+    _addIslandsToMap(crowdMap);
+  } else {
+    // basinMap용 헬퍼가 없으면 인라인으로 작은 사각형 추가
+    [
+      { center: [37.5, 130.87], r: 0.04, name: '울릉도' },
+      { center: [37.24, 131.87], r: 0.015, name: '독도' },
+    ].forEach(isl => {
+      L.circle(isl.center, {
+        radius: isl.r * 100000,
+        fillColor: '#fce7e0', fillOpacity: 1,
+        color: '#94a3b8', weight: 0.7, opacity: 0.8,
+        interactive: false,
+      }).addTo(crowdMap);
+    });
+  }
+
+  setTimeout(() => crowdMap.invalidateSize(), 100);
 }
 
 // ═══════════════════════════════════════
@@ -11437,6 +11575,155 @@ document.addEventListener('DOMContentLoaded', () => {
 // 한 세션 10문제 · localStorage 최고점 저장 · 정답률·복습 카드
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// 📚 Step 6-B: 풍부한 학습 데이터베이스
+// ─────────────────────────────────────────────────────────────
+// 사용자 피드백: "정답: 용수전용댐... 여기서 다시 한 번 더 가볍게 짚어주는 것"
+// → 정답 단어의 친근한 정의 + 댐별 깊이 있는 배경 + 교과서 연계
+// ═══════════════════════════════════════════════════════════════
+
+// 댐 종류별 친근한 정의 — 정답 단어를 한 번 더 짚어줌 (학습 효과의 핵심!)
+const DAM_TYPE_DEF = {
+  multipurpose: {
+    short: '여러 가지 일을 동시에 하는 큰 댐',
+    full: '다목적댐이란 ⟶ 한 댐에서 ① 홍수 조절 ② 생활·공업·농업 용수 공급 ③ 전기 생산(수력 발전) ④ 강 흐름 안정화까지 모두 해내는 다재다능한 댐이에요. 한국 주요 댐의 대부분이 여기 속해요 (소양강·충주·대청·안동·합천·임하·남강 등).',
+    why: '하나의 댐으로 여러 효과를 얻으니 경제적이라서, 1970~80년대 국토 개발 시대에 집중적으로 건설됐어요.',
+  },
+  water_supply: {
+    short: '오직 물 공급 1가지만 하는 전용 댐',
+    full: '용수전용댐이란 ⟶ 발전·홍수조절은 안 하고, 오직 깨끗한 물을 산업 단지나 도시에 공급하는 것만이 목적인 댐이에요. 그래서 \'전용\'이라는 이름이 붙었어요.',
+    why: '특정 산업 단지(예: 포항제철, 삼척시멘트)나 도시의 \'물 갈증\'을 빠르게 해소하려고 만든 댐이에요. 수질 관리가 엄격해서 시민 출입이 제한되기도 해요. 예: 운문댐(경북), 달방댐(강원), 영천댐(경북), 광동댐(강원).',
+  },
+  flood_control: {
+    short: '비가 많이 올 때만 물을 가두는 댐',
+    full: '홍수조절댐이란 ⟶ 평소에는 비어 있다가, 큰 비가 오면 갑자기 불어난 강물을 잠깐 가두었다가 천천히 흘려보내는 댐이에요. 평소 모습은 거의 빈 그릇 같아요!',
+    why: '도시·농지의 침수 피해를 막는 게 유일한 목적이라 \'홍수전용\'이라고도 해요. 한탄강댐(2016, 경기), 평화의댐(1989, 강원)이 대표적이에요.',
+  },
+  regulation: {
+    short: '큰 댐 바로 아래에서 미세 조정하는 작은 댐',
+    full: '조정지댐이란 ⟶ 큰 다목적댐에서 갑자기 많은 물을 흘려보내면 하류가 위험하니까, 바로 아래에 작은 보조 댐을 하나 더 두고 그곳에서 \'천천히, 골고루\' 물을 내보내는 댐이에요.',
+    why: '쉽게 말해 \'완충 댐\'이에요. 본댐(소양강댐) → 조정지댐(의암·청평) → 강 으로 내려가요.',
+  },
+  weir: {
+    short: '강을 가로지르는 키 작은 댐 (높이 10m 안팎)',
+    full: '보(洑)란 ⟶ 일반 댐보다 훨씬 낮은 시설로, 강물을 조금만 가두어 농업용수 확보·뱃길 유지·생태 환경 조성 등을 해요. 2009~2012년 4대강 사업으로 한강·낙동강·금강·영산강에 총 16개를 만들었어요.',
+    why: '큰 댐을 만들기 어려운 평지·도심 강에 적합해요. 대표: 강정고령보, 세종보, 공주보, 백제보 등.',
+  },
+  estuary_barrage: {
+    short: '강이 바다와 만나는 곳을 막은 시설',
+    full: '하굿둑이란 ⟶ 강 하구(바다와 만나는 끝)에서 짠 바닷물이 강 안쪽으로 거슬러 올라오는 것(\'염해\')을 막고, 동시에 농업·공업 용수를 확보하는 댐이에요.',
+    why: '한국 4대 하굿둑: 낙동강하굿둑(1987, 부산), 금강하굿둑(1990, 군산), 영산강하굿둑(1981, 목포), 삽교천방조제(1979, 충남). 단점은 생태계 단절 — 회유성 어류(연어·뱀장어)가 못 올라와요.',
+  },
+};
+
+// 한국 주요 댐별 풍부한 메타데이터 (정답 보충 설명용)
+// 형식: { 완공, 위치, 배경, 의의, 숫자, 재미, 교과 }
+const DAM_LORE = {
+  '소양강댐': {
+    완공: '1973년', 위치: '강원도 춘천시',
+    배경: '경제개발 5개년 계획의 일환으로, 한강 홍수 조절과 수도권 전력 공급을 위해 건설',
+    의의: '아시아 최대 사력댐(흙·돌로 쌓은 댐) — 한강 수계 안보의 핵심',
+    숫자: '저수량 29억 톤 = 서울시민 1년 물 사용량의 약 1.5배',
+    재미: '댐 건설로 마을 18개가 수몰돼 \'망향비(고향을 그리는 비석)\'가 세워졌어요',
+    교과: '중1 사회 〈국토와 자원〉, 고1 한국지리 〈수자원〉',
+  },
+  '충주댐': {
+    완공: '1985년', 위치: '충청북도 충주시',
+    배경: '한강 수계 두 번째 다목적댐 — 수도권 인구·산업 증가에 따른 물 수요 대응',
+    의의: '단일 댐 발전량 국내 최대(412MW)',
+    숫자: '저수량 27.5억 톤 — 댐 호수(충주호) 둘레가 132km로 한국에서 가장 길어요',
+    재미: '충주호 유람선 관광은 매년 100만 명 이상이 찾는 명소예요',
+  },
+  '대청댐': {
+    완공: '1980년', 위치: '대전·청주 경계 금강',
+    배경: '대전·청주·전북 일대 식수와 공업용수 확보를 위해 건설',
+    의의: '금강 수계의 심장 — 호서 지방 약 600만 명이 마시는 물 공급',
+    숫자: '저수량 15억 톤, 발전용량 90MW',
+  },
+  '안동댐': {
+    완공: '1976년', 위치: '경상북도 안동시',
+    배경: '낙동강 수계 첫 다목적댐 — 영남권 가뭄·홍수 대응',
+    의의: '한국 최초의 사력식 다목적댐, 안동·임하 형제댐의 맏형',
+    재미: '안동댐 안개는 \'안개의 도시\'라는 안동의 별명을 만들었어요',
+  },
+  '합천댐': {
+    완공: '1989년', 위치: '경상남도 합천군',
+    배경: '낙동강 본류로 흘러드는 황강의 홍수·가뭄 동시 대응',
+    숫자: '저수량 7.9억 톤, 합천호는 벚꽃 명소로 유명',
+  },
+  '용담댐': {
+    완공: '2001년', 위치: '전라북도 진안군',
+    배경: '전북 서부(전주·익산·군산)와 충남 서부의 물 부족 해결',
+    의의: '금강 상류 댐 — 21세기 들어 한국 마지막 대형 다목적댐 중 하나',
+  },
+  '섬진강댐': {
+    완공: '1965년', 위치: '전라북도 임실군',
+    배경: '한국 최초로 건설된 다목적댐 (1965)',
+    의의: '한국 댐 역사의 시작점 — \'1세대 댐\'의 효시',
+    재미: '준공식에 박정희 대통령이 참석했어요',
+  },
+  '주암댐': {
+    완공: '1992년', 위치: '전라남도 순천시',
+    배경: '광주·여수·순천 등 호남 동부 물 공급',
+    숫자: '저수량 4.6억 톤',
+  },
+  '운문댐': {
+    완공: '1996년', 위치: '경상북도 청도군',
+    종류_특이: 'water_supply',
+    배경: '대구·구미·포항 등 영남권 산업단지의 공업용수 확보',
+    의의: '용수전용댐 — 발전·홍수조절은 안 하고 오직 \'깨끗한 물 공급\'만',
+    재미: '운문호 출입은 수질 보호를 위해 제한돼 있어요',
+  },
+  '광동댐': {
+    완공: '1985년', 위치: '강원도 태백시',
+    종류_특이: 'water_supply',
+    배경: '동해안 공업단지(포항·삼척)의 \'물 갈증\' 해결을 위해 건설된 용수전용댐',
+    의의: '강원 동해안 산업의 물 동맥',
+  },
+  '한탄강댐': {
+    완공: '2016년', 위치: '경기·강원 경계',
+    종류_특이: 'flood_control',
+    배경: '2002년 태풍 \'루사\' 때 한탄강 일대가 큰 침수 피해를 입어, 홍수 전용 댐으로 건설',
+    의의: '한국 최초의 \'홍수조절 전용\' 대형댐 — 평소엔 거의 비어 있어요',
+  },
+  '평화의댐': {
+    완공: '1989년', 위치: '강원도 화천군',
+    종류_특이: 'flood_control',
+    배경: '북한의 \'금강산댐\' 방류 위협에 대비해 건설된 홍수조절 전용댐',
+    재미: '국민 모금으로 시작된 특이한 역사 — \'평화\'라는 이름의 유래',
+  },
+};
+
+// 한국 주요 강 정보 (위치 문제 보충용)
+const RIVER_LORE = {
+  '한강':   '서울을 가로지르는 한국 최대 강 — 길이 514km. 북한강·남한강이 양수리에서 합쳐져요.',
+  '낙동강': '영남 지방을 남북으로 흐르는 한국에서 가장 긴 강(521km). 발원지는 강원도 태백산.',
+  '금강':   '충청 지방의 젖줄 — 길이 401km. 대청댐·용담댐·세종보 등이 있어요.',
+  '섬진강': '전라북도·전라남도·경상남도 3개 도를 가로지르는 강(212km). 1965년 댐이 한국 댐 역사의 시작.',
+  '영산강': '전라남도의 어머니 강 — 길이 138km. 하굿둑(목포)이 있어요.',
+  '북한강': '한강 상류 동쪽 갈래 — 강원도에서 흘러내려 양수리에서 남한강과 합류해요.',
+  '남한강': '한강 상류 서쪽 갈래 — 강원도 태백 검룡소에서 발원, 충주를 거쳐 한강 본류로.',
+  '소양강': '북한강의 지류 — 소양강댐이 있는 강. \'소양강 처녀\' 노래로도 유명해요.',
+  '임진강': '경기 북부를 흐르는 강 — 한강 하류에서 합류. 분단의 강으로도 불려요.',
+  '안성천': '경기 남부 평택·안성을 흐르는 강 — 평택호로 흘러요.',
+  '형산강': '경북 경주·포항을 흐르는 강 — 동해로 흘러나가요.',
+  '태화강': '울산을 가로지르는 강 — 동해로 흘러요.',
+  '동진강': '전북 정읍·김제를 흐르는 강 — 새만금으로 흘러요.',
+  '만경강': '전북 익산·군산을 흐르는 강 — 새만금으로 흘러요.',
+};
+
+// 세계 댐 풍부한 정보 (세계 댐 문제 보충용)
+const WORLD_DAM_LORE = {
+  '삼협댐':         '중국 양쯔강 — 세계 최대 수력발전 댐(22,500MW). 2006년 완공. 길이 2,335m로 만리장성 다음 가는 거대 건설.',
+  '후버댐':         '미국 콜로라도강 — 1936년 완공된 미국 대공황 시대의 상징. 라스베이거스에 전기 공급.',
+  '아스완 하이댐':  '이집트 나일강 — 1970년 완공. 나일강 범람을 막아 농업 혁명을 일으켰지만, 토양 비옥도 저하 부작용도.',
+  '이타이푸댐':     '브라질·파라과이 파라나강 — 세계 두 번째 수력발전 댐. 양국 공동 운영.',
+  '구리댐':         '베네수엘라 카로니강 — 남미 최대 댐 중 하나.',
+  '카리바댐':       '아프리카 잠베지강 — 짐바브웨·잠비아 국경. 인공 호수 \'카리바호\'가 세계 최대급.',
+  '대디알댐':       '에티오피아 청나일강 — 르네상스댐, 동아프리카 최대 수력발전. 이집트와 물 분쟁.',
+  '글렌캐년댐':     '미국 콜로라도강 상류 — 그랜드캐년 보호 논쟁의 중심.',
+};
+
 let quizState = {
   category: 'all',
   questions: [],
@@ -11520,6 +11807,79 @@ function _getKoreanDamPool() {
   return live || (typeof MOCK_DAMS !== 'undefined' ? MOCK_DAMS : []);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 📖 풍부한 해설 빌더 (정답·오답 모두에 깊이 있는 보충 설명)
+// ─────────────────────────────────────────────────────────────
+// 핵심: 정답 단어를 한 번 더 짚어주기 + 배경·역사·교과서 연계
+// HTML로 반환 — 학생이 읽기 쉽게 구조화
+// ═══════════════════════════════════════════════════════════════
+function buildRichExplain(opts) {
+  // opts: { kind, dam, correctAns, river, dtype, world, rate, target }
+  const isEN = (currentLang === 'en');
+  const parts = [];
+
+  // 1) 정답 단어의 정의를 한 번 더 짚어주기 (학생 학습에 핵심)
+  if (opts.dtype && DAM_TYPE_DEF[opts.dtype]) {
+    const def = DAM_TYPE_DEF[opts.dtype];
+    parts.push(`<div class="qrich-def">
+      <span class="qrich-tag">💡 ${QUIZ_CAT_TYPE_LABELS[opts.dtype]?.ko || ''}이란?</span>
+      ${def.full}
+    </div>`);
+    if (def.why) {
+      parts.push(`<div class="qrich-detail">📌 ${def.why}</div>`);
+    }
+  }
+
+  if (opts.river && RIVER_LORE[opts.river]) {
+    parts.push(`<div class="qrich-def">
+      <span class="qrich-tag">💧 ${opts.river}이란?</span>
+      ${RIVER_LORE[opts.river]}
+    </div>`);
+  }
+
+  // 2) 댐별 풍부한 정보 (DAM_LORE)
+  if (opts.dam && DAM_LORE[opts.dam]) {
+    const lore = DAM_LORE[opts.dam];
+    const rows = [];
+    if (lore.완공)   rows.push(`<b>📅 완공:</b> ${lore.완공}`);
+    if (lore.위치)   rows.push(`<b>📍 위치:</b> ${lore.위치}`);
+    if (lore.배경)   rows.push(`<b>🏗️ 건설 배경:</b> ${lore.배경}`);
+    if (lore.의의)   rows.push(`<b>⭐ 의의:</b> ${lore.의의}`);
+    if (lore.숫자)   rows.push(`<b>🔢 숫자로 보기:</b> ${lore.숫자}`);
+    if (lore.재미)   rows.push(`<b>🎁 알아 두면 좋은 이야기:</b> ${lore.재미}`);
+    if (lore.교과)   rows.push(`<b>📚 교과서 연계:</b> ${lore.교과}`);
+    if (rows.length > 0) {
+      parts.push(`<div class="qrich-lore">
+        <div class="qrich-title">📖 ${opts.dam} 자세히 보기</div>
+        ${rows.map(r => `<div class="qrich-row">${r}</div>`).join('')}
+      </div>`);
+    }
+  }
+
+  // 3) 세계 댐 정보
+  if (opts.world && WORLD_DAM_LORE[opts.world]) {
+    parts.push(`<div class="qrich-lore">
+      <div class="qrich-title">🌍 ${opts.world}</div>
+      <div class="qrich-row">${WORLD_DAM_LORE[opts.world]}</div>
+    </div>`);
+  }
+
+  // 4) 저수율 문제의 경우 추가 컨텍스트
+  if (opts.kind === 'rate' && opts.target) {
+    const t = opts.target;
+    const norm = (t.storage_rate < 30) ? '⚠️ 평년보다 낮은 수준 (가뭄 경계)'
+              : (t.storage_rate > 90) ? '🌊 평년보다 높은 수준 (만수에 가까움)'
+              : '✅ 평상 수준';
+    parts.push(`<div class="qrich-detail">
+      <b>📊 현재 상태:</b> ${norm}<br>
+      <b>💡 알아두기:</b> 저수율은 \'현재 저수량 ÷ 만수 저수량 × 100\'이에요.
+      30% 이하면 \'가뭄 경계\', 90% 이상이면 \'홍수 대비\'에 들어가요.
+    </div>`);
+  }
+
+  return parts.join('');
+}
+
 // 카테고리 1: 위치 (이 댐은 어느 강에 있을까?)
 function genQuestionLocation() {
   const pool = _getKoreanDamPool().filter(d => d.river);
@@ -11535,12 +11895,11 @@ function genQuestionLocation() {
   return {
     cat: 'location',
     catLabel: isEN ? '📍 LOCATION' : '📍 위치',
-    q: isEN ? `Which river is "${target.name}" on?` : `"${target.name}"은 어느 강에 있을까요?`,
+    q: isEN ? `Which river is "${target.name}" on?` : `"${target.name}"은(는) 어느 강에 있을까요?`,
     opts, ans,
     hint: isEN ? `Hint: It's in ${target.lat > 36.5 ? 'northern' : 'southern'} Korea.` : `힌트: 한반도 ${target.lat > 36.5 ? '북부' : '남부'}에 있어요.`,
-    explain: isEN
-      ? `"${target.name}" is on the ${correctRiver}.`
-      : `"${target.name}"은(는) ${correctRiver}에 있어요.`,
+    explainShort: `"${target.name}"은(는) <b>${correctRiver}</b>에 있어요.`,
+    explainRich: buildRichExplain({ kind:'location', dam: target.name, river: correctRiver }),
   };
 }
 
@@ -11567,12 +11926,11 @@ function genQuestionType() {
   return {
     cat: 'type',
     catLabel: isEN ? '🏗️ TYPE' : '🏗️ 종류',
-    q: isEN ? `What type of dam is "${target.name}"?` : `"${target.name}"은 어떤 종류의 댐일까요?`,
+    q: isEN ? `What type of dam is "${target.name}"?` : `"${target.name}"은(는) 어떤 종류의 댐일까요?`,
     opts, ans,
     hint: isEN ? `Hint: Capacity ${target.full?.toLocaleString() || '?'} M.ton.` : `힌트: 만수용량은 ${target.full?.toLocaleString() || '?'} 백만톤.`,
-    explain: isEN
-      ? `"${target.name}" is a ${QUIZ_CAT_TYPE_LABELS[correctType].en} dam. ${QUIZ_CAT_TYPE_LABELS[correctType].desc}`
-      : `"${target.name}"은(는) ${QUIZ_CAT_TYPE_LABELS[correctType].ko}이에요. ${QUIZ_CAT_TYPE_LABELS[correctType].desc}`,
+    explainShort: `"${target.name}"은(는) <b>${QUIZ_CAT_TYPE_LABELS[correctType].ko}</b>이에요.`,
+    explainRich: buildRichExplain({ kind:'type', dam: target.name, dtype: correctType }),
   };
 }
 
@@ -11597,9 +11955,8 @@ function genQuestionWorld() {
       q: isEN ? `Which country has "${target.name}"?` : `"${target.name}"은 어느 나라에 있을까요?`,
       opts, ans,
       hint: isEN ? `Hint: ${target.info || 'Major dam in this region.'}` : `힌트: ${target.info || '이 지역의 주요 댐이에요.'}`,
-      explain: isEN
-        ? `"${target.name}" is in ${correct}, on the ${target.river}.`
-        : `"${target.name}"은(는) ${correct}에 있어요. ${target.river}에 위치.`,
+      explainShort: `"${target.name}"은(는) <b>${correct}</b>의 ${target.river}에 있어요.`,
+      explainRich: buildRichExplain({ kind:'world', world: target.name }),
     };
   } else {
     const correct = target.river;
@@ -11613,9 +11970,8 @@ function genQuestionWorld() {
       q: isEN ? `Which river is "${target.name}" on?` : `"${target.name}"은 어느 강에 있을까요?`,
       opts, ans,
       hint: isEN ? `Hint: This dam is in ${target.country}.` : `힌트: 이 댐은 ${target.country}에 있어요.`,
-      explain: isEN
-        ? `"${target.name}" is on the ${correct} in ${target.country}.`
-        : `"${target.name}"은(는) ${target.country}의 ${correct}에 있어요.`,
+      explainShort: `"${target.name}"은(는) ${target.country}의 <b>${correct}</b>에 있어요.`,
+      explainRich: buildRichExplain({ kind:'world', world: target.name }),
     };
   }
 }
@@ -11659,9 +12015,8 @@ function genQuestionRate() {
     hint: isEN
       ? `Hint: Capacity ${target.full?.toLocaleString()} M.ton, current ${target.volume?.toLocaleString()} M.ton.`
       : `힌트: 만수 ${target.full?.toLocaleString()}백만톤 중 현재 ${target.volume?.toLocaleString()}백만톤.`,
-    explain: isEN
-      ? `"${target.name}" is at ${actualRate}% (${target.volume} of ${target.full} M.ton). Source: K-water live data.`
-      : `"${target.name}"은(는) ${actualRate}% (${target.volume}/${target.full}백만톤). K-water 실시간 데이터.`,
+    explainShort: `"${target.name}"의 현재 저수율은 <b>${actualRate}%</b> (${target.volume}/${target.full} 백만톤)이에요.`,
+    explainRich: buildRichExplain({ kind:'rate', dam: target.name, target }),
   };
 }
 
@@ -11760,6 +12115,7 @@ function answerQuiz(selectedIdx) {
   const q = quizState.questions[quizState.currentIdx];
   const isCorrect = (selectedIdx === q.ans);
   const isEN = (currentLang === 'en');
+  const isRetry = quizState.retrying === true;  // 다시 시도 모드인지
 
   // 모든 버튼 비활성 + 정답·오답 표시
   document.querySelectorAll('.quiz-option-btn').forEach((btn, idx) => {
@@ -11768,40 +12124,79 @@ function answerQuiz(selectedIdx) {
     else btn.classList.add('disabled');
   });
 
-  // 점수 계산
-  if (isCorrect) {
+  // 점수 계산 (다시 시도 중에는 점수 미반영)
+  if (isCorrect && !isRetry) {
     quizState.correct++;
     quizState.score += 10;
-  } else {
+  } else if (!isCorrect && !isRetry) {
     quizState.wrongHistory.push({
       q: q.q,
       selected: q.opts[selectedIdx],
       correct: q.opts[q.ans],
-      explain: q.explain,
+      explainShort: q.explainShort || q.explain || '',
+      explainRich:  q.explainRich  || '',
     });
   }
   document.getElementById('quiz-score').textContent = quizState.score;
 
-  // 피드백
+  // ── 풍부한 피드백 (Step 6-B 핵심 개선) ──
   const fb = document.getElementById('quiz-feedback');
   fb.className = isCorrect ? 'quiz-feedback-ok' : 'quiz-feedback-no';
   fb.style.display = 'block';
-  fb.style.padding = '14px';
+  fb.style.padding = '16px';
   fb.style.borderRadius = '12px';
   fb.style.marginBottom = '14px';
-  fb.innerHTML = isCorrect
-    ? `<strong style="color:var(--ok);">${isEN ? '✅ Correct!' : '✅ 정답!'}</strong><br>
-       <span style="font-size:12px;">${q.explain}</span>`
-    : `<strong style="color:var(--danger);">${isEN ? '❌ Wrong' : '❌ 틀렸어요'}</strong><br>
-       <span style="font-size:12px;">
-         ${isEN ? 'Correct answer:' : '정답:'} <strong style="color:var(--ok);">${q.opts[q.ans]}</strong><br>
-         ${q.explain}
-       </span>`;
 
-  // 다음 버튼 (마지막 문제면 결과로)
+  const headerHTML = isCorrect
+    ? `<div class="qfb-header qfb-ok">
+        <span class="qfb-icon">✅</span>
+        <span class="qfb-title">${isEN ? 'Correct!' : '정답!'}</span>
+        ${isRetry ? `<span class="qfb-retry-badge">${isEN?'(retry — no score)':'(다시 시도 — 점수 미반영)'}</span>` : ''}
+      </div>`
+    : `<div class="qfb-header qfb-no">
+        <span class="qfb-icon">❌</span>
+        <span class="qfb-title">${isEN ? 'Wrong' : '틀렸어요'}</span>
+      </div>
+      <div class="qfb-correct-line">
+        ${isEN ? 'Correct answer:' : '정답:'} <b>${q.opts[q.ans]}</b>
+      </div>`;
+
+  const shortHTML = q.explainShort
+    ? `<div class="qfb-short">${q.explainShort}</div>` : '';
+  const richHTML = q.explainRich
+    ? `<div class="qfb-rich">${q.explainRich}</div>` : '';
+
+  fb.innerHTML = headerHTML + shortHTML + richHTML;
+
+  // ── 액션 버튼들 (Step 6-B: X 닫기 + 다시 시도) ──
   const nextBtn = document.getElementById('quiz-next-btn');
   nextBtn.style.display = 'block';
-  if (quizState.currentIdx === quizState.questions.length - 1) {
+
+  // 마지막 문제인지 확인
+  const isLast = (quizState.currentIdx === quizState.questions.length - 1);
+
+  // 액션 버튼들을 묶어서 정리
+  let actionBar = document.getElementById('quiz-action-bar');
+  if (!actionBar) {
+    actionBar = document.createElement('div');
+    actionBar.id = 'quiz-action-bar';
+    actionBar.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;';
+    nextBtn.parentNode.insertBefore(actionBar, nextBtn.nextSibling);
+  }
+
+  // 오답일 때만 "다시 시도" 버튼 (같은 문제 옵션 리셋, 점수 미반영)
+  if (!isCorrect && !isRetry) {
+    actionBar.innerHTML = `
+      <button onclick="retryQuizQuestion()" style="flex:1;min-width:120px;background:rgba(255,184,0,0.1);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ko);font-size:12px;font-weight:600;padding:9px;border-radius:9px;cursor:pointer;">
+        🔄 ${isEN ? 'Try Again' : '다시 시도'} <span style="font-size:10px;opacity:0.75;">${isEN?'(same question)':'(같은 문제)'}</span>
+      </button>
+    `;
+  } else {
+    actionBar.innerHTML = '';
+  }
+
+  // 메인 다음 버튼
+  if (isLast) {
     nextBtn.innerHTML = isEN
       ? `🏁 See Result <span class="en-sub">결과 보기</span>`
       : `🏁 결과 보기 <span class="en-sub">See Result</span>`;
@@ -11810,6 +12205,24 @@ function answerQuiz(selectedIdx) {
       ? `▶ Next Question <span class="en-sub">다음 문제</span>`
       : `▶ 다음 문제 <span class="en-sub">Next Question</span>`;
   }
+
+  quizState.retrying = false;  // 다시 시도 플래그 리셋
+}
+
+// Step 6-B: 같은 문제로 돌아가기 (옵션 리셋, 피드백 숨김)
+function retryQuizQuestion() {
+  quizState.retrying = true;
+  // 같은 문제 그대로 다시 렌더 (옵션은 셔플 안 함 — 사용자가 본 거 그대로)
+  document.getElementById('quiz-feedback').style.display = 'none';
+  document.getElementById('quiz-next-btn').style.display = 'none';
+  const actionBar = document.getElementById('quiz-action-bar');
+  if (actionBar) actionBar.innerHTML = '';
+
+  // 옵션 버튼 다시 활성화 (스타일 초기화)
+  document.querySelectorAll('.quiz-option-btn').forEach(btn => {
+    btn.classList.remove('correct','wrong','disabled');
+  });
+  quizState.answered = false;
 }
 
 function nextQuizQuestion() {
@@ -11869,10 +12282,18 @@ function finishQuiz() {
       </div>
       ${quizState.wrongHistory.map(w => `
         <div class="quiz-review-item">
-          <strong>${w.q}</strong><br>
-          <span style="color:var(--danger);">${isEN ? 'Your answer:' : '내 답:'} ${w.selected}</span> →
-          <span class="qrev-correct">${isEN ? 'Correct:' : '정답:'} ${w.correct}</span><br>
-          <span style="color:var(--text3);font-style:italic;">${w.explain}</span>
+          <div style="font-weight:600;color:var(--text);margin-bottom:5px;">${w.q}</div>
+          <div style="font-size:11px;margin-bottom:5px;">
+            <span style="color:var(--danger);">${isEN ? 'Your answer:' : '내 답:'} ${w.selected}</span> →
+            <span class="qrev-correct">${isEN ? 'Correct:' : '정답:'} ${w.correct}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text2);line-height:1.55;margin-top:6px;padding:6px 8px;background:rgba(0,200,255,0.04);border-left:2px solid var(--accent);border-radius:0 4px 4px 0;">
+            ${w.explainShort || ''}
+          </div>
+          ${w.explainRich ? `<details style="margin-top:6px;font-size:11px;">
+            <summary style="cursor:pointer;color:var(--accent2);font-weight:600;padding:3px 0;">📖 ${isEN?'Learn more':'더 알아보기'}</summary>
+            <div style="margin-top:6px;font-size:11px;line-height:1.6;color:var(--text3);">${w.explainRich}</div>
+          </details>` : ''}
         </div>
       `).join('')}
     `;
@@ -12817,8 +13238,10 @@ function computeCentroid(geom) {
   return [sy / pts.length, sx / pts.length];
 }
 
-function addProvinceLabels(geojson) {
+function addProvinceLabels(geojson, targetMap) {
   if (!geojson || !geojson.features) return;
+  const map = targetMap || basinMap;
+  if (!map) return;
   geojson.features.forEach(feature => {
     const props = feature.properties || {};
     const name = props.name || props.NAME_1 || props.NAME_KOR
@@ -12836,7 +13259,7 @@ function addProvinceLabels(geojson) {
     })
       .setLatLng(center)
       .setContent(display)
-      .addTo(basinMap);
+      .addTo(map);
   });
 }
 
@@ -12871,25 +13294,33 @@ function ensureMap() {
   // ⭐ 타일 없음 — 깨끗한 베이지 배경 위에 한국 영토만 채색
   //    (라이트 타일을 깔면 도로·도시 라벨이 보여서 사용자 의도와 맞지 않음)
 
-  // 한국 영토 옅은 채색 (외부 GeoJSON — 실패해도 OK)
-  fetch('https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2018/json/skorea-provinces-2018-geo.json')
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(geojson => {
-      provinceLayer = L.geoJSON(geojson, {
-        style: {
-          fillColor: '#fce7e0',
-          fillOpacity: 1.0,
-          color: '#94a3b8',
-          weight: 0.7,
-          opacity: 0.8,
-        },
-        interactive: false,
-      }).addTo(basinMap);
-      if (provinceLayer.bringToBack) provinceLayer.bringToBack();
-      // 도 이름 라벨 (스크린샷처럼 빨간 박스)
-      try { addProvinceLabels(geojson); } catch(e) { console.warn('[basin-map] label err', e); }
-    })
-    .catch(e => console.info('[basin-map] province GeoJSON skipped:', e));
+  // 한국 영토 옅은 채색 — 캐시 활용 (crowdMap과 공유)
+  const _applyBasinProvinces = (geojson) => {
+    provinceLayer = L.geoJSON(geojson, {
+      style: {
+        fillColor: '#fce7e0',
+        fillOpacity: 1.0,
+        color: '#94a3b8',
+        weight: 0.7,
+        opacity: 0.8,
+      },
+      interactive: false,
+    }).addTo(basinMap);
+    if (provinceLayer.bringToBack) provinceLayer.bringToBack();
+    try { addProvinceLabels(geojson, basinMap); } catch(e) { console.warn('[basin-map] label err', e); }
+  };
+
+  if (typeof _koreaGeoJSONCache !== 'undefined' && _koreaGeoJSONCache) {
+    _applyBasinProvinces(_koreaGeoJSONCache);
+  } else {
+    fetch('https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2018/json/skorea-provinces-2018-geo.json')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(geojson => {
+        if (typeof _koreaGeoJSONCache !== 'undefined') _koreaGeoJSONCache = geojson;
+        _applyBasinProvinces(geojson);
+      })
+      .catch(e => console.info('[basin-map] province GeoJSON skipped:', e));
+  }
 
   riverLayer = L.layerGroup().addTo(basinMap);
   basinMarkerLayer = L.layerGroup().addTo(basinMap);
