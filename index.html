@@ -2153,6 +2153,7 @@ h3 .en-para, h4 .en-para,
       <div style="display:flex;align-items:baseline;gap:6px;">
         <span class="logo-text" data-ko="댐워치 | DamWatch" data-en="DamWatch | 댐워치">댐워치 | DamWatch</span>
         <span style="font-size:9px;font-family:var(--font-num);color:var(--accent2);letter-spacing:1px;opacity:0.8;">v3.0</span>
+        <span style="font-size:8px;font-family:monospace;color:#ffb800;background:rgba(255,184,0,0.15);padding:1px 4px;border-radius:3px;border:1px solid rgba(255,184,0,0.4);letter-spacing:0.5px;" title="새 파일 식별자 (이 글자 보이면 최신 파일)">b7-map-fix</span>
       </div>
       <span class="logo-sub" data-ko="실시간 댐 모니터·교육" data-en="Real-time Dam Monitor·Edu">실시간 댐 모니터·교육</span>
     </div>
@@ -3775,7 +3776,7 @@ h3 .en-para, h4 .en-para,
           <button onclick="quizBackToStart()" style="flex:1;background:rgba(0,200,255,0.1);border:1px solid var(--accent);color:var(--accent);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
             🔄 다시 도전 <span class="en-sub" style="font-size:10px;">Try Again</span>
           </button>
-          <button onclick="navigate('edu')" style="flex:1;background:rgba(255,184,0,0.1);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
+          <button onclick="goToEduCardGrid()" style="flex:1;background:rgba(255,184,0,0.1);border:1px solid var(--gold);color:var(--gold);font-family:var(--font-ko);font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;">
             📚 교육 메뉴 <span class="en-sub" style="font-size:10px;">Education Menu</span>
           </button>
         </div>
@@ -3870,6 +3871,16 @@ h3 .en-para, h4 .en-para,
             </span>
             <span style="font-size:10px;color:var(--accent3);cursor:pointer;flex-shrink:0;margin-left:8px;" onclick="document.getElementById('gps-guide').style.display=document.getElementById('gps-guide').style.display==='none'?'block':'none';">📱 좌표 찾는 법 ▼</span>
           </label>
+
+          <!-- 🆕 지도에서 직접 클릭 안내 (가장 권장) -->
+          <button type="button" onclick="document.getElementById('crowd-map').scrollIntoView({behavior:'smooth',block:'center'});"
+                  style="width:100%;background:linear-gradient(135deg,rgba(0,255,200,0.12),rgba(0,200,255,0.08));
+                         border:1px solid var(--accent3);color:var(--accent3);font-family:var(--font-ko);
+                         font-size:12.5px;font-weight:700;padding:10px;border-radius:10px;cursor:pointer;
+                         margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            🗺️ 지도에서 클릭으로 위치 선택 (가장 쉬워요!)
+            <span style="font-size:10px;opacity:0.8;font-style:italic;">→ 아래 지도로 이동</span>
+          </button>
           <div id="gps-guide" style="display:none;background:rgba(0,100,200,0.06);border:1px solid rgba(0,100,200,0.2);border-radius:8px;padding:12px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.8;">
             <strong style="color:var(--accent);">📱 스마트폰에서:</strong><br>
             1. Google Maps 앱 열기<br>
@@ -4108,11 +4119,14 @@ h3 .en-para, h4 .en-para,
 
         <!-- 📍 지도 — 상단 고정, 충분한 높이 -->
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;height:320px;position:sticky;top:70px;z-index:2;isolation:isolate;">
-          <div style="padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:12px;color:var(--accent);font-family:var(--font-num);font-weight:700;">📍 등록된 저수지 지도 <span style="font-size:10px;color:var(--text3);font-weight:400;">Map of Registered Reservoirs</span></div>
+          <div style="padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <div style="font-size:12px;color:var(--accent);font-family:var(--font-num);font-weight:700;">📍 등록 지도 + 위치 선택 <span style="font-size:10px;color:var(--text3);font-weight:400;">Click to pick location</span></div>
             <span id="crowd-map-count" style="font-size:10px;color:var(--text3);"></span>
           </div>
-          <div id="crowd-map" style="height:285px;width:100%;"></div>
+          <div style="padding:0 14px 4px;font-size:10.5px;color:var(--accent3);font-style:italic;">
+            👆 지도를 클릭하면 위쪽 위도·경도 칸이 자동 채워져요
+          </div>
+          <div id="crowd-map" style="height:285px;width:100%;cursor:crosshair;"></div>
         </div>
 
         <!-- 등록 결과 (등록 후 표시) -->
@@ -9788,48 +9802,44 @@ let _koreaGeoJSONCache = null;
 function initCrowdMap() {
   if (crowdMap) return;
 
+  // 진단 상태 표시용 (지도 위 라벨)
+  const statusEl = document.getElementById('crowd-map-count');
+  const setStatus = (txt, color) => {
+    if (statusEl) {
+      statusEl.textContent = txt;
+      statusEl.style.color = color || '';
+    }
+  };
+  setStatus('🔄 지도 로딩 중…', 'var(--text3)');
+
+  // patch.js에서 노출된 헬퍼·데이터 가져오기
+  const _bm = window.basinMap || {};
+  const KR_RIVERS         = _bm.KOREA_RIVERS;
+  const provinceLabelsFn  = _bm.addProvinceLabels;
+
   // 사용자 피드백: 대시보드의 깨끗한 한국 지도와 같은 스타일
-  // → 타일 없음, 베이지 배경 위에 한국 영토 + 강줄기 + 도 라벨만
   crowdMap = L.map('crowd-map', {
-    zoomControl: false,
+    zoomControl: true,
     attributionControl: false,
     scrollWheelZoom: true,
     tap: true,
     minZoom: 6, maxZoom: 12,
     zoomSnap: 0.5, zoomDelta: 0.5,
-    // 한국 영토 밖으로 panning/zoom 못 나가도록 (독도까지 포함)
     maxBounds: L.latLngBounds([31.5, 123.5], [39.8, 133.5]),
     maxBoundsViscosity: 0.9,
   }).setView([36.3, 127.8], 7);
 
-  // 작은 맵용 줌 클래스 (라벨 크기 조정)
-  function updateCrowdZoomClass() {
-    const z = crowdMap.getZoom();
-    const el = document.getElementById('crowd-map');
-    if (!el) return;
-    el.classList.remove('z-small','z-mid','z-large');
-    if (z <= 7) el.classList.add('z-small');
-    else if (z <= 9) el.classList.add('z-mid');
-    else el.classList.add('z-large');
-  }
-  crowdMap.on('zoomend', updateCrowdZoomClass);
-  setTimeout(updateCrowdZoomClass, 50);
-
-  // ① 한국 영토 GeoJSON (베이지 채색) — 캐시 사용
+  // ① 한국 영토 GeoJSON
   const applyProvinceLayer = (geojson) => {
     const provinceLayer = L.geoJSON(geojson, {
-      style: {
-        fillColor: '#fce7e0',
-        fillOpacity: 1.0,
-        color: '#94a3b8',
-        weight: 0.7,
-        opacity: 0.8,
-      },
+      style: { fillColor: '#fce7e0', fillOpacity: 1.0, color: '#94a3b8', weight: 0.7, opacity: 0.8 },
       interactive: false,
     }).addTo(crowdMap);
     if (provinceLayer.bringToBack) provinceLayer.bringToBack();
-    // 도 이름 한국어 라벨
-    try { addProvinceLabels(geojson, crowdMap); } catch(e) {}
+    // 도 이름 라벨 (patch.js의 함수 사용)
+    if (typeof provinceLabelsFn === 'function') {
+      try { provinceLabelsFn(geojson, crowdMap); } catch(e) { console.warn('[crowd] label err', e); }
+    }
   };
 
   if (_koreaGeoJSONCache) {
@@ -9841,16 +9851,17 @@ function initCrowdMap() {
         _koreaGeoJSONCache = geojson;
         applyProvinceLayer(geojson);
       })
-      .catch(e => console.info('[crowd-map] province skip:', e));
+      .catch(e => console.info('[crowd-map] province GeoJSON skip:', e));
   }
 
-  // ② 강줄기 (대시보드와 같은 KOREA_RIVERS 데이터)
-  if (typeof KOREA_RIVERS !== 'undefined') {
+  // ② 강줄기 (patch.js의 KOREA_RIVERS 사용)
+  if (KR_RIVERS) {
     const riversLayer = L.layerGroup().addTo(crowdMap);
-    Object.values(KOREA_RIVERS).forEach(r => {
+    let riverCount = 0;
+    Object.values(KR_RIVERS).forEach(r => {
       L.polyline(r.coords, {
-        color: '#7dd3fc',
-        weight: 1, opacity: 0.85,
+        color: r.color || '#7dd3fc',
+        weight: 1.2, opacity: 0.85,
         smoothFactor: 1.5, lineCap:'round', lineJoin:'round',
         interactive: false,
       }).addTo(riversLayer);
@@ -9865,29 +9876,50 @@ function initCrowdMap() {
           }),
           interactive: false, keyboard: false,
         }).addTo(riversLayer);
+        riverCount++;
       }
     });
-  }
-
-  // ③ 울릉도 + 독도 (GeoJSON에서 누락될 수 있어서 명시적 추가)
-  if (typeof _addIslandsToMap === 'function') {
-    _addIslandsToMap(crowdMap);
+    console.info('[crowd-map] rivers drawn:', riverCount);
   } else {
-    // basinMap용 헬퍼가 없으면 인라인으로 작은 사각형 추가
-    [
-      { center: [37.5, 130.87], r: 0.04, name: '울릉도' },
-      { center: [37.24, 131.87], r: 0.015, name: '독도' },
-    ].forEach(isl => {
-      L.circle(isl.center, {
-        radius: isl.r * 100000,
-        fillColor: '#fce7e0', fillOpacity: 1,
-        color: '#94a3b8', weight: 0.7, opacity: 0.8,
-        interactive: false,
-      }).addTo(crowdMap);
-    });
+    console.warn('[crowd-map] KOREA_RIVERS not available — patch.js not loaded?');
   }
 
-  setTimeout(() => crowdMap.invalidateSize(), 100);
+  // ③ 클릭으로 좌표 찍기
+  let pickMarker = null;
+  crowdMap.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    if (lat < 33 || lat > 39 || lng < 124 || lng > 132) return;
+
+    if (pickMarker) crowdMap.removeLayer(pickMarker);
+    pickMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="font-size:36px;line-height:1;transform:translate(-50%,-100%);text-shadow:0 2px 8px rgba(255,68,68,0.6);">📍</div>`,
+        iconSize: [36, 36], iconAnchor: [0, 0],
+      }),
+    }).addTo(crowdMap);
+
+    const latEl = document.getElementById('cr-lat');
+    const lngEl = document.getElementById('cr-lng');
+    if (latEl) { latEl.value = lat.toFixed(6); latEl.dispatchEvent(new Event('input')); }
+    if (lngEl) { lngEl.value = lng.toFixed(6); lngEl.dispatchEvent(new Event('input')); }
+
+    if (latEl && lngEl) {
+      [latEl, lngEl].forEach(el => {
+        el.style.transition = 'background 0.3s';
+        el.style.background = 'rgba(0,255,200,0.18)';
+        setTimeout(() => { el.style.background = ''; }, 800);
+      });
+    }
+  });
+
+  // 상태 표시 갱신 — 강줄기·도 라벨 적용됐는지
+  setTimeout(() => {
+    const hasRivers = !!KR_RIVERS;
+    setStatus(hasRivers ? '✅ 한국 지도 (강줄기·시도)' : '⚠️ 외부 데이터 로딩 실패', hasRivers ? 'var(--accent3)' : 'var(--warning)');
+    crowdMap.invalidateSize();
+  }, 200);
 }
 
 // ═══════════════════════════════════════
@@ -12625,6 +12657,22 @@ function quizBackToStart() {
   _updateSoundToggleUI();
 }
 
+// 결과 화면 → 교육 카드 그리드로 돌아가기 (퀴즈 모듈 닫음)
+function goToEduCardGrid() {
+  // quiz 모듈 비활성화 → 교육 카드 그리드 다시 노출
+  const quizMod = document.getElementById('edu-quiz');
+  if (quizMod) quizMod.classList.remove('active');
+  // 모든 edu-module 닫기
+  document.querySelectorAll('.edu-module').forEach(m => m.classList.remove('active'));
+  // 교육 탭으로 (이미 거기 있어도 OK)
+  navigate('edu');
+  // 카드 그리드로 스크롤
+  setTimeout(() => {
+    const cards = document.querySelector('.edu-cards');
+    if (cards) cards.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 100);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 📄 Step 6-C: 결과 보고서 PDF 내보내기 (학교 제출용)
 // ─────────────────────────────────────────────────────────────
@@ -14780,6 +14828,11 @@ window.basinMap = {
   show: showBasinMap,
   hide: () => { if (panelEl) panelEl.style.display = 'none'; },
   getDamBasin, BASIN_DEFS, KOREA_RIVERS,
+  // Step 6-E: 저수지 등록 지도가 같은 데이터·함수 쓸 수 있도록 노출
+  addProvinceLabels,
+  PROVINCE_CENTERS,
+  shortenProvinceName,
+  computeCentroid,
 };
 window.weatherPanel = {
   refresh: () => loadWeather(true),
