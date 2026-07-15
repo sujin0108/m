@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>너트 재고 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#221e1b;
+    --bg-grain: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.028) 1px, transparent 1.6px);
+    --panel:#2c2622;
+    --panel-2:#352e29;
+    --line:#4a3f37;
+    --text:#f1e9db;
+    --text-dim:#a89584;
+    --brass:#c99a4e;
+    --brass-dim:#8a6a38;
+    --teal:#5c9c8f;
+    --teal-dim:#3c6a61;
+    --rust:#c66a35;
+    --rust-dim:#8a4622;
+    --danger:#c0503f;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background-color:var(--bg);
+    background-image:var(--bg-grain);
+    background-size:14px 14px;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 16px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px; margin-bottom:22px; flex-wrap:wrap; gap:10px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:26px; font-weight:700; margin:0; letter-spacing:-0.01em;
+    display:flex; align-items:center; gap:10px;
+  }
+  h1 .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500;
+    color:var(--bg); background:var(--brass); padding:3px 7px; border-radius:4px;
+    letter-spacing:0.04em;
+  }
+  .sub{color:var(--text-dim); font-size:13px; margin-top:4px;}
+  .total-badge{
+    font-family:'IBM Plex Mono',monospace; text-align:right; font-size:13px; color:var(--text-dim);
+  }
+  .total-badge b{display:block; font-size:28px; color:var(--text); font-family:'Space Grotesk',sans-serif;}
+
+  .bins{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px;
+  }
+  @media(max-width:640px){ .bins{grid-template-columns:1fr;} }
+
+  .bin{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 16px 16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .bin::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:4px;
+  }
+  .bin.a::before{background:var(--brass);}
+  .bin.b::before{background:var(--teal);}
+  .bin.c::before{background:var(--rust);}
+
+  .bin-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;}
+  .bin-name{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px;}
+  .bin-ratio{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim);}
+  .bin-dir{font-size:11px; color:var(--text-dim); margin-top:2px; margin-bottom:14px;}
+
+  .nut-icon{width:22px; height:22px; opacity:0.9;}
+
+  .count{
+    font-family:'IBM Plex Mono',monospace; font-size:40px; font-weight:600;
+    line-height:1; margin-bottom:14px; text-align:center;
+  }
+  .bin.a .count{color:var(--brass);}
+  .bin.b .count{color:var(--teal);}
+  .bin.c .count{color:var(--rust);}
+
+  .stepper{display:flex; align-items:center; justify-content:center; gap:8px;}
+  .stepper button{
+    width:32px; height:32px; border-radius:7px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:16px; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .stepper button:hover{border-color:var(--brass);}
+  .stepper input{
+    width:60px; text-align:center; background:transparent; border:none; color:var(--text-dim);
+    font-family:'IBM Plex Mono',monospace; font-size:12px;
+  }
+
+  .panel-title{
+    font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600;
+    margin:0 0 12px; display:flex; align-items:center; gap:8px; color:var(--text);
+  }
+  .panel-title .num{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--bg);
+    background:var(--text-dim); width:18px; height:18px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 20px; margin-bottom:16px;
+  }
+
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace;}
+  .field input{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:14px;
+    width:100px;
+  }
+  .field input:focus{outline:none; border-color:var(--brass);}
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    border:none; border-radius:7px; padding:10px 16px; cursor:pointer;
+  }
+  .btn-primary{background:var(--brass); color:#221e1b;}
+  .btn-primary:hover{background:#dbab5e;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--text-dim);}
+  .btn-ghost:hover{color:var(--text); border-color:var(--text-dim);}
+  .btn-danger{background:transparent; border:1px solid var(--rust-dim); color:var(--rust);}
+  .btn-danger:hover{background:var(--rust-dim); color:var(--text);}
+
+  .preview-table{
+    width:100%; border-collapse:collapse; margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:13px;
+  }
+  .preview-table th{
+    text-align:center; font-weight:500; color:var(--text-dim); font-size:11px;
+    padding:0 6px 8px; border-bottom:1px solid var(--line);
+  }
+  .preview-table th.group-col{text-align:left;}
+  .preview-table td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:center;}
+  .preview-table td.group-col{text-align:left; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;}
+  .preview-table .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px;}
+  .dot.a{background:var(--brass);} .dot.b{background:var(--teal);} .dot.c{background:var(--rust);}
+  .preview-table .before-val{color:var(--text-dim);}
+  .preview-table input{
+    width:72px; text-align:center; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:6px 4px; font-family:'IBM Plex Mono',monospace; font-size:13px;
+  }
+  .preview-table input:focus{outline:none; border-color:var(--brass);}
+  .preview-table td.result-cell input{color:var(--brass); font-weight:600; border-color:var(--brass-dim);}
+  .preview-table td.arrow{color:var(--text-dim); font-size:12px; padding:8px 2px;}
+
+  .hint{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+
+  .settings-grid{display:flex; gap:20px; flex-wrap:wrap;}
+
+  .history{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;}
+  .history li{
+    display:flex; justify-content:space-between; gap:10px; font-size:12.5px;
+    border-bottom:1px dashed var(--line); padding-bottom:8px; color:var(--text-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .history li span.time{color:var(--text-dim); min-width:110px;}
+  .history li span.detail{color:var(--text); flex:1; text-align:right;}
+  .empty{color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0;}
+
+  footer{text-align:center; margin-top:30px; color:var(--text-dim); font-size:11px; font-family:'IBM Plex Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>너트 재고 관리 <span class="tag">3 : 2 : 1</span></h1>
+      <div class="sub">그룹 A(변화 없음) · 그룹 B(왼쪽 추가) · 그룹 C(오른쪽 추가)</div>
+    </div>
+    <div class="total-badge">총 보관 수량<b id="totalCount">0</b></div>
+  </header>
+
+  <div class="bins">
+    <div class="bin a">
+      <div class="bin-head">
+        <span class="bin-name">그룹 A</span>
+        <span class="bin-ratio" id="ratioA">비율 3</span>
+      </div>
+      <div class="bin-dir">변화 없음</div>
+      <div class="count" id="countA">0</div>
+      <div class="stepper">
+        <button onclick="adjust('a',-1)">−</button>
+        <input type="number" id="inputA" value="0" oninput="setDirect('a', this.value)">
+        <button onclick="adjust('a',1)">＋</button>
+      </div>
+    </div>
+
+    <div class="bin b">
+      <div class="bin-head">
+        <span class="bin-name">그룹 B</span>
+        <span class="bin-ratio" id="ratioB">비율 2</span>
+      </div>
+      <div class="bin-dir">← 왼쪽 추가분 포함</div>
+      <div class="count" id="countB">0</div>
+      <div class="stepper">
+        <button onclick="adjust('b',-1)">−</button>
+        <input type="number" id="inputB" value="0" oninput="setDirect('b', this.value)">
+        <button onclick="adjust('b',1)">＋</button>
+      </div>
+    </div>
+
+    <div class="bin c">
+      <div class="bin-head">
+        <span class="bin-name">그룹 C</span>
+        <span class="bin-ratio" id="ratioC">비율 1</span>
+      </div>
+      <div class="bin-dir">오른쪽 추가분 포함 →</div>
+      <div class="count" id="countC">0</div>
+      <div class="stepper">
+        <button onclick="adjust('c',-1)">−</button>
+        <input type="number" id="inputC" value="0" oninput="setDirect('c', this.value)">
+        <button onclick="adjust('c',1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">1</span> 새 박스 입고</p>
+    <div class="row">
+      <div class="field">
+        <label>입고 총 개수</label>
+        <input type="number" id="boxTotal" placeholder="예: 60" min="0">
+      </div>
+      <button class="btn btn-primary" style="align-self:flex-end;" onclick="calcPreview()">분배 계산</button>
+    </div>
+
+    <table class="preview-table" id="previewBox" style="display:none;">
+      <thead>
+        <tr>
+          <th class="group-col">그룹</th>
+          <th>이전</th>
+          <th></th>
+          <th>추가</th>
+          <th></th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="group-col"><span class="dot a"></span>A <span id="pctA" style="color:var(--text-dim); font-weight:400;"></span></td>
+          <td class="before-val" id="beforeA">0</td>
+          <td class="arrow">+</td>
+          <td><input type="number" id="prevA" oninput="onEditAdd('a')"></td>
+          <td class="arrow">=</td>
+          <td class="result-cell"><input type="number" id="resultA" oninput="onEditResult('a')"></td>
+        </tr>
+        <tr>
+          <td class="group-col"><span class="dot b"></span>B <span id="pctB" style="color:var(--text-dim); font-weight:400;"></span></td>
+          <td class="before-val" id="beforeB">0</td>
+          <td class="arrow">+</td>
+          <td><input type="number" id="prevB" oninput="onEditAdd('b')"></td>
+          <td class="arrow">=</td>
+          <td class="result-cell"><input type="number" id="resultB" oninput="onEditResult('b')"></td>
+        </tr>
+        <tr>
+          <td class="group-col"><span class="dot c"></span>C <span id="pctC" style="color:var(--text-dim); font-weight:400;"></span></td>
+          <td class="before-val" id="beforeC">0</td>
+          <td class="arrow">+</td>
+          <td><input type="number" id="prevC" oninput="onEditAdd('c')"></td>
+          <td class="arrow">=</td>
+          <td class="result-cell"><input type="number" id="resultC" oninput="onEditResult('c')"></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="hint" id="previewHint" style="display:none;"></div>
+    <div class="row" id="applyRow" style="display:none; margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyBox()">이 분배대로 적용</button>
+      <button class="btn btn-ghost" onclick="cancelPreview()">취소</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">2</span> 분배 설정</p>
+    <div class="settings-grid">
+      <div class="field">
+        <label>비율 A : B : C</label>
+        <div class="row">
+          <input type="number" id="ratioAInput" style="width:50px;" min="0">
+          <span>:</span>
+          <input type="number" id="ratioBInput" style="width:50px;" min="0">
+          <span>:</span>
+          <input type="number" id="ratioCInput" style="width:50px;" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>그룹 B 추가분(왼쪽)</label>
+        <input type="number" id="extraB" min="0">
+      </div>
+      <div class="field">
+        <label>그룹 C 추가분(오른쪽)</label>
+        <input type="number" id="extraC" min="0">
+      </div>
+      <button class="btn btn-ghost" style="align-self:flex-end;" onclick="saveSettings()">설정 저장</button>
+    </div>
+    <div class="hint">비율은 기본 분배 계산에 쓰이고, 추가분은 박스 입고 시 그룹 B·C에 자동으로 더해져요. 계산된 값은 입고 시 언제든 직접 수정할 수 있어요.</div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">3</span> 입고 기록</p>
+    <ul class="history" id="historyList"><li class="empty" style="border:none;">아직 기록이 없어요</li></ul>
+    <div class="row" style="margin-top:14px;">
+      <button class="btn btn-danger" onclick="resetAll()">전체 초기화</button>
+    </div>
+  </div>
+
+  <footer>모든 데이터는 이 브라우저에 자동 저장됩니다</footer>
+</div>
+
+<script>
+let state = {
+  stock: { a: 0, b: 0, c: 0 },
+  ratio: [3, 2, 1],
+  extraB: 0,
+  extraC: 0,
+  history: []
+};
+let pendingPreview = null;
+const KEY = 'nut-inventory-state';
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(KEY, false);
+    if(res && res.value){
+      state = JSON.parse(res.value);
+    }
+  }catch(e){
+    console.log('저장된 데이터 없음, 기본값으로 시작');
+  }
+  render();
+}
+
+async function saveState(){
+  try{
+    await window.storage.set(KEY, JSON.stringify(state), false);
+  }catch(e){
+    console.error('저장 실패', e);
+  }
+}
+
+function render(){
+  document.getElementById('countA').textContent = state.stock.a;
+  document.getElementById('countB').textContent = state.stock.b;
+  document.getElementById('countC').textContent = state.stock.c;
+  document.getElementById('inputA').value = state.stock.a;
+  document.getElementById('inputB').value = state.stock.b;
+  document.getElementById('inputC').value = state.stock.c;
+
+  document.getElementById('ratioA').textContent = '비율 ' + state.ratio[0];
+  document.getElementById('ratioB').textContent = '비율 ' + state.ratio[1];
+  document.getElementById('ratioC').textContent = '비율 ' + state.ratio[2];
+
+  document.getElementById('ratioAInput').value = state.ratio[0];
+  document.getElementById('ratioBInput').value = state.ratio[1];
+  document.getElementById('ratioCInput').value = state.ratio[2];
+  document.getElementById('extraB').value = state.extraB;
+  document.getElementById('extraC').value = state.extraC;
+
+  const total = state.stock.a + state.stock.b + state.stock.c;
+  document.getElementById('totalCount').textContent = total;
+
+  renderHistory();
+}
+
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  if(!state.history.length){
+    list.innerHTML = '<li class="empty" style="border:none;">아직 기록이 없어요</li>';
+    return;
+  }
+  list.innerHTML = state.history.slice().reverse().map(h => {
+    return `<li><span class="time">${h.time}</span><span class="detail">+${h.total}개 → A ${h.a >= 0 ? '+' : ''}${h.a} / B ${h.b >= 0 ? '+' : ''}${h.b} / C ${h.c >= 0 ? '+' : ''}${h.c}</span></li>`;
+  }).join('');
+}
+
+function adjust(group, delta){
+  state.stock[group] = Math.max(0, state.stock[group] + delta);
+  render();
+  saveState();
+}
+
+function setDirect(group, value){
+  const v = parseInt(value, 10);
+  state.stock[group] = isNaN(v) ? 0 : Math.max(0, v);
+  document.getElementById('totalCount').textContent = state.stock.a + state.stock.b + state.stock.c;
+  saveState();
+}
+
+function calcPreview(){
+  const total = parseInt(document.getElementById('boxTotal').value, 10);
+  if(isNaN(total) || total <= 0){
+    alert('입고 개수를 올바르게 입력해주세요.');
+    return;
+  }
+  const [ra, rb, rc] = state.ratio;
+  const sumRatio = ra + rb + rc;
+  const unit = total / sumRatio;
+
+  let a = Math.round(unit * ra);
+  let b = Math.round(unit * rb) + Number(state.extraB || 0);
+  let c = Math.round(unit * rc) + Number(state.extraC || 0);
+
+  // 반올림 오차를 A에서 보정 (추가분은 그대로 유지)
+  const baseSum = Math.round(unit * ra) + Math.round(unit * rb) + Math.round(unit * rc);
+  a += (total - baseSum);
+
+  document.getElementById('beforeA').textContent = state.stock.a;
+  document.getElementById('beforeB').textContent = state.stock.b;
+  document.getElementById('beforeC').textContent = state.stock.c;
+
+  document.getElementById('prevA').value = a;
+  document.getElementById('prevB').value = b;
+  document.getElementById('prevC').value = c;
+
+  document.getElementById('resultA').value = state.stock.a + a;
+  document.getElementById('resultB').value = state.stock.b + b;
+  document.getElementById('resultC').value = state.stock.c + c;
+
+  document.getElementById('pctA').textContent = `(비율 ${ra})`;
+  document.getElementById('pctB').textContent = `(비율 ${rb}${state.extraB ? ' + 추가 ' + state.extraB : ''})`;
+  document.getElementById('pctC').textContent = `(비율 ${rc}${state.extraC ? ' + 추가 ' + state.extraC : ''})`;
+
+  document.getElementById('previewBox').style.display = 'table';
+  document.getElementById('applyRow').style.display = 'flex';
+  const hint = document.getElementById('previewHint');
+  hint.style.display = 'block';
+  hint.textContent = `입고 ${total}개 기준 제안값이에요. "추가"나 "결과" 칸을 직접 고치면 서로 자동으로 맞춰져요.`;
+
+  pendingPreview = total;
+}
+
+function onEditAdd(group){
+  const before = parseInt(document.getElementById('before' + group.toUpperCase()).textContent, 10) || 0;
+  const add = parseInt(document.getElementById('prev' + group.toUpperCase()).value, 10) || 0;
+  document.getElementById('result' + group.toUpperCase()).value = before + add;
+}
+
+function onEditResult(group){
+  const before = parseInt(document.getElementById('before' + group.toUpperCase()).textContent, 10) || 0;
+  const result = parseInt(document.getElementById('result' + group.toUpperCase()).value, 10) || 0;
+  document.getElementById('prev' + group.toUpperCase()).value = result - before;
+}
+
+function applyBox(){
+  const a = parseInt(document.getElementById('prevA').value, 10) || 0;
+  const b = parseInt(document.getElementById('prevB').value, 10) || 0;
+  const c = parseInt(document.getElementById('prevC').value, 10) || 0;
+
+  state.stock.a += a;
+  state.stock.b += b;
+  state.stock.c += c;
+
+  const now = new Date();
+  const time = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  state.history.push({ time, total: pendingPreview, a, b, c });
+
+  cancelPreview();
+  document.getElementById('boxTotal').value = '';
+  render();
+  saveState();
+}
+
+function cancelPreview(){
+  document.getElementById('previewBox').style.display = 'none';
+  document.getElementById('applyRow').style.display = 'none';
+  document.getElementById('previewHint').style.display = 'none';
+  pendingPreview = null;
+}
+
+function saveSettings(){
+  const ra = parseInt(document.getElementById('ratioAInput').value, 10);
+  const rb = parseInt(document.getElementById('ratioBInput').value, 10);
+  const rc = parseInt(document.getElementById('ratioCInput').value, 10);
+  const eb = parseInt(document.getElementById('extraB').value, 10);
+  const ec = parseInt(document.getElementById('extraC').value, 10);
+
+  state.ratio = [isNaN(ra)?3:ra, isNaN(rb)?2:rb, isNaN(rc)?1:rc];
+  state.extraB = isNaN(eb) ? 0 : eb;
+  state.extraC = isNaN(ec) ? 0 : ec;
+
+  render();
+  saveState();
+}
+
+function resetAll(){
+  if(!confirm('모든 재고와 기록을 초기화할까요? 이 작업은 되돌릴 수 없어요.')) return;
+  state = { stock:{a:0,b:0,c:0}, ratio:[3,2,1], extraB:0, extraC:0, history:[] };
+  render();
+  saveState();
+}
+
+loadState();
+</script>
+</body>
+</html>
