@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Common side</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#221e1b;
+    --bg-grain: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.028) 1px, transparent 1.6px);
+    --panel:#2c2622;
+    --panel-2:#352e29;
+    --line:#4a3f37;
+    --text:#f1e9db;
+    --text-dim:#a89584;
+    --brass:#c99a4e;
+    --brass-dim:#8a6a38;
+    --steel:#5b84a6;
+    --steel-dim:#3c5972;
+    --teal:#5c9c8f;
+    --teal-dim:#3c6a61;
+    --rust:#c66a35;
+    --rust-dim:#8a4622;
+    --danger:#c0503f;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background-color:var(--bg);
+    background-image:var(--bg-grain);
+    background-size:14px 14px;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 16px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px; margin-bottom:14px; flex-wrap:wrap; gap:10px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:26px; font-weight:700; margin:0; letter-spacing:-0.01em;
+    display:flex; align-items:center; gap:10px;
+  }
+  h1 .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500;
+    color:var(--bg); background:var(--brass); padding:3px 7px; border-radius:4px;
+    letter-spacing:0.04em;
+  }
+  .sub{color:var(--text-dim); font-size:13px; margin-top:4px;}
+  .total-badge{
+    font-family:'IBM Plex Mono',monospace; text-align:right; font-size:13px; color:var(--text-dim);
+  }
+  .total-badge b{display:block; font-size:28px; color:var(--text); font-family:'Space Grotesk',sans-serif;}
+
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .toolbar .btn{font-size:12px; padding:8px 12px;}
+
+  .recent-banner{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px;
+  }
+  @media(max-width:640px){ .recent-banner{grid-template-columns:1fr;} }
+  .recent-col .rc-title{font-size:11px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; margin-bottom:6px;}
+  .recent-col .rc-main{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; margin-bottom:4px;}
+  .recent-col .rc-detail{font-size:12px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace;}
+  .recent-col{border-left:3px solid var(--line); padding-left:12px;}
+  .recent-col.recent{border-left-color:var(--brass);}
+  .recent-col.prev{border-left-color:var(--steel);}
+
+  .ratio-bar{
+    display:flex; height:22px; border-radius:6px; overflow:hidden; margin-bottom:6px;
+    border:1px solid var(--line);
+  }
+  .ratio-bar div{display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#1a1512; font-weight:600; transition:width .3s;}
+  .ratio-bar .seg-a{background:var(--brass);}
+  .ratio-bar .seg-d{background:var(--steel);}
+  .ratio-bar .seg-b{background:var(--teal);}
+  .ratio-bar .seg-c{background:var(--rust);}
+  .ratio-caption{font-size:11px; color:var(--text-dim); margin:0 0 20px; font-family:'IBM Plex Mono',monospace;}
+
+  .bins{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;
+  }
+  @media(max-width:800px){ .bins{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:440px){ .bins{grid-template-columns:1fr;} }
+
+  .bin{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 14px 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .bin::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:4px;
+  }
+  .bin.a::before{background:var(--brass);}
+  .bin.d::before{background:var(--steel);}
+  .bin.b::before{background:var(--teal);}
+  .bin.c::before{background:var(--rust);}
+
+  .bin-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:6px;}
+  .bin-name-select{
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+    background:transparent; border:none; color:var(--text); cursor:pointer; padding:0;
+  }
+  .bin-name-select:focus{outline:none;}
+  .bin-ratio{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); white-space:nowrap;}
+  .bin-custom-input{
+    width:100%; margin-top:6px; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:6px 8px; font-size:12px; font-family:'Inter',sans-serif;
+  }
+
+  .count{
+    font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600;
+    line-height:1; margin:6px 0 12px; text-align:center;
+  }
+  .bin.a .count{color:var(--brass);}
+  .bin.d .count{color:var(--steel);}
+  .bin.b .count{color:var(--teal);}
+  .bin.c .count{color:var(--rust);}
+
+  .stepper{display:flex; align-items:center; justify-content:center; gap:6px;}
+  .stepper button{
+    width:28px; height:28px; border-radius:7px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:15px; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .stepper button:hover{border-color:var(--brass);}
+  .stepper input{
+    width:54px; text-align:center; background:transparent; border:none; color:var(--text-dim);
+    font-family:'IBM Plex Mono',monospace; font-size:12px;
+  }
+
+  .panel-title{
+    font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600;
+    margin:0 0 12px; display:flex; align-items:center; gap:8px; color:var(--text);
+  }
+  .panel-title .num{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--bg);
+    background:var(--text-dim); width:18px; height:18px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 20px; margin-bottom:16px;
+  }
+
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace;}
+  .field input, .field textarea, .field select{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:14px;
+    width:100px;
+  }
+  .field textarea{width:100%; font-family:'Inter',sans-serif; font-size:13px; resize:vertical; min-height:44px;}
+  .field input:focus, .field textarea:focus, .field select:focus{outline:none; border-color:var(--brass);}
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    border:none; border-radius:7px; padding:10px 16px; cursor:pointer;
+  }
+  .btn-primary{background:var(--brass); color:#221e1b;}
+  .btn-primary:hover{background:#dbab5e;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--text-dim);}
+  .btn-ghost:hover{color:var(--text); border-color:var(--text-dim);}
+  .btn-danger{background:transparent; border:1px solid var(--rust-dim); color:var(--rust);}
+  .btn-danger:hover{background:var(--rust-dim); color:var(--text);}
+  .btn-small{padding:6px 10px; font-size:11px; border-radius:6px;}
+
+  .preview-table{
+    width:100%; border-collapse:collapse; margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  }
+  .preview-table th{
+    text-align:center; font-weight:500; color:var(--text-dim); font-size:11px;
+    padding:0 4px 8px; border-bottom:1px solid var(--line);
+  }
+  .preview-table th.group-col{text-align:left;}
+  .preview-table td{padding:8px 4px; border-bottom:1px solid var(--line); text-align:center;}
+  .preview-table td.group-col{text-align:left; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12.5px;}
+  .preview-table .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+  .dot.a{background:var(--brass);} .dot.d{background:var(--steel);} .dot.b{background:var(--teal);} .dot.c{background:var(--rust);}
+  .preview-table .before-val{color:var(--text-dim);}
+  .preview-table input{
+    width:58px; text-align:center; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:6px; padding:6px 3px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  }
+  .preview-table input:focus{outline:none; border-color:var(--brass);}
+  .preview-table td.result-cell input{color:var(--brass); font-weight:600; border-color:var(--brass-dim);}
+  .preview-table td.defect-cell input{color:var(--rust); border-color:var(--rust-dim); width:46px;}
+  .preview-table td.arrow{color:var(--text-dim); font-size:12px; padding:8px 2px;}
+
+  .hint{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+
+  .settings-grid{display:flex; gap:20px; flex-wrap:wrap;}
+
+  .history{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto;}
+  .history li{
+    border-bottom:1px dashed var(--line); padding-bottom:10px;
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+  }
+  .h-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .h-row .time{color:var(--text-dim); min-width:110px; font-size:11.5px;}
+  .h-row .detail{color:var(--text); flex:1; text-align:right;}
+  .h-note{color:var(--text-dim); font-size:12px; margin-top:4px; font-family:'Inter',sans-serif; font-style:italic;}
+  .h-defect{color:var(--rust); font-size:11.5px; margin-top:3px;}
+  .h-actions{display:flex; gap:6px; margin-top:6px; justify-content:flex-end;}
+  .empty{color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0;}
+
+  .edit-box{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:8px;}
+  .edit-box .row{margin-bottom:8px;}
+  .edit-box .field input, .edit-box .field select{width:82px;}
+
+  .stats-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:12px;}
+  .stat-box{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:12px; text-align:center;}
+  .stat-box .num{font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--brass);}
+  .stat-box .label{font-size:11px; color:var(--text-dim); margin-top:4px;}
+
+  .backup-area{width:100%; min-height:140px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; margin-top:10px;}
+
+  footer{text-align:center; margin-top:30px; color:var(--text-dim); font-size:11px; font-family:'IBM Plex Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Common side <span class="tag" id="ratioTag">3:1:2:1</span></h1>
+      <div class="sub">너트 재고 관리 · 잔고 + 입고 전체가 항상 목표 비율에 맞도록 관리</div>
+    </div>
+    <div class="total-badge">총 보관 수량<b id="totalCount">0</b></div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn btn-ghost" onclick="exportCSV()">⬇ CSV 내보내기</button>
+    <button class="btn btn-ghost" onclick="shareSummary()">공유</button>
+    <button class="btn btn-ghost" onclick="toggleBackup()">백업 데이터 보기</button>
+  </div>
+
+  <div class="card" id="backupCard" style="display:none;">
+    <p class="panel-title"><span class="num">＋</span> 백업 / 가져오기</p>
+    <div class="hint">아래 내용을 복사해서 보관하거나 다른 기기에 붙여넣기 하면 그대로 이어서 쓸 수 있어요.</div>
+    <textarea class="backup-area" id="backupText" readonly></textarea>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn btn-ghost btn-small" onclick="copyBackup()">복사</button>
+      <button class="btn btn-ghost btn-small" onclick="document.getElementById('importArea').style.display='block'">가져오기 열기</button>
+    </div>
+    <div id="importArea" style="display:none; margin-top:10px;">
+      <textarea class="backup-area" id="importText" placeholder="여기에 백업 JSON을 붙여넣으세요"></textarea>
+      <button class="btn btn-primary btn-small" style="margin-top:8px;" onclick="importBackup()">이 데이터로 불러오기</button>
+    </div>
+  </div>
+
+  <div class="recent-banner" id="recentBanner"></div>
+
+  <div class="ratio-bar" id="ratioBar"></div>
+  <div class="ratio-caption" id="ratioCaption">현재 비율 —</div>
+
+  <div class="bins" id="binsWrap"></div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">1</span> 새 박스 입고</p>
+    <div class="row">
+      <div class="field">
+        <label>입고 총 개수</label>
+        <input type="number" id="boxTotal" placeholder="예: 60" min="0">
+      </div>
+      <button class="btn btn-primary" style="align-self:flex-end;" onclick="calcPreview()">분배 계산</button>
+    </div>
+
+    <table class="preview-table" id="previewBox" style="display:none;">
+      <thead>
+        <tr>
+          <th class="group-col">그룹</th>
+          <th>이전</th>
+          <th></th>
+          <th>추가</th>
+          <th></th>
+          <th>결과</th>
+          <th>불량</th>
+        </tr>
+      </thead>
+      <tbody id="previewBody"></tbody>
+    </table>
+    <div class="field" id="noteFieldWrap" style="display:none; margin-top:12px; width:100%;">
+      <label>특이사항 / 메모</label>
+      <textarea id="boxNote" placeholder="예: 3번 박스 포장 파손, 규격 다른 자재 일부 섞임 등"></textarea>
+    </div>
+    <div class="hint" id="previewHint" style="display:none;"></div>
+    <div class="row" id="applyRow" style="display:none; margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyBox()">이 내용으로 입고 기록</button>
+      <button class="btn btn-ghost" onclick="cancelPreview()">취소</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">2</span> 특이사항만 기록 (입고 없이)</p>
+    <div class="row">
+      <textarea id="quickNote" placeholder="예: C그룹 보관함 습기 발생, 재점검 필요" style="flex:1; min-width:200px;"></textarea>
+      <button class="btn btn-ghost" style="align-self:flex-start;" onclick="addQuickNote()">기록 추가</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">3</span> 분배 설정</p>
+    <div class="settings-grid" id="ratioSettingsWrap"></div>
+    <div class="hint">비율은 "잔고+입고 전체"가 이 값에 최대한 가까워지도록 배분을 역산하는 데 쓰여요. 추가분은 그 결과에 더해 오른쪽·왼쪽 그룹 쪽으로 소량을 추가로 옮기고 싶을 때만 설정하세요(기본 0). Mid 그룹에는 추가분이 적용되지 않아요.</div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">4</span> 월정산 통계</p>
+    <div class="row">
+      <div class="field">
+        <label>조회 월</label>
+        <select id="monthSelect" onchange="renderStats()" style="width:140px;"></select>
+      </div>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+
+  <div class="card">
+    <p class="panel-title"><span class="num">5</span> 입고 / 기록 이력</p>
+    <ul class="history" id="historyList"></ul>
+    <div class="row" style="margin-top:14px;">
+      <button class="btn btn-danger" onclick="resetAll()">전체 초기화</button>
+    </div>
+  </div>
+
+  <footer>모든 데이터는 이 브라우저에 자동 저장됩니다</footer>
+</div>
+
+<script>
+const GROUPS = ['a', 'd', 'b', 'c']; // a=공통, d=mid, b=오른쪽(비율2), c=왼쪽(비율1)
+const GROUP_NAME = { a: 'A', d: 'Mid', b: 'B', c: 'C' };
+const LABEL_PRESETS = ['공통(Common)', '미드(Mid)', '왼쪽(Left)', '오른쪽(Right)', '상단(Upper side)', '하단(Lower side)', '직접입력'];
+
+const DEFAULT_STATE = {
+  stock: { a: 0, d: 0, b: 0, c: 0 },
+  ratio: { a: 3, d: 1, b: 2, c: 1 },
+  extraB: 0,
+  extraC: 0,
+  labels: { a: '공통(Common)', d: '미드(Mid)', b: '오른쪽(Right)', c: '왼쪽(Left)' },
+  history: []
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let pendingCalc = null;
+const KEY = 'nut-inventory-state';
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(KEY, false);
+    if(res && res.value){
+      const loaded = JSON.parse(res.value);
+      state = migrateState(loaded);
+    }
+  }catch(e){
+    console.log('저장된 데이터 없음, 기본값으로 시작');
+  }
+  buildBins();
+  buildRatioSettings();
+  render();
+}
+
+// 이전 버전(그룹 3개, 배열형 ratio, add/defect 없는 기록 등) 데이터를 현재 구조로 변환
+function migrateState(loaded){
+  const s = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+  if(loaded.stock){
+    GROUPS.forEach(g => { if(typeof loaded.stock[g] === 'number') s.stock[g] = loaded.stock[g]; });
+  }
+
+  if(Array.isArray(loaded.ratio)){
+    // 예전 [3,2,1] 배열 형식 -> a,b,c 매핑, d는 기본값 유지
+    s.ratio.a = loaded.ratio[0] ?? s.ratio.a;
+    s.ratio.b = loaded.ratio[1] ?? s.ratio.b;
+    s.ratio.c = loaded.ratio[2] ?? s.ratio.c;
+  } else if(loaded.ratio && typeof loaded.ratio === 'object'){
+    GROUPS.forEach(g => { if(typeof loaded.ratio[g] === 'number') s.ratio[g] = loaded.ratio[g]; });
+  }
+
+  if(typeof loaded.extraB === 'number') s.extraB = loaded.extraB;
+  if(typeof loaded.extraC === 'number') s.extraC = loaded.extraC;
+
+  if(loaded.labels){
+    GROUPS.forEach(g => { if(loaded.labels[g]) s.labels[g] = loaded.labels[g]; });
+  }
+
+  s.history = (loaded.history || []).map(h => normalizeHistoryEntry(h));
+
+  return s;
+}
+
+function normalizeHistoryEntry(h){
+  const emptyGroupObj = () => ({ a: 0, d: 0, b: 0, c: 0 });
+  let add = emptyGroupObj();
+  let defect = emptyGroupObj();
+
+  if(h.add && typeof h.add === 'object'){
+    GROUPS.forEach(g => { add[g] = h.add[g] || 0; });
+  } else {
+    // 아주 예전 형식: { a, b, c } 가 최상위에 바로 있는 경우
+    add.a = h.a || 0; add.b = h.b || 0; add.c = h.c || 0;
+  }
+
+  if(h.defect && typeof h.defect === 'object'){
+    GROUPS.forEach(g => { defect[g] = h.defect[g] || 0; });
+  }
+
+  let dateISO = h.dateISO;
+  if(!dateISO){
+    const parsed = h.time ? Date.parse(h.time) : NaN;
+    dateISO = !isNaN(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
+  }
+
+  let before = null;
+  if(h.before && typeof h.before === 'object'){
+    before = emptyGroupObj();
+    GROUPS.forEach(g => { before[g] = h.before[g] || 0; });
+  }
+
+  return {
+    id: h.id || ('h' + Math.random().toString(36).slice(2, 10)),
+    type: h.type || 'box',
+    dateISO,
+    total: typeof h.total === 'number' ? h.total : (add.a + add.d + add.b + add.c),
+    add, defect, before,
+    note: h.note || ''
+  };
+}
+
+async function saveState(){
+  try{
+    await window.storage.set(KEY, JSON.stringify(state), false);
+  }catch(e){
+    console.error('저장 실패', e);
+  }
+}
+
+// ---------- 동적 UI 빌드 ----------
+function buildBins(){
+  const wrap = document.getElementById('binsWrap');
+  wrap.innerHTML = GROUPS.map(g => `
+    <div class="bin ${g}">
+      <div class="bin-head">
+        <select class="bin-name-select" id="labelSelect${g}" onchange="onLabelChange('${g}')"></select>
+        <span class="bin-ratio" id="ratioTxt${g}"></span>
+      </div>
+      <input type="text" class="bin-custom-input" id="labelCustom${g}" style="display:none;" placeholder="직접 입력" oninput="onLabelCustom('${g}', this.value)">
+      <div class="count" id="count${g}">0</div>
+      <div class="stepper">
+        <button onclick="adjust('${g}',-1)">−</button>
+        <input type="number" id="input${g}" value="0" oninput="setDirect('${g}', this.value)">
+        <button onclick="adjust('${g}',1)">＋</button>
+      </div>
+    </div>
+  `).join('');
+  GROUPS.forEach(g => {
+    const sel = document.getElementById('labelSelect' + g);
+    sel.innerHTML = LABEL_PRESETS.map(p => `<option value="${p}">${p}</option>`).join('');
+  });
+}
+
+function buildRatioSettings(){
+  const wrap = document.getElementById('ratioSettingsWrap');
+  wrap.innerHTML = `
+    <div class="field">
+      <label>비율 A : Mid : B : C</label>
+      <div class="row">
+        ${GROUPS.map(g => `<input type="number" id="ratioInput${g}" style="width:48px;" min="0">`).join('<span>:</span>')}
+      </div>
+    </div>
+    <div class="field">
+      <label id="extraBLabel">B 그룹 추가분</label>
+      <input type="number" id="extraB" min="0">
+    </div>
+    <div class="field">
+      <label id="extraCLabel">C 그룹 추가분</label>
+      <input type="number" id="extraC" min="0">
+    </div>
+    <button class="btn btn-ghost" style="align-self:flex-end;" onclick="saveSettings()">설정 저장</button>
+  `;
+}
+
+function onLabelChange(g){
+  const sel = document.getElementById('labelSelect' + g);
+  const customInput = document.getElementById('labelCustom' + g);
+  if(sel.value === '직접입력'){
+    customInput.style.display = 'block';
+    customInput.value = '';
+    state.labels[g] = customInput.value || '직접입력';
+  } else {
+    customInput.style.display = 'none';
+    state.labels[g] = sel.value;
+  }
+  render();
+  saveState();
+}
+
+function onLabelCustom(g, value){
+  state.labels[g] = value || '직접입력';
+  render();
+  saveState();
+}
+
+// ---------- 렌더 ----------
+function render(){
+  GROUPS.forEach(g => {
+    document.getElementById('count' + g).textContent = state.stock[g];
+    document.getElementById('input' + g).value = state.stock[g];
+    document.getElementById('ratioTxt' + g).textContent = '비율 ' + state.ratio[g];
+    document.getElementById('ratioInput' + g).value = state.ratio[g];
+
+    const sel = document.getElementById('labelSelect' + g);
+    const customInput = document.getElementById('labelCustom' + g);
+    if(LABEL_PRESETS.includes(state.labels[g])){
+      sel.value = state.labels[g];
+      customInput.style.display = 'none';
+    } else {
+      sel.value = '직접입력';
+      customInput.style.display = 'block';
+      customInput.value = state.labels[g];
+    }
+  });
+
+  document.getElementById('extraB').value = state.extraB;
+  document.getElementById('extraC').value = state.extraC;
+  document.getElementById('extraBLabel').textContent = 'B(' + state.labels.b + ') 추가분';
+  document.getElementById('extraCLabel').textContent = 'C(' + state.labels.c + ') 추가분';
+  document.getElementById('ratioTag').textContent = GROUPS.map(g => state.ratio[g]).join(':');
+
+  const total = GROUPS.reduce((s, g) => s + state.stock[g], 0);
+  document.getElementById('totalCount').textContent = total;
+
+  renderRatioBar(total);
+  renderRecentBanner();
+  renderHistory();
+  buildMonthSelect();
+  renderStats();
+}
+
+function renderRatioBar(total){
+  const bar = document.getElementById('ratioBar');
+  const caption = document.getElementById('ratioCaption');
+  if(total === 0){
+    bar.innerHTML = `<div class="seg-a" style="width:100%;">비어 있음</div>`;
+    caption.textContent = '아직 재고가 없어요';
+    return;
+  }
+  bar.innerHTML = GROUPS.map(g => {
+    const pct = (state.stock[g] / total * 100).toFixed(1);
+    return `<div class="seg-${g}" style="width:${pct}%;">${state.stock[g]}</div>`;
+  }).join('');
+
+  const vals = GROUPS.map(g => state.stock[g]);
+  const g = gcdAll(vals);
+  const simplified = vals.map(v => (g ? (v / g) : v).toFixed(1));
+  caption.textContent = `현재 비율 ${vals.join(':')} (약 ${simplified.join(':')}) · 목표 ${GROUPS.map(x => state.ratio[x]).join(':')}`;
+}
+
+function gcdAll(arr){
+  const gcd2 = (x, y) => y === 0 ? x : gcd2(y, x % y);
+  let g = arr[0];
+  for(let i = 1; i < arr.length; i++) g = gcd2(g, arr[i]);
+  return g || 1;
+}
+
+function renderRecentBanner(){
+  const wrap = document.getElementById('recentBanner');
+  const boxEntries = state.history.filter(h => h.type === 'box').sort((x, y) => new Date(y.dateISO) - new Date(x.dateISO));
+  if(boxEntries.length === 0){
+    wrap.innerHTML = `
+      <div class="recent-col recent"><div class="rc-title">최근 입고</div><div class="rc-main">아직 없음</div></div>
+      <div class="recent-col prev"><div class="rc-title">직전 재고</div><div class="rc-main">아직 없음</div></div>`;
+    return;
+  }
+  const last = boxEntries[0];
+  const addTxt = GROUPS.map(g => `${GROUP_NAME[g]} +${last.add[g]}`).join(' · ');
+  const beforeTxt = last.before ? GROUPS.map(g => `${GROUP_NAME[g]} ${last.before[g]}`).join(' · ') : '기록 없음(이전 버전 데이터)';
+  wrap.innerHTML = `
+    <div class="recent-col recent">
+      <div class="rc-title">최근 입고 · ${formatDate(last.dateISO)}</div>
+      <div class="rc-main">+${last.total}개</div>
+      <div class="rc-detail">${addTxt}</div>
+    </div>
+    <div class="recent-col prev">
+      <div class="rc-title">입고 직전 재고</div>
+      <div class="rc-main">${last.before ? GROUPS.reduce((s,g)=>s+last.before[g],0) : '—'}개</div>
+      <div class="rc-detail">${beforeTxt}</div>
+    </div>`;
+}
+
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  if(!state.history.length){
+    list.innerHTML = '<li class="empty" style="border:none;">아직 기록이 없어요</li>';
+    return;
+  }
+  list.innerHTML = state.history.slice().sort((x,y) => new Date(y.dateISO)-new Date(x.dateISO)).map(h => {
+    const defectSum = GROUPS.reduce((s,g) => s + (h.defect[g]||0), 0);
+    const isNoteOnly = h.type === 'note';
+    const detail = isNoteOnly ? '메모' :
+      `+${h.total}개 → ` + GROUPS.map(g => `${GROUP_NAME[g]} ${h.add[g]>=0?'+':''}${h.add[g]}`).join(' / ');
+    return `<li id="hist-${h.id}">
+      <div class="h-row">
+        <span class="time">${formatDate(h.dateISO)}</span>
+        <span class="detail">${detail}</span>
+      </div>
+      ${defectSum > 0 ? `<div class="h-defect">불량 ${GROUPS.map(g => `${GROUP_NAME[g]} ${h.defect[g]||0}`).join(' · ')} (합 ${defectSum})</div>` : ''}
+      ${h.note ? `<div class="h-note">📝 ${escapeHtml(h.note)}</div>` : ''}
+      <div class="h-actions">
+        <button class="btn btn-ghost btn-small" onclick="startEdit('${h.id}')">수정</button>
+        <button class="btn btn-danger btn-small" onclick="deleteEntry('${h.id}')">삭제</button>
+      </div>
+      <div id="edit-${h.id}"></div>
+    </li>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function formatDate(iso){
+  const d = new Date(iso);
+  const y = d.getFullYear(), mo = d.getMonth()+1, da = d.getDate();
+  const h = String(d.getHours()).padStart(2,'0'), mi = String(d.getMinutes()).padStart(2,'0');
+  return `${y}.${String(mo).padStart(2,'0')}.${String(da).padStart(2,'0')} ${h}:${mi}`;
+}
+
+function adjust(group, delta){
+  state.stock[group] = Math.max(0, state.stock[group] + delta);
+  render();
+  saveState();
+}
+
+function setDirect(group, value){
+  const v = parseInt(value, 10);
+  state.stock[group] = isNaN(v) ? 0 : Math.max(0, v);
+  render();
+  saveState();
+}
+
+// ---------- 입고 분배 계산 ----------
+function calcPreview(){
+  const total = parseInt(document.getElementById('boxTotal').value, 10);
+  if(isNaN(total) || total <= 0){
+    alert('입고 개수를 올바르게 입력해주세요.');
+    return;
+  }
+  const ratioMap = state.ratio;
+  const existing = state.stock;
+
+  let active = new Set(GROUPS);
+  let target = {};
+  while (active.size > 0) {
+    let sumRatioActive = 0, sumExistingActive = 0;
+    active.forEach(g => { sumRatioActive += ratioMap[g]; sumExistingActive += existing[g]; });
+    const totalAfterActive = sumExistingActive + total;
+    const unit = totalAfterActive / sumRatioActive;
+
+    const raw = {};
+    const negative = [];
+    active.forEach(g => {
+      raw[g] = unit * ratioMap[g];
+      if (raw[g] < existing[g] - 1e-9) negative.push(g);
+    });
+
+    if (negative.length === 0) {
+      const temp = {};
+      let sumRounded = 0;
+      active.forEach(g => { temp[g] = Math.round(raw[g]); sumRounded += temp[g]; });
+      const diff = totalAfterActive - sumRounded;
+      if (diff !== 0) {
+        const biggest = [...active].sort((x, y) => ratioMap[y] - ratioMap[x])[0];
+        temp[biggest] += diff;
+      }
+      active.forEach(g => { target[g] = temp[g]; });
+      break;
+    } else {
+      negative.forEach(g => { target[g] = existing[g]; active.delete(g); });
+    }
+  }
+  GROUPS.forEach(g => { if (!(g in target)) target[g] = existing[g]; });
+
+  const totalExtra = Number(state.extraB || 0) + Number(state.extraC || 0);
+  if (totalExtra > 0 && target.a - totalExtra >= existing.a) {
+    target.a -= totalExtra;
+    target.b += Number(state.extraB || 0);
+    target.c += Number(state.extraC || 0);
+  }
+
+  const add = {};
+  GROUPS.forEach(g => { add[g] = target[g] - existing[g]; });
+
+  const body = document.getElementById('previewBody');
+  body.innerHTML = GROUPS.map(g => {
+    const extraTxt = (g === 'b' && state.extraB) ? ` + 추가 ${state.extraB}` : (g === 'c' && state.extraC) ? ` + 추가 ${state.extraC}` : '';
+    return `<tr>
+      <td class="group-col"><span class="dot ${g}"></span>${GROUP_NAME[g]}(${state.labels[g]}) <span style="color:var(--text-dim); font-weight:400;">(목표 비율 ${state.ratio[g]}${extraTxt})</span></td>
+      <td class="before-val" id="before${g}">${existing[g]}</td>
+      <td class="arrow">+</td>
+      <td><input type="number" id="prev${g}" value="${add[g]}" oninput="onEditAdd('${g}')"></td>
+      <td class="arrow">=</td>
+      <td class="result-cell"><input type="number" id="result${g}" value="${existing[g] + add[g]}" oninput="onEditResult('${g}')"></td>
+      <td class="defect-cell"><input type="number" id="defect${g}" value="0" min="0"></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('boxNote').value = '';
+  document.getElementById('previewBox').style.display = 'table';
+  document.getElementById('noteFieldWrap').style.display = 'block';
+  document.getElementById('applyRow').style.display = 'flex';
+  const hint = document.getElementById('previewHint');
+  hint.style.display = 'block';
+  hint.textContent = `잔고를 반영해서, 입고 후 전체가 목표 비율 ${GROUPS.map(g=>state.ratio[g]).join(':')}에 최대한 가까워지도록 ${total}개를 배분했어요. 이미 목표치를 넘어선 그룹은 이번엔 추가하지 않아요. "추가"나 "결과" 칸을 직접 고치면 서로 자동으로 맞춰져요.`;
+
+  pendingCalc = total;
+}
+
+function onEditAdd(group){
+  const before = parseInt(document.getElementById('before' + group).textContent, 10) || 0;
+  const add = parseInt(document.getElementById('prev' + group).value, 10) || 0;
+  document.getElementById('result' + group).value = before + add;
+}
+
+function onEditResult(group){
+  const before = parseInt(document.getElementById('before' + group).textContent, 10) || 0;
+  const result = parseInt(document.getElementById('result' + group).value, 10) || 0;
+  document.getElementById('prev' + group).value = result - before;
+}
+
+function applyBox(){
+  const add = {}, defect = {};
+  GROUPS.forEach(g => {
+    add[g] = parseInt(document.getElementById('prev' + g).value, 10) || 0;
+    defect[g] = parseInt(document.getElementById('defect' + g).value, 10) || 0;
+  });
+  const note = document.getElementById('boxNote').value.trim();
+  const before = {}; GROUPS.forEach(g => { before[g] = state.stock[g]; });
+
+  GROUPS.forEach(g => { state.stock[g] += add[g]; });
+
+  state.history.push({
+    id: 'h' + Date.now() + Math.random().toString(36).slice(2,6),
+    type: 'box',
+    dateISO: new Date().toISOString(),
+    total: pendingCalc,
+    add, defect, before,
+    note
+  });
+
+  cancelPreview();
+  document.getElementById('boxTotal').value = '';
+  render();
+  saveState();
+}
+
+function cancelPreview(){
+  document.getElementById('previewBox').style.display = 'none';
+  document.getElementById('applyRow').style.display = 'none';
+  document.getElementById('previewHint').style.display = 'none';
+  document.getElementById('noteFieldWrap').style.display = 'none';
+  pendingCalc = null;
+}
+
+function addQuickNote(){
+  const text = document.getElementById('quickNote').value.trim();
+  if(!text){ alert('내용을 입력해주세요.'); return; }
+  state.history.push({
+    id: 'h' + Date.now() + Math.random().toString(36).slice(2,6),
+    type: 'note',
+    dateISO: new Date().toISOString(),
+    total: 0,
+    add: { a:0, d:0, b:0, c:0 },
+    defect: { a:0, d:0, b:0, c:0 },
+    before: null,
+    note: text
+  });
+  document.getElementById('quickNote').value = '';
+  render();
+  saveState();
+}
+
+function startEdit(id){
+  const h = state.history.find(x => x.id === id);
+  if(!h) return;
+  const holder = document.getElementById('edit-' + id);
+  const dt = new Date(h.dateISO);
+  const localVal = new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const boxFields = h.type === 'box' ? GROUPS.map(g => `
+        <div class="field"><label>${GROUP_NAME[g]} 추가</label><input type="number" id="ed-${g}-${id}" value="${h.add[g]}"></div>
+  `).join('') + `
+        <div class="field"><label>불량 ${GROUPS.map(g=>GROUP_NAME[g]).join('/')}</label>
+          <div class="row">
+            ${GROUPS.map(g => `<input type="number" id="ed-def-${g}-${id}" value="${h.defect[g]||0}" style="width:44px;">`).join('')}
+          </div>
+        </div>` : '';
+  holder.innerHTML = `
+    <div class="edit-box">
+      <div class="row">
+        <div class="field"><label>날짜/시간</label><input type="datetime-local" id="ed-date-${id}" value="${localVal}" style="width:170px;"></div>
+        ${boxFields}
+      </div>
+      <div class="field" style="width:100%;"><label>메모</label><textarea id="ed-note-${id}">${escapeHtml(h.note||'')}</textarea></div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn btn-primary btn-small" onclick="saveEdit('${id}')">저장</button>
+        <button class="btn btn-ghost btn-small" onclick="cancelEdit('${id}')">취소</button>
+      </div>
+    </div>`;
+}
+
+function cancelEdit(id){
+  document.getElementById('edit-' + id).innerHTML = '';
+}
+
+function saveEdit(id){
+  const h = state.history.find(x => x.id === id);
+  if(!h) return;
+
+  GROUPS.forEach(g => { state.stock[g] = Math.max(0, state.stock[g] - h.add[g]); });
+
+  const dateInput = document.getElementById('ed-date-' + id).value;
+  h.dateISO = new Date(dateInput).toISOString();
+  h.note = document.getElementById('ed-note-' + id).value.trim();
+
+  if(h.type === 'box'){
+    GROUPS.forEach(g => {
+      h.add[g] = parseInt(document.getElementById('ed-' + g + '-' + id).value, 10) || 0;
+      h.defect[g] = parseInt(document.getElementById('ed-def-' + g + '-' + id).value, 10) || 0;
+    });
+    h.total = GROUPS.reduce((s,g) => s + h.add[g], 0);
+  }
+
+  GROUPS.forEach(g => { state.stock[g] += h.add[g]; });
+
+  render();
+  saveState();
+}
+
+function deleteEntry(id){
+  const h = state.history.find(x => x.id === id);
+  if(!h) return;
+  if(!confirm('이 기록을 삭제할까요? 관련된 재고 변화도 함께 되돌립니다.')) return;
+
+  GROUPS.forEach(g => { state.stock[g] = Math.max(0, state.stock[g] - h.add[g]); });
+  state.history = state.history.filter(x => x.id !== id);
+  render();
+  saveState();
+}
+
+function saveSettings(){
+  GROUPS.forEach(g => {
+    const v = parseInt(document.getElementById('ratioInput' + g).value, 10);
+    state.ratio[g] = isNaN(v) ? state.ratio[g] : v;
+  });
+  const eb = parseInt(document.getElementById('extraB').value, 10);
+  const ec = parseInt(document.getElementById('extraC').value, 10);
+  state.extraB = isNaN(eb) ? 0 : eb;
+  state.extraC = isNaN(ec) ? 0 : ec;
+
+  render();
+  saveState();
+}
+
+function resetAll(){
+  if(!confirm('모든 재고와 기록을 초기화할까요? 이 작업은 되돌릴 수 없어요.')) return;
+  const labels = state.labels;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  state.labels = labels;
+  render();
+  saveState();
+}
+
+// ---------- 월정산 통계 ----------
+function buildMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  const prevVal = sel.value;
+  const months = new Set(state.history.map(h => h.dateISO.slice(0,7)));
+  const now = new Date();
+  months.add(now.toISOString().slice(0,7));
+  const sorted = [...months].sort().reverse();
+  sel.innerHTML = sorted.map(m => `<option value="${m}">${m}</option>`).join('');
+  if(sorted.includes(prevVal)) sel.value = prevVal;
+}
+
+function renderStats(){
+  const sel = document.getElementById('monthSelect');
+  if(!sel.value) return;
+  const month = sel.value;
+  const entries = state.history.filter(h => h.dateISO.slice(0,7) === month);
+  const boxEntries = entries.filter(h => h.type === 'box');
+  const noteEntries = entries.filter(h => h.type === 'note' || h.note);
+
+  const sum = { total: 0, defect: 0 };
+  GROUPS.forEach(g => sum[g] = 0);
+  boxEntries.forEach(h => {
+    GROUPS.forEach(g => { sum[g] += h.add[g]; sum.defect += (h.defect[g]||0); });
+    sum.total += h.total;
+  });
+
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = `
+    <div class="stat-box"><div class="num">${sum.total}</div><div class="label">총 입고량</div></div>
+    ${GROUPS.map(g => `<div class="stat-box"><div class="num">${sum[g]}</div><div class="label">${GROUP_NAME[g]}(${state.labels[g]}) 입고</div></div>`).join('')}
+    <div class="stat-box"><div class="num">${boxEntries.length}</div><div class="label">입고 횟수</div></div>
+    <div class="stat-box"><div class="num">${sum.defect}</div><div class="label">불량 합계</div></div>
+    <div class="stat-box"><div class="num">${noteEntries.length}</div><div class="label">특이사항 건수</div></div>
+  `;
+}
+
+// ---------- 내보내기 / 공유 / 백업 ----------
+function exportCSV(){
+  const header = ['날짜','종류','입고총계', ...GROUPS.map(g=>GROUP_NAME[g]+'추가'), ...GROUPS.map(g=>'불량'+GROUP_NAME[g]), '메모'];
+  let csv = header.join(',') + '\n';
+  state.history.forEach(h => {
+    const row = [
+      formatDate(h.dateISO), h.type === 'box' ? '입고' : '메모', h.total,
+      ...GROUPS.map(g => h.add[g]), ...GROUPS.map(g => h.defect[g]||0),
+      '"' + (h.note||'').replace(/"/g,'""') + '"'
+    ];
+    csv += row.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `common-side_기록_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildSummaryText(){
+  const total = GROUPS.reduce((s,g) => s + state.stock[g], 0);
+  return `[Common side 재고 현황]\n총 ${total}개\n` +
+    GROUPS.map(g => `${GROUP_NAME[g]}(${state.labels[g]}) ${state.stock[g]}`).join('\n') +
+    `\n목표 비율 ${GROUPS.map(g=>state.ratio[g]).join(':')}`;
+}
+
+async function shareSummary(){
+  const text = buildSummaryText();
+  if(navigator.share){
+    try{ await navigator.share({ title: 'Common side 재고 현황', text }); return; }catch(e){ /* 취소 등 */ }
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('공유 기능을 지원하지 않는 환경이라 클립보드로 복사했어요.');
+  }catch(e){
+    alert(text);
+  }
+}
+
+function toggleBackup(){
+  const card = document.getElementById('backupCard');
+  const willShow = card.style.display === 'none';
+  card.style.display = willShow ? 'block' : 'none';
+  if(willShow){
+    document.getElementById('backupText').value = JSON.stringify(state, null, 2);
+  }
+}
+
+function copyBackup(){
+  const ta = document.getElementById('backupText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => alert('복사했어요.')).catch(() => {});
+}
+
+function importBackup(){
+  const raw = document.getElementById('importText').value.trim();
+  if(!raw) return;
+  try{
+    const parsed = JSON.parse(raw);
+    if(!parsed.stock) throw new Error('형식이 올바르지 않습니다');
+    if(!confirm('현재 데이터를 불러온 내용으로 덮어쓸까요?')) return;
+    state = migrateState(parsed);
+    render();
+    saveState();
+    document.getElementById('importArea').style.display = 'none';
+    alert('불러오기 완료');
+  }catch(e){
+    alert('가져오기에 실패했어요. JSON 형식을 확인해주세요.');
+  }
+}
+
+loadState();
+</script>
+</body>
+</html>
