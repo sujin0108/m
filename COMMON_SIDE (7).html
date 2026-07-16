@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COMMON SIDE 현황 및 재고 관리</title>
+<style>
+:root{
+  --bg:#0a0a12; --card:rgba(255,255,255,0.035);
+  --gold:#e5c14f; --gold-soft:#f2dc94; --purple:#a98ad6; --purple-soft:#c9b0ec;
+  --line:rgba(229,193,79,0.30);
+  --text:#f6f4fb; --text2:#d6d2e4; --text3:#a49fb8;
+  --k0:#f2dc94; --k1:#c9b0ec; --k2:#8fd4e4;
+  --ok:#7ce8a4; --warn:#f5bc70; --bad:#f87878;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(ellipse at 50% 0%,#1e1e38 0%,#0d0d18 60%);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;
+  min-height:100vh;padding:18px 12px 60px;-webkit-text-size-adjust:100%}
+.wrap{max-width:860px;margin:0 auto}
+header{text-align:center;margin-bottom:18px}
+h1{font-size:30px;font-weight:900;letter-spacing:1.5px;margin-bottom:6px;line-height:1.25;
+  font-family:'Arial Black','Segoe UI',ui-monospace,system-ui,sans-serif;
+  background:linear-gradient(180deg,#fff6d0 0%,#f2dc94 35%,#e5c14f 65%,#c9962a 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 14px rgba(229,193,79,.45)) drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  text-shadow:0 0 30px rgba(229,193,79,.2)}
+h1 .cs{letter-spacing:3px}
+.sub{font-size:12px;color:var(--text2);letter-spacing:.2px}
+.badge{display:inline-block;margin-top:9px;padding:4px 13px;border:1px solid var(--line);border-radius:20px;font-size:11px;color:var(--gold-soft);font-family:ui-monospace,monospace;background:rgba(229,193,79,.07)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{flex:1;min-width:74px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;
+  padding:12px 6px;text-align:center;cursor:pointer;transition:all .18s;font-size:13.5px;font-weight:600;color:var(--text2)}
+.tab:hover{border-color:rgba(212,175,55,.5)}
+.tab.on{background:rgba(229,193,79,.2);border-color:var(--gold);color:#fff6d0;font-weight:700;box-shadow:0 0 12px rgba(229,193,79,.2)}
+.card{background:rgba(255,255,255,0.05);border:1px solid var(--line);border-radius:13px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;font-weight:700;color:var(--gold-soft);margin-bottom:12px;letter-spacing:.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 .r{margin-left:auto;font-size:11.5px;color:var(--text2);font-weight:400;font-family:ui-monospace,monospace}
+.sec{display:none} .sec.on{display:block}
+/* 재고 3칸 */
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.sb{border-radius:11px;padding:13px 6px;text-align:center;border:1px solid;position:relative;overflow:hidden}
+.sb.k0{background:rgba(242,220,148,.12);border-color:rgba(242,220,148,.45)}
+.sb.k1{background:rgba(201,176,236,.12);border-color:rgba(201,176,236,.45)}
+.sb.k2{background:rgba(143,212,228,.12);border-color:rgba(143,212,228,.45)}
+.sb.zero{opacity:.62}
+.sb .nut{font-size:22px;line-height:1;margin-bottom:4px;font-family:ui-monospace,monospace;letter-spacing:-1px;text-shadow:0 0 10px currentColor}
+.sb .nm{font-size:12px;color:var(--text2);letter-spacing:.3px;font-weight:600}
+.sb .rt{font-size:11px;opacity:.85;font-family:ui-monospace,monospace}
+.sb .q{font-size:32px;font-weight:800;font-family:ui-monospace,monospace;line-height:1.15;margin-top:3px;text-shadow:0 0 16px currentColor}
+.sb.k0 .q{color:var(--k0)} .sb.k1 .q{color:var(--k1)} .sb.k2 .q{color:var(--k2)}
+.sb .badge2{position:absolute;top:5px;right:6px;font-size:10px;font-weight:700;font-family:ui-monospace,monospace;color:var(--ok);opacity:0}
+@keyframes glowpulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0);transform:scale(1)}
+  50%{box-shadow:0 0 22px 4px rgba(212,175,55,.55);transform:scale(1.035)}
+}
+@keyframes fadeInOut{0%,100%{opacity:0}25%,75%{opacity:1}}
+.sb.flash{animation:glowpulse 1s ease-in-out 5}
+.sb.flash .badge2{animation:fadeInOut 1s ease-in-out 5}
+.ratio-now{text-align:center;font-size:13px;color:var(--text2);font-family:ui-monospace,monospace;margin-top:11px;font-weight:600}
+.ratio-now b{color:var(--ok)}
+.ratio-now.off b{color:var(--warn)}
+/* 최근 입고 */
+.recent{background:rgba(229,193,79,.11);border:1px solid rgba(229,193,79,.42);border-radius:11px;padding:13px;margin-top:12px;box-shadow:0 0 18px rgba(229,193,79,.09)}
+.recent .t{font-size:12px;font-weight:700;color:var(--gold-soft);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.recent .t .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:blink 1.4s ease-in-out infinite;box-shadow:0 0 8px var(--ok)}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+.recent .body{font-size:13px;color:var(--text);font-family:ui-monospace,monospace;line-height:1.75}
+.recent .body b{color:var(--text)}
+.recent .memo{font-size:12px;color:var(--text2);margin-top:6px}
+/* 비율 */
+.rbar{display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);flex-wrap:wrap;justify-content:center}
+.rbar .lb{font-size:12px;color:var(--text2);font-weight:600}
+.rin{width:44px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:var(--gold-soft);
+  font-size:17px;font-weight:800;font-family:ui-monospace,monospace;text-align:center;padding:7px 2px;outline:none;-moz-appearance:textfield}
+.rin::-webkit-outer-spin-button,.rin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.rin:focus{border-color:var(--gold);background:rgba(212,175,55,.08)}
+.rin.k0{color:var(--k0)} .rin.k1{color:var(--k1)} .rin.k2{color:var(--k2)}
+.rsep{color:var(--text3);font-family:ui-monospace,monospace}
+.rpre{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.rp{padding:5px 11px;border:1px solid rgba(255,255,255,.18);border-radius:14px;font-size:11.5px;color:var(--text2);
+  cursor:pointer;font-family:ui-monospace,monospace;transition:all .15s}
+.rp:hover{border-color:var(--gold);color:var(--gold-soft)}
+.rp.on{background:rgba(229,193,79,.22);border-color:var(--gold);color:#fff6d0;font-weight:700}
+/* 입력 */
+label{display:block;font-size:12.5px;color:var(--text2);margin-bottom:6px;font-weight:600}
+input,select,textarea{width:100%;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  color:var(--text);font-size:15px;padding:11px;outline:none;font-family:inherit}
+input::placeholder,textarea::placeholder{color:#8a8599}
+input[type=number]{font-family:ui-monospace,monospace;text-align:center;font-size:22px;font-weight:800;color:var(--gold-soft);-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=datetime-local]{font-size:13px;font-family:ui-monospace,monospace}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,.06)}
+textarea{font-size:13px;resize:vertical;min-height:50px}
+.row{display:grid;gap:10px;margin-bottom:10px}
+.row2{grid-template-columns:1fr 1fr}
+.row3{grid-template-columns:1fr 1fr 1fr}
+/* 옵션 칩 */
+.opts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.opt{flex:1;min-width:64px;padding:10px 6px;border:1px solid rgba(255,255,255,.18);border-radius:9px;text-align:center;
+  font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;font-family:ui-monospace,monospace}
+.opt:hover{border-color:rgba(212,175,55,.5)}
+.opt.on{background:rgba(229,193,79,.22);border-color:var(--gold);color:#fff6d0;font-weight:700}
+.opt.k0.on{background:rgba(242,220,148,.24);border-color:var(--k0);color:#fff8dc;font-weight:700}
+.opt.k1.on{background:rgba(201,176,236,.24);border-color:var(--k1);color:#eee2ff;font-weight:700}
+.opt.k2.on{background:rgba(143,212,228,.24);border-color:var(--k2);color:#e0f7ff;font-weight:700}
+button{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:var(--text);
+  padding:10px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit}
+button:hover{background:rgba(229,193,79,.2);border-color:var(--gold);color:#fff6d0}
+button.go{background:linear-gradient(135deg,rgba(229,193,79,.3),rgba(169,138,214,.26));border-color:var(--gold);
+  color:#fff6d0;font-weight:700;width:100%;padding:14px;font-size:15.5px;margin-top:4px;letter-spacing:.5px}
+button.go:hover{background:linear-gradient(135deg,rgba(229,193,79,.45),rgba(169,138,214,.38));box-shadow:0 0 16px rgba(229,193,79,.25)}
+button.sm{padding:8px 13px;font-size:12.5px}
+.prev{background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:13px;margin-top:10px;font-size:13px;font-family:ui-monospace,monospace;line-height:1.8;color:var(--text2)}
+.prev .hi{color:#fff6d0;font-weight:800}
+.prev .st{padding:2px 0}
+.msg{padding:9px 12px;border-radius:8px;font-size:12px;margin-top:9px;line-height:1.5}
+.msg.ok{background:rgba(90,215,138,.1);border:1px solid rgba(90,215,138,.3);color:#8ee8b0}
+.msg.bad{background:rgba(240,90,90,.1);border:1px solid rgba(240,90,90,.3);color:#f09090}
+/* 기록 */
+.filt{display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap}
+.filt select{flex:1;min-width:88px;font-size:13px;padding:9px}
+.log{max-height:440px;overflow-y:auto}
+.li{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+.li:last-child{border:none}
+.li .tm{color:var(--text2);font-family:ui-monospace,monospace;font-size:11px;flex-shrink:0;width:74px;line-height:1.45}
+.li .ty{flex-shrink:0;padding:3px 7px;border-radius:5px;font-size:11px;font-weight:700}
+.ty.in{background:rgba(124,232,164,.24);color:#a8f5c4}
+.ty.out{background:rgba(245,188,112,.24);color:#ffd9a0}
+.ty.def{background:rgba(248,120,120,.24);color:#ffa8a8}
+.ty.adj{background:rgba(169,138,214,.26);color:#ddc9f5}
+.li .dt{flex:1;color:var(--text);line-height:1.55;min-width:0;font-size:12.5px}
+.li .dt b{color:var(--text);font-family:ui-monospace,monospace}
+.li .loc{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(169,138,214,.26);color:#ddc9f5;font-size:10.5px;font-weight:700;font-family:ui-monospace,monospace}
+.li .memo{color:var(--text2);font-size:12px;margin-top:3px;word-break:break-all}
+.li .acts{display:flex;gap:3px;flex-shrink:0}
+.li .ic{color:var(--text2);cursor:pointer;padding:3px 6px;font-size:13px;border-radius:4px}
+.li .ic:hover{color:var(--gold-soft);background:rgba(212,175,55,.1)}
+.li .ic.d:hover{color:var(--bad);background:rgba(240,90,90,.1)}
+.empty{text-align:center;color:var(--text2);font-size:13px;padding:24px 0}
+/* 월통계 */
+.mrow{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.mrow select{flex:1;min-width:110px}
+.mstat{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:13px}
+.ms{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:12px 6px;text-align:center}
+.ms .l{font-size:11.5px;color:var(--text2);margin-bottom:4px;font-weight:600}
+.ms .v{font-size:23px;font-weight:800;font-family:ui-monospace,monospace}
+.ms.in .v{color:var(--ok)} .ms.out .v{color:var(--warn)} .ms.def .v{color:var(--bad)} .ms.cnt .v{color:var(--purple-soft)}
+.mtable{width:100%;border-collapse:collapse;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:14px}
+.mtable th{text-align:left;color:var(--text2);font-weight:600;font-size:11.5px;padding:7px 5px;border-bottom:1px solid var(--line)}
+.mtable td{padding:8px 5px;border-bottom:1px solid rgba(255,255,255,.08);color:var(--text)}
+.mtable td b{color:var(--text)}
+.mtable tr:last-child td{border:none}
+.bars{margin-top:6px}
+.bl{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.bl .n{width:54px;color:var(--text2);font-family:ui-monospace,monospace;flex-shrink:0;font-weight:600}
+.bl .track{flex:1;height:18px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden;display:flex}
+.bl .sg{height:100%;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bl .vv{width:34px;text-align:right;font-family:ui-monospace,monospace;color:var(--text)}
+.hint{font-size:12px;color:var(--text2);margin-top:9px;line-height:1.65}
+.dvd{height:1px;background:rgba(255,255,255,.07);margin:14px 0}
+/* 수정 모달 */
+.mod{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:16px;z-index:99;backdrop-filter:blur(3px)}
+.mod.on{display:flex}
+.mbox{background:#1a1a2c;border:1px solid var(--line);border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
+.mbox h3{font-size:16px;font-weight:700;color:var(--gold-soft);margin-bottom:14px}
+footer{text-align:center;font-size:11.5px;color:var(--text2);margin-top:22px;line-height:1.75}
+@media(max-width:430px){
+  h1{font-size:22px;letter-spacing:.8px} h1 .cs{letter-spacing:1.5px} .sb .q{font-size:27px} .row2,.row3{grid-template-columns:1fr}
+  .mstat{grid-template-columns:repeat(2,1fr)} .li .tm{width:64px;font-size:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="cs">COMMON SIDE</span><br>현황 및 재고 관리</h1>
+    <div class="sub">너트 없음 · 오른쪽 · 왼쪽 &nbsp;|&nbsp; 위치 UPPER · MID · SIDE · LOWER</div>
+    <span class="badge">NAEMANG2943 · SJL0108</span>
+  </header>
+
+  <div class="card">
+    <h2>현재 재고 <button class="sm" onclick="openStock()" style="padding:5px 11px;font-size:11.5px">✎ 재고 직접 입력</button><span class="r" id="rlabel"></span></h2>
+    <div class="stock" id="stock"></div>
+    <div class="ratio-now" id="rnow"></div>
+    <div id="recent"></div>
+    <div class="rbar">
+      <span class="lb">배분 비율</span>
+      <input type="number" class="rin k0" id="r0" value="3" min="0" max="99" inputmode="numeric" oninput="setRatio()">
+      <span class="rsep">:</span>
+      <input type="number" class="rin k1" id="r1" value="2" min="0" max="99" inputmode="numeric" oninput="setRatio()">
+      <span class="rsep">:</span>
+      <input type="number" class="rin k2" id="r2" value="1" min="0" max="99" inputmode="numeric" oninput="setRatio()">
+      <span class="lb" id="rsimp"></span>
+    </div>
+    <div class="rpre" id="rpre"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="in" onclick="tab('in')">입고</div>
+    <div class="tab" data-t="out" onclick="tab('out')">출고·불량</div>
+    <div class="tab" data-t="log" onclick="tab('log')">기록</div>
+    <div class="tab" data-t="stat" onclick="tab('stat')">월정산</div>
+  </div>
+
+  <!-- 입고 -->
+  <div class="sec on" id="s-in">
+    <div class="card">
+      <h2>입고 <span class="r" id="inttl"></span></h2>
+      <label>위치</label>
+      <div class="opts" id="inloc"></div>
+      <div class="row row2">
+        <div><label>들어온 개수</label><input type="number" id="inq" value="12" min="0" inputmode="numeric" oninput="preview()"></div>
+        <div><label>날짜·시간 (자동)</label><input type="datetime-local" id="indt"></div>
+      </div>
+      <div class="row"><div><label>불량·특이사항 메모</label><textarea id="inmemo" placeholder="예: 3개 표면 흠집"></textarea></div></div>
+      <div class="prev" id="prev"></div>
+      <button class="go" onclick="doIn()">입고 처리</button>
+      <div class="hint">이전 재고를 고려해서 <b style="color:var(--text2)">최종 결과가 설정 비율에 맞도록</b> 배분합니다. 이미 많은 쪽은 적게 받거나 0개일 수 있어요.</div>
+    </div>
+  </div>
+
+  <!-- 출고 -->
+  <div class="sec" id="s-out">
+    <div class="card">
+      <h2>출고 · 불량</h2>
+      <label>구분</label>
+      <div class="opts" id="outtype"></div>
+      <label>너트</label>
+      <div class="opts" id="outkind"></div>
+      <label>위치</label>
+      <div class="opts" id="outloc"></div>
+      <div class="row row2">
+        <div><label>개수</label><input type="number" id="outq" value="1" min="1" inputmode="numeric"></div>
+        <div><label>날짜·시간 (자동)</label><input type="datetime-local" id="outdt"></div>
+      </div>
+      <div class="row"><div><label>불량·특이사항 메모</label><textarea id="outmemo" placeholder="예: 치수 불량"></textarea></div></div>
+      <button class="go" onclick="doOut()">처리</button>
+      <div id="outmsg"></div>
+    </div>
+  </div>
+
+  <!-- 기록 -->
+  <div class="sec" id="s-log">
+    <div class="card">
+      <h2>전체 기록 <span class="r" id="logcnt"></span></h2>
+      <div class="filt">
+        <select id="fType" onchange="renderLog()"><option value="">구분 전체</option><option>입고</option><option>출고</option><option>불량</option><option>조정</option></select>
+        <select id="fLoc" onchange="renderLog()"><option value="">위치 전체</option></select>
+        <select id="fMemo" onchange="renderLog()"><option value="">메모 전체</option><option value="y">메모 있는 것만</option></select>
+      </div>
+      <div class="log" id="loglist"></div>
+      <div class="dvd"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="sm" onclick="shareTxt()">📤 공유</button>
+        <button class="sm" onclick="exportCSV()">📄 CSV</button>
+        <button class="sm" onclick="exportJSON()">💾 백업</button>
+        <button class="sm" onclick="importJSON()">📂 복원</button>
+        <button class="sm" onclick="clearAll()" style="margin-left:auto;border-color:rgba(240,90,90,.3);color:#f09090">전체 삭제</button>
+      </div>
+      <input type="file" id="fileIn" accept=".json" style="display:none" onchange="loadFile(event)">
+      <div class="hint">기록은 이 브라우저에 저장됩니다. 가끔 <b style="color:var(--text2)">백업</b>을 받아두세요.</div>
+    </div>
+  </div>
+
+  <!-- 월정산 -->
+  <div class="sec" id="s-stat">
+    <div class="card">
+      <h2>월정산</h2>
+      <div class="mrow">
+        <select id="mon" onchange="renderStat()"></select>
+        <button class="sm" onclick="exportMonth()">📄 내보내기</button>
+        <button class="sm" onclick="shareMonth()">📤 공유</button>
+      </div>
+      <div class="mstat" id="mstat"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:7px">너트별</div>
+      <table class="mtable" id="mkind"></table>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:7px">위치별</div>
+      <table class="mtable" id="mloc"></table>
+      <div class="bars" id="mbars"></div>
+      <div class="hint" id="mhint"></div>
+    </div>
+    <div class="card">
+      <h2>월별 추이</h2>
+      <table class="mtable" id="alltable"></table>
+    </div>
+  </div>
+
+  <footer>COMMON SIDE 현황 및 재고 관리 · NAEMANG2943<br>이전 잔고를 고려해 전체가 항상 설정 비율에 맞도록 배분합니다</footer>
+</div>
+
+<!-- 수정 모달 -->
+<div class="mod" id="mod" onclick="if(event.target===this)closeMod()">
+  <div class="mbox">
+    <h3>기록 수정</h3>
+    <div class="row"><div><label>날짜·시간</label><input type="datetime-local" id="e_dt"></div></div>
+    <div class="row row2">
+      <div><label>구분</label><select id="e_type"><option>입고</option><option>출고</option><option>불량</option><option>조정</option></select></div>
+      <div><label>개수</label><input type="number" id="e_q" min="0" inputmode="numeric"></div>
+    </div>
+    <div class="row row2">
+      <div><label>너트</label><select id="e_kind"></select></div>
+      <div><label>위치</label><select id="e_loc"></select></div>
+    </div>
+    <div class="row"><div><label>메모</label><textarea id="e_memo"></textarea></div></div>
+    <div class="msg" style="background:rgba(240,168,80,.1);border:1px solid rgba(240,168,80,.3);color:#f0c890;font-size:11px;margin-bottom:10px">
+      수정해도 현재 재고는 자동으로 바뀌지 않아요. 재고가 어긋나면 아래 <b>재고 재계산</b>을 누르세요.
+    </div>
+    <div style="display:flex;gap:7px">
+      <button class="go" style="margin:0" onclick="saveEdit()">저장</button>
+      <button onclick="closeMod()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 재고 직접 입력 -->
+<div class="mod" id="smod" onclick="if(event.target===this)closeStock()">
+  <div class="mbox">
+    <h3>재고 직접 입력</h3>
+    <div class="msg" style="background:rgba(245,188,112,.12);border:1px solid rgba(245,188,112,.35);color:#ffd9a0;font-size:12px;margin-bottom:12px;line-height:1.6">
+      지금 실제로 남아 있는 개수를 그대로 넣으세요. 처음 시작할 때나 실물과 안 맞을 때 씁니다.
+    </div>
+    <div class="row row3" id="smod_in"></div>
+    <div class="row"><div><label>메모 (선택)</label><input type="text" id="s_memo" placeholder="예: 재고 실사 반영"></div></div>
+    <div class="prev" id="s_prev" style="margin-bottom:12px"></div>
+    <div style="display:flex;gap:7px">
+      <button class="go" style="margin:0" onclick="saveStock()">저장</button>
+      <button onclick="closeStock()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const KINDS=['없음','오른쪽','왼쪽'];
+const NUTS=['—','◧','◨'];
+const LOCS=['UPPER','MID','SIDE','LOWER'];
+const PRESETS=[[3,2,1],[1,1,1],[4,3,2],[2,1,1],[5,3,2]];
+const KEY='commonside_v2';
+const $=i=>document.getElementById(i);
+function nextSeq(){ D.seq=(D.seq||0)+1; return D.seq; }
+let D={stock:[0,0,0], log:[], R:[3,2,1], seq:0};
+let inLoc='UPPER', outLoc='UPPER', outKind=0, outType='출고';
+let editIdx=-1;
+
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(D)); }catch(e){} }
+function load(){
+  try{ const s=localStorage.getItem(KEY); if(s){ D=JSON.parse(s); if(!D.R||D.R.length!==3)D.R=[3,2,1]; if(!D.stock)D.stock=[0,0,0]; if(!D.log)D.log=[];
+    // 옛 기록에 seq 없으면 부여 (배열 순서 = 최신순이므로 역순으로)
+    if(typeof D.seq!=='number') D.seq=0;
+    let need=D.log.some(L=>typeof L.seq!=='number');
+    if(need){ const n=D.log.length; D.log.forEach((L,i)=>{ if(typeof L.seq!=='number') L.seq=n-i; }); D.seq=n; }
+  } }catch(e){}
+}
+const R=()=>D.R;
+function gcd(a,b){ return b?gcd(b,a%b):a; }
+function simplify(r){ const nz=r.filter(x=>x>0); if(!nz.length)return r.slice(); let g=nz[0]; nz.forEach(x=>g=gcd(g,x)); return g>1?r.map(x=>x/g):r.slice(); }
+function rs(r){ return r.join(' : '); }
+function p2(n){ return String(n).padStart(2,'0'); }
+function nowLocal(){ const d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+'T'+p2(d.getHours())+':'+p2(d.getMinutes()); }
+function fmt(dt){ return dt.replace('T',' '); }
+function esc(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+// ── 배분
+function isExact(fin,Rv){
+  const nz=[0,1,2].filter(i=>Rv[i]>0);
+  if(!nz.length) return false;
+  for(let i=0;i<3;i++) if(Rv[i]===0&&fin[i]!==0) return false;
+  const k=fin[nz[0]]/Rv[nz[0]];
+  return nz.every(i=>Math.abs(fin[i]/Rv[i]-k)<1e-9);
+}
+function allocate(stock,N){
+  const Rv=R(), S=Rv.reduce((a,b)=>a+b,0);
+  if(S===0) return {a:[0,0,0],fin:stock.slice(),target:[0,0,0],need:[0,0,0],feasible:false,exact:false,T:stock.reduce((a,b)=>a+b,0)+N,noRatio:true};
+  const T=stock[0]+stock[1]+stock[2]+N;
+  const target=Rv.map(r=>T*r/S);
+  const need=target.map((t,i)=>t-stock[i]);
+  const over=need.map(x=>x<-1e-9);
+  const feasible=!over.some(x=>x);
+  let a;
+  if(feasible){
+    const base=need.map(Math.floor);
+    let rem=N-base.reduce((s,x)=>s+x,0);
+    const ord=[0,1,2].sort((i,j)=>(need[j]-Math.floor(need[j]))-(need[i]-Math.floor(need[i])));
+    a=base.slice(); for(let k=0;k<rem;k++) a[ord[k%3]]++;
+  } else {
+    a=[0,0,0];
+    const idx=[0,1,2].filter(i=>need[i]>0);
+    const tot=idx.reduce((s,i)=>s+need[i],0);
+    if(tot>0){
+      idx.forEach(i=>a[i]=Math.floor(N*need[i]/tot));
+      let rem=N-a.reduce((s,x)=>s+x,0);
+      const ord=idx.slice().sort((i,j)=>need[j]-need[i]);
+      for(let k=0;k<rem;k++) a[ord[k%ord.length]]++;
+    } else if(N>0) a[0]=N;
+  }
+  const fin=a.map((x,i)=>x+stock[i]);
+  return {a,fin,target,need,feasible,exact:isExact(fin,Rv),T};
+}
+
+// ── 재고 표시
+function renderStock(flash){
+  const Rv=R();
+  $('rlabel').textContent='비율 '+rs(Rv)+' · 총 '+D.stock.reduce((a,b)=>a+b,0)+'개';
+  $('stock').innerHTML=KINDS.map((n,i)=>
+    '<div class="sb k'+i+(Rv[i]===0?' zero':'')+'" id="sb'+i+'">'+
+      '<div class="badge2" id="bd'+i+'"></div>'+
+      '<div class="nut" style="color:var(--k'+i+')">'+NUTS[i]+'</div>'+
+      '<div class="nm">너트 '+n+' <span class="rt">('+Rv[i]+')</span></div>'+
+      '<div class="q">'+D.stock[i]+'</div></div>').join('');
+  const s=D.stock, t=s[0]+s[1]+s[2];
+  const ex=t>0&&isExact(s,Rv);
+  $('rnow').className='ratio-now'+(ex||t===0?'':' off');
+  $('rnow').innerHTML = t===0?'비어 있음 — <span style="color:var(--gold-soft);cursor:pointer;text-decoration:underline" onclick="openStock()">이전 잔고 입력하기</span>' : ('현재 <b>'+s.join(' : ')+'</b> — '+(ex?'정확히 '+rs(simplify(Rv)):'비율 안 맞음'));
+  $('inttl').textContent=rs(Rv)+' 자동 배분';
+  const sim=simplify(Rv);
+  $('rsimp').innerHTML=(Rv.join()!==sim.join())?'<span style="color:var(--gold-soft)">= '+rs(sim)+'</span>':'';
+  ['r0','r1','r2'].forEach((id,i)=>{ if($(id)&&document.activeElement!==$(id)) $(id).value=Rv[i]; });
+  $('rpre').innerHTML=PRESETS.map(P=>'<span class="rp'+(P.join()===Rv.join()?' on':'')+'" onclick="preset('+P.join(',')+')">'+P.join(':')+'</span>').join('');
+  renderRecent();
+  if(flash){
+    const last=D.log[0];
+    [0,1,2].forEach(i=>{
+      const el=$('sb'+i);
+      if(last&&last.type==='입고'&&last.alloc[i]>0){
+        $('bd'+i).textContent='+'+last.alloc[i];
+        el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+        setTimeout(()=>{ el.classList.remove('flash'); $('bd'+i).textContent=''; },5200);
+      }
+    });
+  }
+}
+function renderRecent(){
+  const last=D.log.find(L=>L.type==='입고');
+  if(!last){ $('recent').innerHTML=''; return; }
+  $('recent').innerHTML='<div class="recent"><div class="t"><span class="dot"></span>최근 입고 · '+fmt(last.t)+' · <span style="color:var(--purple-soft)">'+last.loc+'</span></div>'+
+    '<div class="body">들어온 개수 <b>'+last.q+'</b>개 → 배분 '+
+    KINDS.map((k,i)=>'<span style="color:var(--k'+i+')">'+k+' <b>+'+last.alloc[i]+'</b></span>').join(' · ')+
+    '<br>결과 <b>'+last.fin.join(' : ')+'</b>'+(last.exact?' <span style="color:var(--ok)">✓ '+rs(simplify(last.R||R()))+'</span>':' <span style="color:var(--warn)">≈ 근사</span>')+'</div>'+
+    (last.memo?'<div class="memo">✎ '+esc(last.memo)+'</div>':'')+'</div>';
+}
+function setRatio(){
+  D.R=['r0','r1','r2'].map(id=>{ let x=parseInt($(id).value); return (isNaN(x)||x<0)?0:Math.min(99,x); });
+  save(); renderStock(); preview(); if($('mon').value) renderStat();
+}
+function preset(a,b,c){ D.R=[a,b,c]; ['r0','r1','r2'].forEach((id,i)=>$(id).value=D.R[i]); save(); renderStock(); preview(); if($('mon').value) renderStat(); }
+
+// ── 옵션 칩
+function buildOpts(){
+  $('inloc').innerHTML=LOCS.map(L=>'<div class="opt'+(L===inLoc?' on':'')+'" onclick="setInLoc(\''+L+'\')">'+L+'</div>').join('');
+  $('outloc').innerHTML=LOCS.map(L=>'<div class="opt'+(L===outLoc?' on':'')+'" onclick="setOutLoc(\''+L+'\')">'+L+'</div>').join('');
+  $('outkind').innerHTML=KINDS.map((k,i)=>'<div class="opt k'+i+(i===outKind?' on':'')+'" onclick="setOutKind('+i+')">'+NUTS[i]+' '+k+'</div>').join('');
+  $('outtype').innerHTML=['출고','불량'].map(t=>'<div class="opt'+(t===outType?' on':'')+'" onclick="setOutType(\''+t+'\')">'+t+'</div>').join('');
+}
+function setInLoc(L){ inLoc=L; buildOpts(); }
+function setOutLoc(L){ outLoc=L; buildOpts(); }
+function setOutKind(i){ outKind=i; buildOpts(); }
+function setOutType(t){ outType=t; buildOpts(); }
+
+// ── 입고
+function preview(){
+  const N=Math.max(0,parseInt($('inq').value)||0);
+  const r=allocate(D.stock,N);
+  let m='';
+  if(R().reduce((a,b)=>a+b,0)===0) m='<div class="st" style="color:var(--bad)">비율이 모두 0입니다.</div>';
+  else if(N===0) m='<div class="st" style="color:var(--text3)">개수를 입력하세요</div>';
+  else m='<div class="st">현재 '+D.stock.join('+')+' = '+D.stock.reduce((a,b)=>a+b,0)+'개 + 새 '+N+'개 = <span class="hi">'+r.T+'개</span></div>'+
+    '<div class="st" style="color:var(--text3)">목표 '+r.target.map(t=>t.toFixed(1)).join(' : ')+'</div>'+
+    KINDS.map((k,i)=>'<div class="st"><span style="color:var(--k'+i+')">'+k+'</span>: '+D.stock[i]+' + <span class="hi">'+r.a[i]+'</span> = '+r.fin[i]+(r.a[i]===0?' <span style="color:var(--text3)">(안 넣음)</span>':'')+'</div>').join('')+
+    '<div class="st" style="border-top:1px dashed rgba(255,255,255,.1);margin-top:4px;padding-top:5px">결과 <span class="hi">'+r.fin.join(' : ')+'</span> '+
+    (r.exact?'<span style="color:var(--ok)">✓ 정확히 '+rs(simplify(R()))+'</span>':(r.feasible?'<span style="color:var(--warn)">≈ 근사</span>':'<span style="color:var(--bad)">⚠ 비율 불가</span>'))+'</div>';
+  $('prev').innerHTML=m;
+}
+function doIn(){
+  const N=Math.max(0,parseInt($('inq').value)||0);
+  if(N<=0){ alert('개수를 입력하세요'); return; }
+  if(R().reduce((a,b)=>a+b,0)===0){ alert('비율을 먼저 정하세요'); return; }
+  const r=allocate(D.stock,N);
+  D.stock=r.fin.slice();
+  D.log.unshift({seq:nextSeq(), t:$('indt').value||nowLocal(), type:'입고', loc:inLoc, q:N, alloc:r.a.slice(), fin:r.fin.slice(), memo:$('inmemo').value.trim(), exact:r.exact, R:R().slice()});
+  $('inmemo').value=''; $('inq').value=''; $('indt').value=nowLocal();
+  save(); renderStock(true); preview(); renderLog(); buildMonths();
+}
+// ── 출고
+function doOut(){
+  const q=Math.max(1,parseInt($('outq').value)||0);
+  if(q>D.stock[outKind]){ $('outmsg').className='msg bad'; $('outmsg').textContent='재고 부족: '+KINDS[outKind]+'에 '+D.stock[outKind]+'개뿐입니다.'; return; }
+  D.stock[outKind]-=q;
+  D.log.unshift({seq:nextSeq(), t:$('outdt').value||nowLocal(), type:outType, loc:outLoc, kind:outKind, q:q, fin:D.stock.slice(), memo:$('outmemo').value.trim()});
+  $('outmemo').value=''; $('outdt').value=nowLocal();
+  $('outmsg').className='msg ok'; $('outmsg').textContent=outLoc+' · 너트 '+KINDS[outKind]+' '+outType+' '+q+'개 → 남은 '+D.stock[outKind]+'개';
+  save(); renderStock(); preview(); renderLog(); buildMonths();
+  setTimeout(()=>{ $('outmsg').className=''; $('outmsg').textContent=''; },2800);
+}
+
+// ── 기록
+function filtered(){
+  const ft=$('fType').value, fl=$('fLoc').value, fm=$('fMemo').value;
+  return D.log.map((L,i)=>({L,i})).filter(({L})=>
+    (!ft||L.type===ft) && (!fl||L.loc===fl||L.type==='조정') && (!fm||(L.memo&&L.memo.length)));
+}
+function renderLog(){
+  const cur=$('fLoc').value;
+  $('fLoc').innerHTML='<option value="">위치 전체</option>'+LOCS.map(L=>'<option'+(L===cur?' selected':'')+'>'+L+'</option>').join('');
+  const F=filtered();
+  $('logcnt').textContent=F.length+' / '+D.log.length+'건';
+  if(!F.length){ $('loglist').innerHTML='<div class="empty">기록이 없습니다</div>'; return; }
+  $('loglist').innerHTML=F.map(({L,i})=>{
+    const cls=L.type==='입고'?'in':(L.type==='불량'?'def':(L.type==='조정'?'adj':'out'));
+    let dt;
+    if(L.type==='입고') dt='<b>+'+L.q+'</b> · 배분 '+L.alloc.map((x,k)=>'<span style="color:var(--k'+k+')">'+x+'</span>').join('/')+' → <b>'+L.fin.join(':')+'</b>'+(L.exact?' <span style="color:var(--ok)">✓</span>':'');
+    else if(L.type==='조정') dt='재고 직접 입력 <span style="color:var(--text3)">'+(L.before?L.before.join(':'):'?')+'</span> → <b>'+L.fin.join(':')+'</b>';
+    else dt='<span style="color:var(--k'+L.kind+')">'+NUTS[L.kind]+KINDS[L.kind]+'</span> <b>−'+L.q+'</b> → <b>'+L.fin.join(':')+'</b>';
+    return '<div class="li"><span class="tm">'+L.t.replace('T','<br>')+'</span><span class="ty '+cls+'">'+L.type+'</span>'+
+      '<span class="dt"><span class="loc">'+L.loc+'</span> '+dt+(L.memo?'<div class="memo">✎ '+esc(L.memo)+'</div>':'')+'</span>'+
+      '<span class="acts"><span class="ic" onclick="openEdit('+i+')">✎</span><span class="ic d" onclick="delLog('+i+')">✕</span></span></div>';
+  }).join('');
+}
+function delLog(i){
+  const L=D.log[i];
+  if(!confirm('이 기록을 지울까요?\n\n'+fmt(L.t)+' · '+L.type+' '+L.q+'개\n\n재고를 자동으로 되돌리려면 확인 후 [재고 재계산]을 쓰세요.')) return;
+  D.log.splice(i,1); save(); renderLog(); buildMonths();
+  if(confirm('재고를 기록 전체로 다시 계산할까요?')) recalc();
+}
+function openEdit(i){
+  editIdx=i; const L=D.log[i];
+  $('e_dt').value=L.t; $('e_type').value=L.type; $('e_q').value=L.q; $('e_memo').value=L.memo||'';
+  $('e_kind').innerHTML=KINDS.map((k,j)=>'<option value="'+j+'"'+(L.kind===j?' selected':'')+'>'+k+'</option>').join('');
+  $('e_kind').disabled = L.type==='입고';
+  $('e_loc').innerHTML=LOCS.map(x=>'<option'+(x===L.loc?' selected':'')+'>'+x+'</option>').join('');
+  $('mod').classList.add('on');
+}
+function closeMod(){ $('mod').classList.remove('on'); editIdx=-1; }
+function saveEdit(){
+  if(editIdx<0) return;
+  const L=D.log[editIdx];
+  L.t=$('e_dt').value||L.t;
+  L.type=$('e_type').value;
+  L.q=Math.max(0,parseInt($('e_q').value)||0);
+  L.loc=$('e_loc').value;
+  L.memo=$('e_memo').value.trim();
+  if(L.type!=='입고'){ L.kind=+$('e_kind').value; if(!L.alloc) L.alloc=null; }
+  save(); closeMod(); renderLog(); buildMonths();
+  if(confirm('재고를 기록 전체로 다시 계산할까요?')) recalc();
+}
+// 재고 재계산: 기록을 시간순으로 재생
+function recalc(){
+  const L=D.log.slice().sort((a,b)=>{
+    if(a.t!==b.t) return a.t<b.t?-1:1;
+    return (a.seq||0)-(b.seq||0);
+  });
+  let st=[0,0,0];
+  L.forEach(x=>{
+    if(x.type==='입고'){
+      const Rv=x.R||D.R, S=Rv.reduce((a,b)=>a+b,0)||1;
+      const T=st.reduce((a,b)=>a+b,0)+x.q;
+      const tg=Rv.map(r=>T*r/S), nd=tg.map((t,i)=>t-st[i]);
+      let a;
+      if(nd.some(v=>v<-1e-9)){
+        a=[0,0,0]; const idx=[0,1,2].filter(i=>nd[i]>0);
+        const tot=idx.reduce((s,i)=>s+nd[i],0);
+        if(tot>0){ idx.forEach(i=>a[i]=Math.floor(x.q*nd[i]/tot));
+          let rem=x.q-a.reduce((s,v)=>s+v,0); const ord=idx.slice().sort((i,j)=>nd[j]-nd[i]);
+          for(let k=0;k<rem;k++)a[ord[k%ord.length]]++; }
+        else if(x.q>0) a[0]=x.q;
+      } else {
+        const base=nd.map(Math.floor); let rem=x.q-base.reduce((s,v)=>s+v,0);
+        const ord=[0,1,2].sort((i,j)=>(nd[j]-Math.floor(nd[j]))-(nd[i]-Math.floor(nd[i])));
+        a=base.slice(); for(let k=0;k<rem;k++)a[ord[k%3]]++;
+      }
+      st=a.map((v,i)=>v+st[i]);
+      x.alloc=a.slice(); x.fin=st.slice(); x.exact=isExact(st,Rv);
+    } else if(x.type==='조정'){
+      x.before=st.slice();
+      st=(x.fin||st).slice();   // 조정은 그 시점의 실측값으로 재고를 덮어씀
+    } else {
+      st[x.kind]=Math.max(0,st[x.kind]-x.q);
+      x.fin=st.slice();
+    }
+  });
+  D.stock=st;
+  D.log=L.slice().sort((a,b)=>{ if(a.t!==b.t) return a.t<b.t?1:-1; return (b.seq||0)-(a.seq||0); });
+  save(); renderStock(); renderLog(); buildMonths(); preview();
+  alert('재고를 다시 계산했습니다: '+st.join(' : '));
+}
+
+// ── 월정산
+function buildMonths(){
+  const ms=[...new Set(D.log.map(L=>L.t.slice(0,7)))].sort().reverse();
+  const cur=$('mon').value;
+  $('mon').innerHTML=ms.length?ms.map(m=>'<option'+(m===cur?' selected':'')+'>'+m+'</option>').join(''):'<option value="">기록 없음</option>';
+  renderStat();
+}
+function monthData(m){
+  const L=D.log.filter(x=>x.t.slice(0,7)===m);
+  const st={in:0,out:0,def:0,adj:0,cnt:L.length,
+    byK:KINDS.map(()=>({in:0,out:0,def:0})),
+    byL:{}, memos:[]};
+  LOCS.forEach(x=>st.byL[x]={in:0,out:0,def:0,cnt:0});
+  L.forEach(x=>{
+    if(!st.byL[x.loc]) st.byL[x.loc]={in:0,out:0,def:0,cnt:0};
+    st.byL[x.loc].cnt++;
+    if(x.type==='입고'){ st.in+=x.q; st.byL[x.loc].in+=x.q; (x.alloc||[0,0,0]).forEach((v,i)=>st.byK[i].in+=v); }
+    else if(x.type==='출고'){ st.out+=x.q; st.byL[x.loc].out+=x.q; st.byK[x.kind].out+=x.q; }
+    else if(x.type==='불량'){ st.def+=x.q; st.byL[x.loc].def+=x.q; st.byK[x.kind].def+=x.q; }
+    else if(x.type==='조정'){ st.adj=(st.adj||0)+1; }
+    if(x.memo) st.memos.push({t:x.t,type:x.type,loc:x.loc,memo:x.memo});
+  });
+  return st;
+}
+function renderStat(){
+  const m=$('mon').value;
+  if(!m){ $('mstat').innerHTML='<div class="empty" style="grid-column:1/-1">기록이 없습니다</div>';
+    $('mkind').innerHTML=''; $('mloc').innerHTML=''; $('mbars').innerHTML=''; $('mhint').textContent=''; renderAll(); return; }
+  const s=monthData(m);
+  $('mstat').innerHTML=
+    '<div class="ms in"><div class="l">입고</div><div class="v">'+s.in+'</div></div>'+
+    '<div class="ms out"><div class="l">출고</div><div class="v">'+s.out+'</div></div>'+
+    '<div class="ms def"><div class="l">불량</div><div class="v">'+s.def+'</div></div>'+
+    '<div class="ms cnt"><div class="l">건수</div><div class="v">'+s.cnt+'</div></div>';
+  $('mkind').innerHTML='<tr><th>너트</th><th>비율</th><th>입고</th><th>출고</th><th>불량</th><th>현재고</th></tr>'+
+    KINDS.map((k,i)=>'<tr><td style="color:var(--k'+i+')">'+NUTS[i]+' '+k+'</td><td style="color:var(--text3)">'+R()[i]+'</td><td>'+s.byK[i].in+'</td><td>'+s.byK[i].out+'</td><td>'+s.byK[i].def+'</td><td><b>'+D.stock[i]+'</b></td></tr>').join('')+
+    '<tr><td style="color:var(--gold-soft)">합계</td><td>—</td><td><b>'+s.in+'</b></td><td><b>'+s.out+'</b></td><td><b>'+s.def+'</b></td><td><b>'+D.stock.reduce((a,b)=>a+b,0)+'</b></td></tr>';
+  $('mloc').innerHTML='<tr><th>위치</th><th>입고</th><th>출고</th><th>불량</th><th>건수</th></tr>'+
+    LOCS.map(L=>'<tr><td style="color:var(--purple-soft)">'+L+'</td><td>'+s.byL[L].in+'</td><td>'+s.byL[L].out+'</td><td>'+s.byL[L].def+'</td><td>'+s.byL[L].cnt+'</td></tr>').join('');
+  const mx=Math.max(...LOCS.map(L=>s.byL[L].in+s.byL[L].out+s.byL[L].def),1);
+  $('mbars').innerHTML='<div style="font-size:11px;color:var(--text3);margin:10px 0 7px">위치별 물량</div>'+
+    LOCS.map(L=>{ const d=s.byL[L], t=d.in+d.out+d.def;
+      return '<div class="bl"><span class="n">'+L+'</span><div class="track">'+
+        (d.in?'<div class="sg" style="width:'+(d.in/mx*100)+'%;background:var(--ok)"></div>':'')+
+        (d.out?'<div class="sg" style="width:'+(d.out/mx*100)+'%;background:var(--warn)"></div>':'')+
+        (d.def?'<div class="sg" style="width:'+(d.def/mx*100)+'%;background:var(--bad)"></div>':'')+
+      '</div><span class="vv">'+t+'</span></div>';
+    }).join('')+
+    '<div style="font-size:10px;color:var(--text3);margin-top:5px">'+
+    '<span style="color:var(--ok)">■</span> 입고 <span style="color:var(--warn)">■</span> 출고 <span style="color:var(--bad)">■</span> 불량</div>';
+  const net=s.in-s.out-s.def;
+  const rate=s.in>0?(s.def/s.in*100).toFixed(1):'0.0';
+  let h=m+' · 순증감 <b style="color:'+(net>=0?'var(--ok)':'var(--bad)')+'">'+(net>=0?'+':'')+net+'</b>개 · 불량률 <b style="color:var(--bad)">'+rate+'%</b>';
+  if(s.memos.length) h+='<br>특이사항 '+s.memos.length+'건 — '+s.memos.slice(0,3).map(x=>'<span style="color:var(--text2)">['+x.loc+'] '+esc(x.memo)+'</span>').join(' / ')+(s.memos.length>3?' 외 '+(s.memos.length-3)+'건':'');
+  $('mhint').innerHTML=h;
+  renderAll();
+}
+function renderAll(){
+  const ms=[...new Set(D.log.map(L=>L.t.slice(0,7)))].sort().reverse();
+  if(!ms.length){ $('alltable').innerHTML='<tr><td class="empty">기록 없음</td></tr>'; return; }
+  $('alltable').innerHTML='<tr><th>월</th><th>입고</th><th>출고</th><th>불량</th><th>불량률</th><th>건수</th><th>순증감</th></tr>'+
+    ms.map(m=>{ const s=monthData(m), d=s.in-s.out-s.def, r=s.in>0?(s.def/s.in*100).toFixed(1)+'%':'—';
+      return '<tr><td><b>'+m+'</b></td><td style="color:var(--ok)">'+s.in+'</td><td style="color:var(--warn)">'+s.out+'</td><td style="color:var(--bad)">'+s.def+'</td><td>'+r+'</td><td>'+s.cnt+'</td><td>'+(d>=0?'+':'')+d+'</td></tr>';
+    }).join('');
+}
+
+// ── 내보내기·공유
+function dl(name,content,type){
+  try{
+    const b=new Blob([content],{type}); const u=URL.createObjectURL(b);
+    const a=document.createElement('a');
+    a.href=u; a.download=name; a.style.display='none';
+    document.body.appendChild(a);          // DOM에 붙여야 확실히 동작 (일부 브라우저)
+    a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(u); },150);
+  }catch(e){ alert('파일 저장에 실패했습니다: '+e.message); }
+}
+function exportCSV(){
+  if(!D.log.length){ alert('기록이 없습니다'); return; }
+  let c='\uFEFF날짜시간,구분,위치,너트,개수,없음,오른쪽,왼쪽,비율,메모\n';
+  D.log.slice().reverse().forEach(L=>{
+    const k=L.type==='입고'?'(비율 배분)':(L.type==='조정'?'(직접 입력)':KINDS[L.kind]);
+    const q=L.type==='입고'?L.q:(L.type==='조정'?L.q:('-'+L.q));
+    c+='"'+fmt(L.t)+'","'+L.type+'","'+L.loc+'","'+k+'",'+q+','+L.fin[0]+','+L.fin[1]+','+L.fin[2]+',"'+(L.R?L.R.join(':'):'')+'","'+(L.memo||'').replace(/"/g,'""')+'"\n';
+  });
+  dl('COMMON_SIDE_'+nowLocal().slice(0,10)+'.csv',c,'text/csv;charset=utf-8');
+}
+function exportMonth(){
+  const m=$('mon').value; if(!m){ alert('기록이 없습니다'); return; }
+  const s=monthData(m);
+  let c='\uFEFFCOMMON SIDE 월정산,'+m+'\n생성,'+fmt(nowLocal())+'\n배분 비율,'+rs(R())+'\n\n';
+  c+='너트,비율,입고,출고,불량,현재고\n';
+  KINDS.forEach((k,i)=>{ c+=k+','+R()[i]+','+s.byK[i].in+','+s.byK[i].out+','+s.byK[i].def+','+D.stock[i]+'\n'; });
+  c+='합계,,'+s.in+','+s.out+','+s.def+','+D.stock.reduce((a,b)=>a+b,0)+'\n\n';
+  c+='위치,입고,출고,불량,건수\n';
+  LOCS.forEach(L=>{ c+=L+','+s.byL[L].in+','+s.byL[L].out+','+s.byL[L].def+','+s.byL[L].cnt+'\n'; });
+  c+='\n건수,'+s.cnt+'\n순증감,'+(s.in-s.out-s.def)+'\n불량률,'+(s.in>0?(s.def/s.in*100).toFixed(1)+'%':'-')+'\n';
+  if(s.memos.length){ c+='\n특이사항\n날짜시간,구분,위치,메모\n';
+    s.memos.forEach(x=>{ c+='"'+fmt(x.t)+'","'+x.type+'","'+x.loc+'","'+x.memo.replace(/"/g,'""')+'"\n'; }); }
+  c+='\n전체 기록\n날짜시간,구분,위치,너트,개수,없음,오른쪽,왼쪽,메모\n';
+  D.log.filter(L=>L.t.slice(0,7)===m).slice().reverse().forEach(L=>{
+    const kk=L.type==='입고'?'(배분)':(L.type==='조정'?'(직접 입력)':KINDS[L.kind]);
+    const qq=L.type==='입고'?L.q:(L.type==='조정'?L.q:'-'+L.q);
+    c+='"'+fmt(L.t)+'","'+L.type+'","'+L.loc+'","'+kk+'",'+qq+','+L.fin[0]+','+L.fin[1]+','+L.fin[2]+',"'+(L.memo||'').replace(/"/g,'""')+'"\n';
+  });
+  dl('COMMON_SIDE_monthly_'+m+'.csv',c,'text/csv;charset=utf-8');
+}
+function txtMonth(m){
+  const s=monthData(m);
+  let t='📦 COMMON SIDE 월정산 — '+m+'\n';
+  t+='━━━━━━━━━━━━━━━\n';
+  t+='입고 '+s.in+' / 출고 '+s.out+' / 불량 '+s.def+' (건수 '+s.cnt+')\n';
+  t+='순증감 '+(s.in-s.out-s.def>=0?'+':'')+(s.in-s.out-s.def)+' · 불량률 '+(s.in>0?(s.def/s.in*100).toFixed(1)+'%':'-')+'\n\n';
+  t+='[너트별] 비율 '+rs(R())+'\n';
+  KINDS.forEach((k,i)=>{ t+=' '+k+': 입'+s.byK[i].in+' 출'+s.byK[i].out+' 불'+s.byK[i].def+' → 재고 '+D.stock[i]+'\n'; });
+  t+='\n[위치별]\n';
+  LOCS.forEach(L=>{ if(s.byL[L].cnt) t+=' '+L+': 입'+s.byL[L].in+' 출'+s.byL[L].out+' 불'+s.byL[L].def+'\n'; });
+  t+='\n현재 재고 '+D.stock.join(' : ')+' (총 '+D.stock.reduce((a,b)=>a+b,0)+'개)\n';
+  if(s.memos.length){ t+='\n[특이사항]\n'; s.memos.forEach(x=>{ t+=' • '+fmt(x.t).slice(5)+' ['+x.loc+'] '+x.memo+'\n'; }); }
+  return t;
+}
+async function share(text,title){
+  if(navigator.share){ try{ await navigator.share({title,text}); return; }catch(e){ if(e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(text); alert('클립보드에 복사했습니다'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); alert('클립보드에 복사했습니다'); }catch(x){ alert(text); } document.body.removeChild(ta); }
+}
+function shareMonth(){ const m=$('mon').value; if(!m){ alert('기록이 없습니다'); return; } share(txtMonth(m),'COMMON SIDE 월정산 '+m); }
+function shareTxt(){
+  if(!D.log.length){ alert('기록이 없습니다'); return; }
+  let t='📦 COMMON SIDE 현황\n━━━━━━━━━━━━━━━\n';
+  t+='재고 '+D.stock.join(' : ')+' (총 '+D.stock.reduce((a,b)=>a+b,0)+'개) · 비율 '+rs(R())+'\n\n최근 기록\n';
+  D.log.slice(0,10).forEach(L=>{
+    let d;
+    if(L.type==='입고') d='+'+L.q+' → '+L.alloc.join('/');
+    else if(L.type==='조정') d=(L.before?L.before.join(':'):'?')+' → '+L.fin.join(':');
+    else d=KINDS[L.kind]+' -'+L.q;
+    t+=' • '+fmt(L.t).slice(5)+' ['+L.loc+'] '+L.type+' '+d+(L.memo?' ✎'+L.memo:'')+'\n';
+  });
+  share(t,'COMMON SIDE 현황');
+}
+function exportJSON(){ dl('COMMON_SIDE_backup_'+nowLocal().slice(0,10).replace(/-/g,'')+'.json',JSON.stringify(D,null,1),'application/json'); }
+function importJSON(){ $('fileIn').click(); }
+function loadFile(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const j=JSON.parse(r.result);
+    if(!j.stock||!j.log) throw 0;
+    if(!j.R||j.R.length!==3) j.R=[3,2,1];
+    if(typeof j.seq!=='number') j.seq=0;
+    { const n=j.log.length; j.log.forEach((L,i)=>{ if(typeof L.seq!=='number') L.seq=n-i; }); if(!j.seq) j.seq=n; }
+    if(!confirm('현재 기록을 덮어씁니다. 계속할까요?')) return;
+    D=j; save(); renderStock(); preview(); renderLog(); buildMonths(); alert('복원되었습니다');
+  }catch(x){ alert('파일을 읽을 수 없습니다'); } };
+  r.readAsText(f); e.target.value='';
+}
+function clearAll(){
+  if(!confirm('모든 기록과 재고를 지웁니다. 계속할까요?')) return;
+  if(!confirm('정말로 지울까요? 되돌릴 수 없습니다.\n(백업을 먼저 받아두는 걸 권합니다)')) return;
+  D={stock:[0,0,0],log:[],R:R().slice(),seq:0}; save(); renderStock(); preview(); renderLog(); buildMonths();
+}
+// ── 재고 직접 입력
+function openStock(){
+  $('smod_in').innerHTML=KINDS.map((k,i)=>
+    '<div><label style="color:var(--k'+i+')">'+NUTS[i]+' 너트 '+k+'</label>'+
+    '<input type="number" id="s'+i+'" value="'+D.stock[i]+'" min="0" inputmode="numeric" oninput="stockPrev()"></div>').join('');
+  $('s_memo').value='';
+  stockPrev();
+  $('smod').classList.add('on');
+}
+function closeStock(){ $('smod').classList.remove('on'); }
+function stockPrev(){
+  const v=[0,1,2].map(i=>{ const x=parseInt($('s'+i).value); return (isNaN(x)||x<0)?0:x; });
+  const t=v.reduce((a,b)=>a+b,0);
+  const ex=t>0&&isExact(v,R());
+  const old=D.stock;
+  $('s_prev').innerHTML='<div class="st">현재 <span style="color:var(--text3)">'+old.join(' : ')+'</span> → 바꿀 값 <span class="hi">'+v.join(' : ')+'</span></div>'+
+    '<div class="st">총 '+t+'개 · '+(t===0?'비어 있음':(ex?'<span style="color:var(--ok)">정확히 '+rs(simplify(R()))+'</span>':'<span style="color:var(--warn)">비율 안 맞음 — 다음 입고 때 맞춰집니다</span>'))+'</div>';
+}
+function saveStock(){
+  const v=[0,1,2].map(i=>{ const x=parseInt($('s'+i).value); return (isNaN(x)||x<0)?0:x; });
+  const before=D.stock.slice();
+  if(before.join()===v.join()){ closeStock(); return; }
+  D.stock=v;
+  D.log.unshift({seq:nextSeq(), t:nowLocal(), type:'조정', loc:'—', q:v.reduce((a,b)=>a+b,0), fin:v.slice(), before:before,
+    memo:$('s_memo').value.trim()||'재고 직접 입력 ('+before.join(':')+' → '+v.join(':')+')'});
+  save(); closeStock(); renderStock(); preview(); renderLog(); buildMonths();
+}
+
+function tab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  document.querySelectorAll('.sec').forEach(x=>x.classList.toggle('on',x.id==='s-'+t));
+  if(t==='stat') buildMonths();
+  if(t==='in') $('indt').value=nowLocal();
+  if(t==='out') $('outdt').value=nowLocal();
+}
+load(); buildOpts(); renderStock(); preview(); renderLog(); buildMonths();
+$('indt').value=nowLocal(); $('outdt').value=nowLocal();
+</script>
+</body>
+</html>
