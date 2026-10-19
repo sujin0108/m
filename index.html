@@ -4598,6 +4598,9 @@ h3 .en-para, h4 .en-para,
           <!-- 현재 날씨 요약 (전용 컨테이너 — 누적 방지) -->
           <div id="weather-current-summary"></div>
 
+          <!-- 댐 인근 대기질 (에어코리아 실측 — 누적 방지) -->
+          <div id="weather-air-dam"></div>
+
           <!-- 유역 정보 -->
           <div class="info-block" style="margin-bottom:16px;">
             <div class="info-block-title">유역(Watershed) 정보 <span class="en-sub">Watershed Info</span></div>
@@ -9471,6 +9474,9 @@ async function loadWeatherPanel(damId) {
   // 강수 예보 바 컨테이너도 비움 (이전 댐 잔재 방지)
   const _rainBarsEl = document.getElementById('rain-forecast-bars');
   if (_rainBarsEl) _rainBarsEl.innerHTML = '';
+  // 대기질 컨테이너도 비움 (이전 댐 잔재 방지)
+  const _airDamEl = document.getElementById('weather-air-dam');
+  if (_airDamEl) _airDamEl.innerHTML = '';
 
   // 댐 위치 좌표
   const dam = allDams.find(d => d.id === damId) || MOCK_DAMS.find(d => d.id === damId);
@@ -9486,66 +9492,40 @@ async function loadWeatherPanel(damId) {
     : '—';
   document.getElementById('ws-supply').textContent  = damIntro ? (damIntro.supply_city || '—') : (damInfo ? (damInfo.supply_city||'—') : '—');
 
-  let weatherData = null;
   let isMock = false;
 
-  // OpenWeatherMap 5일 예보 — API 키가 실제로 입력된 경우에만 호출
-  const hasKey = OWM_API_KEY && OWM_API_KEY.trim().length > 10;
-  if (hasKey) {
-    try {
-      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OWM_API_KEY.trim()}&units=metric&lang=kr&cnt=40`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const json = await res.json();
-        // OpenWeatherMap 정상 응답인지 확인 (cod === "200")
-        if (json.cod === '200' && json.list) {
-          weatherData = json;
-        }
-      }
-    } catch(e) {
-      // 네트워크 에러 / CORS / 타임아웃 → 모의 데이터로 조용히 전환
-      console.info('[DamWatch] 날씨 API 사용 불가 — 모의 데이터로 표시합니다.', e.message || e);
-    }
+  // 날씨: 기상청(KMA) 모델 — Open-Meteo (API 키 불필요)
+  let wx = null;
+  try {
+    wx = await fetchKmaWeather(lat, lon);
+  } catch(e) {
+    wx = null;
+    console.info('[DamWatch] KMA 날씨 호출 실패 — 모의 데이터로 표시합니다.', e && e.message);
   }
 
   let days = [];
   let totalRain = 0;
 
-  if (weatherData && weatherData.list) {
-    // OpenWeatherMap 응답 파싱 (3시간 단위 → 일별 합산)
-    const dayMap = {};
-    weatherData.list.forEach(item => {
-      const date = item.dt_txt.slice(0, 10);
-      if (!dayMap[date]) {
-        dayMap[date] = {
-          date: date.replace(/-/g,''),
-          rain_mm: 0,
-          temp_min: item.main.temp,
-          temp_max: item.main.temp,
-          weather_id: item.weather[0].id,
-          weather_desc: item.weather[0].description,
-          humidity: item.main.humidity,
-          wind_speed: item.wind.speed,
-          icon: item.weather[0].icon,
-        };
-      }
-      dayMap[date].rain_mm += (item.rain && item.rain['3h']) ? item.rain['3h'] : 0;
-      dayMap[date].temp_min = Math.min(dayMap[date].temp_min, item.main.temp);
-      dayMap[date].temp_max = Math.max(dayMap[date].temp_max, item.main.temp);
-    });
-
-    days = Object.values(dayMap).slice(0, 5).map(d => {
-      const rain = Math.round(d.rain_mm * 10) / 10;
+  if (wx && wx.daily && wx.daily.time && wx.daily.time.length) {
+    // Open-Meteo 일별 예보 파싱
+    const dd = wx.daily, n = Math.min(5, dd.time.length);
+    const area = damInfo ? (damInfo.area_km2 || 2000) : 2000;
+    for (let i = 0; i < n; i++) {
+      const rain = Math.round((dd.precipitation_sum[i] || 0) * 10) / 10;
       const level = rain > 50 ? 'heavy' : rain > 20 ? 'moderate' : rain > 5 ? 'light' : 'none';
-      const area = damInfo ? (damInfo.area_km2 || 2000) : 2000;
+      const wk = (typeof wmoKo === 'function') ? wmoKo(dd.weather_code[i]) : { desc:'' };
       totalRain += rain;
-      return {
-        ...d,
+      days.push({
+        date: dd.time[i].replace(/-/g,''),
         rain_mm: rain,
         level,
+        temp_min: dd.temperature_2m_min[i],
+        temp_max: dd.temperature_2m_max[i],
+        weather_desc: wk.desc,
+        humidity: null,
         estimated_inflow_m3s: Math.round(rain * area * 1000 * 0.7 / 86400),
-      };
-    });
+      });
+    }
     isMock = false;
 
   } else {
@@ -9623,8 +9603,7 @@ async function loadWeatherPanel(damId) {
   }).join('');
 
   // 현재 날씨 요약 카드 추가
-  if (!isMock && weatherData && weatherData.list && weatherData.list[0]) {
-    const cur = weatherData.list[0];
+  if (!isMock && wx && wx.temp != null) {
     const curColor = levelColors[days[0]?.level] || '#00c8ff';
     const summaryHtml = `
       <div style="background:linear-gradient(135deg,rgba(0,100,200,0.12),rgba(0,200,255,0.06));
@@ -9634,22 +9613,30 @@ async function loadWeatherPanel(damId) {
           📍 ${dam ? dam.name : ''} 인근 현재 날씨
           <span style="font-size:9px;color:var(--text3);margin-left:8px;">Current Weather</span>
         </div>
-        <div class="weather-now-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;overflow:hidden;">
+        <div class="weather-now-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow:hidden;">
           <div class="flow-item">
-            <div class="flow-value" style="color:var(--accent3);font-size:20px;">${cur.main.temp.toFixed(1)}°C</div>
+            <div class="flow-value" style="color:var(--accent3);font-size:20px;">${wx.temp != null ? wx.temp.toFixed(1) : '—'}°C</div>
             <div class="flow-label">기온<br><small>Temperature</small></div>
           </div>
           <div class="flow-item">
-            <div class="flow-value" style="color:var(--accent);">${cur.main.humidity}%</div>
+            <div class="flow-value" style="color:var(--accent);">${wx.humidity != null ? Math.round(wx.humidity) : '—'}%</div>
             <div class="flow-label">습도<br><small>Humidity</small></div>
           </div>
           <div class="flow-item">
-            <div class="flow-value" style="color:var(--gold);font-size:18px;word-break:keep-all;">${cur.wind.speed.toFixed(1)}<span style="font-size:10px;">m/s</span></div>
+            <div class="flow-value" style="color:var(--gold);font-size:18px;word-break:keep-all;">${wx.wind != null ? wx.wind.toFixed(1) : '—'}<span style="font-size:10px;">m/s</span></div>
             <div class="flow-label">풍속<br><small>Wind Speed</small></div>
           </div>
           <div class="flow-item">
-            <div class="flow-value" style="color:${curColor};font-size:13px;">${cur.weather[0].description}</div>
+            <div class="flow-value" style="color:${curColor};font-size:13px;">${wx.desc || '—'}</div>
             <div class="flow-label">날씨<br><small>Weather</small></div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-value" id="dam-cur-pm25" style="color:var(--text3);font-size:18px;">…</div>
+            <div class="flow-label">초미세먼지<br><small>PM2.5 ㎍/㎥</small></div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-value" id="dam-cur-pm10" style="color:var(--text3);font-size:18px;">…</div>
+            <div class="flow-label">미세먼지<br><small>PM10 ㎍/㎥</small></div>
           </div>
         </div>
       </div>`;
@@ -9659,11 +9646,93 @@ async function loadWeatherPanel(damId) {
   }
 
   document.getElementById('weather-note').innerHTML = isMock
-    ? `📊 모의 날씨 데이터 &nbsp;|&nbsp; 실제 날씨를 보려면 <a href="https://openweathermap.org/api" target="_blank" style="color:var(--accent);text-decoration:underline;">OpenWeatherMap</a>에서 무료 API 키를 발급받아 코드 상단 <code style="color:var(--accent3)">OWM_API_KEY</code>에 입력하세요.`
-    : `✅ OpenWeatherMap 실시간 날씨 · 5일 예보<br><span style="color:var(--text3);font-size:10px;">Powered by OpenWeatherMap</span>`;
+    ? `📊 실시간 날씨를 불러오지 못해 예시 데이터로 표시 중이에요. 인터넷 연결을 확인하고 탭을 다시 열어 주세요.`
+    : `✅ 실시간 · 날씨 <strong style="color:var(--accent3)">${(wx && wx.usedKMA) ? '기상청(KMA) 모델' : '글로벌 기상 모델'}</strong> · 5일 예보<br><span style="color:var(--text3);font-size:10px;">제공: Open-Meteo · 기상청 모델 기반</span>`;
 
   if (totalRain > 0)
     document.getElementById('pr-rain').value = Math.round(totalRain);
+
+  // ── 댐 인근 대기질 (에어코리아 실측 · 초미세먼지 → 미세먼지) ──
+  (async function renderDamAir(){
+    const airEl = document.getElementById('weather-air-dam');
+    if (!airEl) return;
+    const isEN_a = (currentLang === 'en');
+    const nc = (typeof nearestCity === 'function') ? nearestCity(lat, lon) : null;
+
+    // 현재날씨 카드의 미세먼지 칸 채우기용
+    const setCurDust = (id, v, metric) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (v == null || isNaN(v)) { el.textContent = '—'; el.style.color = 'var(--text3)'; return; }
+      el.textContent = Math.round(v);
+      const g = (typeof gradeOf === 'function') ? gradeOf(metric, v) : null;
+      const gObj = (g && typeof GRADES !== 'undefined') ? GRADES[g] : null;
+      if (gObj) el.style.color = gObj.color;
+    };
+
+    airEl.innerHTML = `
+      <div class="info-block" style="margin-bottom:16px;">
+        <div class="info-block-title">🌫️ ${isEN_a?'Air Quality (nearest station)':'댐 인근 대기질'} <span class="en-sub">${isEN_a?'AirKorea measured':'에어코리아 실측'}</span></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px;">${isEN_a?'Loading…':'측정소 조회 중…'}${nc?` (${nc.name})`:''}</div>
+      </div>`;
+
+    let air = null;
+    try {
+      if (nc && typeof fetchAirKoreaPollution === 'function') air = await fetchAirKoreaPollution(nc);
+    } catch(e) { air = null; }
+
+    // 그 사이 다른 댐으로 바뀌었으면 중단 (오염 방지)
+    if (!currentDam || currentDam.id !== damId) return;
+
+    if (!air) {
+      setCurDust('dam-cur-pm25', null);
+      setCurDust('dam-cur-pm10', null);
+      airEl.innerHTML = `
+        <div class="info-block" style="margin-bottom:16px;">
+          <div class="info-block-title">🌫️ ${isEN_a?'Air Quality':'댐 인근 대기질'}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:8px;">${isEN_a?'Air quality data unavailable right now.':'대기질 데이터를 잠시 불러오지 못했어요.'}</div>
+        </div>`;
+      return;
+    }
+
+    // 현재날씨 카드의 초미세먼지·미세먼지 칸 채우기
+    setCurDust('dam-cur-pm25', air.pm25, 'pm25');
+    setCurDust('dam-cur-pm10', air.pm10, 'pm10');
+
+    const spec = [
+      { metric:'pm25', ko:'초미세먼지', en:'PM2.5', sub:'PM2.5', unit:'µg/m³', v:air.pm25, f:v=>Math.round(v) },
+      { metric:'pm10', ko:'미세먼지',   en:'PM10',  sub:'PM10',  unit:'µg/m³', v:air.pm10, f:v=>Math.round(v) },
+      { metric:'o3',   ko:'오존',       en:'Ozone', sub:'O₃',   unit:'ppm',   v:air.o3,   f:v=>v.toFixed(3) },
+      { metric:'no2',  ko:'이산화질소', en:'NO₂',   sub:'NO₂',  unit:'ppm',   v:air.no2,  f:v=>v.toFixed(3) },
+      { metric:'co',   ko:'일산화탄소', en:'CO',    sub:'CO',   unit:'ppm',   v:air.co,   f:v=>v.toFixed(2) },
+    ];
+    const cards = spec.map(s => {
+      const g = (typeof gradeOf === 'function') ? gradeOf(s.metric, s.v) : null;
+      const gObj = (g && typeof GRADES !== 'undefined') ? GRADES[g] : null;
+      const color = gObj ? gObj.color : '#5a88aa';
+      const emoji = gObj ? gObj.emoji : '—';
+      const gl = gObj ? (isEN_a?gObj.en:gObj.ko) : (isEN_a?'No data':'데이터 없음');
+      const val = (s.v != null && !isNaN(s.v)) ? s.f(s.v) : '—';
+      return `
+        <div style="flex:1;min-width:86px;background:var(--surface);border:1px solid ${color}44;border-radius:10px;padding:10px 8px;text-align:center;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color};"></div>
+          <div style="font-size:18px;line-height:1;margin-bottom:3px;">${emoji}</div>
+          <div style="font-size:11px;color:var(--text2);">${isEN_a?s.en:s.ko}</div>
+          <div style="font-size:9px;color:var(--text3);font-family:var(--font-num);">${s.sub} · ${s.unit}</div>
+          <div style="font-family:var(--font-big);font-size:22px;color:${color};line-height:1.1;margin-top:2px;">${val}</div>
+          <div style="font-size:11px;color:${color};font-weight:700;">${gl}</div>
+        </div>`;
+    }).join('');
+
+    const station = air.stationName ? (isEN_a?`Station: ${air.stationName}`:`측정소: ${air.stationName}`) : '';
+    const dtime   = air.dataTime ? ` · ${air.dataTime}` : '';
+    airEl.innerHTML = `
+      <div class="info-block" style="margin-bottom:16px;">
+        <div class="info-block-title">🌫️ ${isEN_a?'Air Quality (nearest station)':'댐 인근 대기질'} <span class="en-sub">${isEN_a?'AirKorea measured':'에어코리아 실측'}</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${cards}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">${station}${dtime}${nc?` · ${isEN_a?'near':'기준 도시'} ${nc.name}`:''}</div>
+      </div>`;
+  })();
 
   document.getElementById('weather-loading').style.display = 'none';
   document.getElementById('weather-content').style.display = 'block';
@@ -13703,12 +13772,12 @@ function fetchTimeout(url, timeoutMs) {
 
 // 🇰🇷 에어코리아 대기오염 실시간 정보 — CORS 프록시 통해 호출
 //    응답은 한국공단 측정망 실측값 (PM10/PM2.5 µg/m³ · O3/NO2/CO ppm)
-async function fetchAirKoreaPollution() {
+async function fetchAirKoreaPollution(loc = WEATHER_LOC) {
   const key = _getAirKoreaKey();
   if (!key) throw new Error('No AirKorea key');
 
-  const sido = CITY_TO_SIDO[WEATHER_LOC.key] || '전국';
-  const userCity = WEATHER_LOC.name || '';
+  const sido = CITY_TO_SIDO[loc.key] || '전국';
+  const userCity = loc.name || '';
 
   const params = new URLSearchParams({
     serviceKey: key,
@@ -14323,14 +14392,15 @@ let WEATHER_LOC = (function() {
     const saved = localStorage.getItem('damwatch_weather_city');
     if (saved) {
       if (saved === 'gps') {
-        // GPS 모드였다면 GPS 다시 시도 — 일단 기본값으로 시작
-        return { ...KOREA_CITIES[0] };
+        // GPS 모드였다면 GPS 다시 시도 — 일단 기본값(청주)으로 시작
+        return { ...(KOREA_CITIES.find(c => c.key === 'cheongju') || KOREA_CITIES[0]) };
       }
       const c = KOREA_CITIES.find(c => c.key === saved);
       if (c) return { ...c };
     }
   } catch(e) {}
-  return { ...KOREA_CITIES[0] };
+  // 저장된 값이 없으면 기본 위치: 청주
+  return { ...(KOREA_CITIES.find(c => c.key === 'cheongju') || KOREA_CITIES[0]) };
 })();
 
 function ensureWeatherPanel() {
@@ -14389,7 +14459,7 @@ function ensureWeatherPanel() {
       <span class="wp-leg-chip" style="background:#f97316;">😷 나쁨</span>
       <span class="wp-leg-chip" style="background:#ef4444;">😨 매우나쁨</span>
       <span style="margin-left:auto;color:var(--text3);font-size:9px;" id="wp-source">
-        출처: OpenWeatherMap · 한국환경공단 기준
+        날씨: 기상청(KMA) 모델 · 대기질: 에어코리아 기준
       </span>
     </div>
   `;
@@ -14448,6 +14518,59 @@ function ensureWeatherPanel() {
   return weatherPanelEl;
 }
 
+// 🇰🇷 WMO 날씨코드 → 한글 설명 + (OWM 호환) 아이콘코드
+function wmoKo(code){
+  const M = {
+    0:['맑음','01d'],1:['대체로 맑음','02d'],2:['구름 조금','03d'],3:['흐림','04d'],
+    45:['안개','50d'],48:['짙은 안개','50d'],
+    51:['약한 이슬비','10d'],53:['이슬비','10d'],55:['강한 이슬비','09d'],
+    56:['어는 이슬비','13d'],57:['어는 이슬비','13d'],
+    61:['약한 비','10d'],63:['비','10d'],65:['강한 비','09d'],
+    66:['진눈깨비','13d'],67:['진눈깨비','13d'],
+    71:['약한 눈','13d'],73:['눈','13d'],75:['강한 눈','13d'],77:['싸락눈','13d'],
+    80:['약한 소나기','09d'],81:['소나기','09d'],82:['강한 소나기','09d'],
+    85:['소낙눈','13d'],86:['소낙눈','13d'],
+    95:['뇌우','11d'],96:['뇌우·우박','11d'],99:['강한 뇌우','11d'],
+  };
+  const w = M[code];
+  return w ? { desc:w[0], icon:w[1] } : { desc:'', icon:'01d' };
+}
+
+// 🇰🇷 기상청(KMA) 모델 날씨 — Open-Meteo (API 키 불필요, 현재+5일예보)
+async function fetchKmaWeather(lat, lon) {
+  const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+    + `&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code,precipitation`
+    + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum`
+    + `&timezone=Asia%2FSeoul&wind_speed_unit=ms&forecast_days=5`;
+  async function go(url){
+    const r = await fetchTimeout(url, 8000);
+    if (!r.ok) throw new Error('OpenMeteo HTTP ' + r.status);
+    const j = await r.json();
+    if (j && j.error) throw new Error('OpenMeteo: ' + (j.reason || 'error'));
+    return j;
+  }
+  let j = null, usedKMA = true;
+  try {
+    j = await go(base + '&models=kma_seamless');
+    if (!j.current || j.current.temperature_2m == null) throw new Error('KMA empty');
+  } catch(_) {
+    usedKMA = false;
+    j = await go(base);   // 폴백: 글로벌 모델
+  }
+  const c = j.current || {};
+  const wk = wmoKo(c.weather_code);
+  return {
+    temp: c.temperature_2m,
+    feels: c.apparent_temperature,
+    humidity: c.relative_humidity_2m,
+    wind: c.wind_speed_10m,
+    icon: wk.icon,
+    desc: wk.desc,
+    daily: j.daily || null,
+    usedKMA,
+  };
+}
+
 async function loadWeather(force) {
   if (!ensureWeatherPanel()) return;
   const owmKey = _getOwmKey();
@@ -14455,18 +14578,10 @@ async function loadWeather(force) {
   const subEl  = document.getElementById('wp-sub');
   const isEN   = (_getLang() === 'en');
 
-  if (!owmKey) {
-    renderWeatherData(getMockWeather(), true);
-    subEl.innerHTML = isEN
-      ? '<span style="color:var(--warning)">⚠️ Mock data — set OWM_API_KEY for real data</span>'
-      : '<span style="color:var(--warning)">⚠️ 모의 데이터 (실제 데이터는 OWM_API_KEY 설정 시)</span>';
-    return;
-  }
-
   subEl.textContent = isEN ? 'Fetching data...' : '데이터 수신 중…';
 
-  // ─── 1) OWM 날씨 호출 (재시도 2회) ───
-  let owmWeather = null, lastErr = null;
+  // ─── 1) 날씨 호출: 기상청(KMA) 모델 — Open-Meteo (API 키 불필요, 재시도 2회) ───
+  let omWx = null, lastErr = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt > 0) {
       subEl.textContent = isEN ? `Retrying (${attempt+1}/2)…` : `재시도 (${attempt+1}/2)…`;
@@ -14474,14 +14589,11 @@ async function loadWeather(force) {
     }
     try {
       const { lat, lon } = WEATHER_LOC;
-      const wUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${owmKey}&units=metric&lang=kr`;
-      const wRes = await fetchTimeout(wUrl, 8000);
-      if (!wRes.ok) throw new Error(`OWM HTTP ${wRes.status}`);
-      owmWeather = await wRes.json();
+      omWx = await fetchKmaWeather(lat, lon);
       break;
     } catch(err) {
       lastErr = err;
-      console.warn(`[weather] OWM attempt ${attempt+1}/2 failed:`, err.message || err);
+      console.warn(`[weather] KMA attempt ${attempt+1}/2 failed:`, err.message || err);
     }
   }
 
@@ -14519,15 +14631,16 @@ async function loadWeather(force) {
   }
 
   // ─── 3) 결과 렌더링 ───
-  if (owmWeather) {
+  if (omWx) {
     const data = {
-      temp:    owmWeather.main.temp,
-      feels:   owmWeather.main.feels_like,
-      humidity:owmWeather.main.humidity,
-      wind:    owmWeather.wind ? owmWeather.wind.speed : null,
-      icon:    owmWeather.weather[0].icon,
-      desc:    owmWeather.weather[0].description,
-      city:    owmWeather.name || WEATHER_LOC.name,
+      temp:    omWx.temp,
+      feels:   omWx.feels,
+      humidity:omWx.humidity,
+      wind:    omWx.wind,
+      icon:    omWx.icon,
+      desc:    omWx.desc,
+      city:    WEATHER_LOC.name,
+      wxSource: omWx.usedKMA ? 'kma' : 'global',
       pm10:    airData?.pm10 ?? null,
       pm25:    airData?.pm25 ?? null,
       o3:      airData?.o3   ?? null,
@@ -14603,28 +14716,25 @@ function renderWeatherData(d, isMock) {
   const sourceEl = document.getElementById('wp-source');
   if (sourceEl) {
     const isEN_src = (_getLang() === 'en');
+    const wxName = (d.wxSource === 'global')
+      ? (isEN_src ? '글로벌 기상 모델' : '글로벌 기상 모델')
+      : (isEN_src ? '기상청(KMA) 모델' : '기상청(KMA) 모델');
     if (d.airSource === 'airkorea') {
-      sourceEl.innerHTML = isEN_src
-        ? '날씨: OpenWeatherMap · 대기질: 한국환경공단 에어코리아 (실측)'
-        : '날씨: OpenWeatherMap · 대기질: 에어코리아 (실측)';
+      sourceEl.innerHTML = `날씨: ${wxName} · 대기질: 에어코리아 (실측)`;
     } else if (d.airSource === 'owm') {
-      sourceEl.innerHTML = isEN_src
-        ? 'Source: OpenWeatherMap (AirKorea unavailable — fallback)'
-        : '출처: OpenWeatherMap (에어코리아 호출 실패 — 폴백)';
+      sourceEl.innerHTML = `날씨: ${wxName} · 대기질: OpenWeatherMap (폴백)`;
     } else {
-      sourceEl.innerHTML = isEN_src
-        ? 'Source: OpenWeatherMap'
-        : '출처: OpenWeatherMap';
+      sourceEl.innerHTML = `날씨: ${wxName}`;
     }
   }
 
   // 대기질 카드
   const isEN_air = (_getLang() === 'en');
   const airSpec = [
-    { key:'pm10', metric:'pm10', label: isEN_air ? 'PM10'      : '미세먼지',     subLabel:'PM10',  unit:'µg/m³',  v: d.pm10, format: v => Math.round(v) },
     { key:'pm25', metric:'pm25', label: isEN_air ? 'PM2.5'     : '초미세먼지',   subLabel:'PM2.5', unit:'µg/m³',  v: d.pm25, format: v => Math.round(v) },
+    { key:'pm10', metric:'pm10', label: isEN_air ? 'PM10'      : '미세먼지',     subLabel:'PM10',  unit:'µg/m³',  v: d.pm10, format: v => Math.round(v) },
     { key:'o3',   metric:'o3',   label: isEN_air ? 'Ozone'     : '오존',          subLabel:'O₃',   unit:'ppm',    v: d.o3,   format: v => v.toFixed(3) },
-    { key:'no2',  metric:'no2',  label: isEN_air ? 'NO₂'       : '일산화질소',   subLabel:'NO₂',   unit:'ppm',    v: d.no2,  format: v => v.toFixed(3) },
+    { key:'no2',  metric:'no2',  label: isEN_air ? 'NO₂'       : '이산화질소',   subLabel:'NO₂',   unit:'ppm',    v: d.no2,  format: v => v.toFixed(3) },
     { key:'co',   metric:'co',   label: isEN_air ? 'CO'        : '일산화탄소',   subLabel:'CO',    unit:'ppm',    v: d.co,   format: v => v.toFixed(2) },
   ];
 
