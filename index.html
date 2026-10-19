@@ -9677,9 +9677,17 @@ async function loadWeatherPanel(damId) {
       </div>`;
 
     let air = null;
+    let airSrc = 'airkorea';   // 'airkorea'(실측) | 'openmeteo'(모델)
+    // 1차: 에어코리아 실측 (CORS 프록시 경유)
     try {
       if (nc && typeof fetchAirKoreaPollution === 'function') air = await fetchAirKoreaPollution(nc);
     } catch(e) { air = null; }
+    // 2차 폴백: Open-Meteo 대기질 (키·프록시 불필요)
+    if (!air || (air.pm25 == null && air.pm10 == null)) {
+      try {
+        if (typeof fetchOpenMeteoAir === 'function') { air = await fetchOpenMeteoAir(lat, lon); airSrc = 'openmeteo'; }
+      } catch(e2) { /* 그대로 실패 처리 */ }
+    }
 
     // 그 사이 다른 댐으로 바뀌었으면 중단 (오염 방지)
     if (!currentDam || currentDam.id !== damId) return;
@@ -9724,11 +9732,15 @@ async function loadWeatherPanel(damId) {
         </div>`;
     }).join('');
 
-    const station = air.stationName ? (isEN_a?`Station: ${air.stationName}`:`측정소: ${air.stationName}`) : '';
+    const srcTag = (airSrc === 'airkorea')
+      ? (isEN_a?'AirKorea measured':'에어코리아 실측')
+      : (isEN_a?'Open-Meteo model':'Open-Meteo 모델값');
+    const station = (airSrc === 'airkorea' && air.stationName)
+      ? (isEN_a?`Station: ${air.stationName}`:`측정소: ${air.stationName}`) : '';
     const dtime   = air.dataTime ? ` · ${air.dataTime}` : '';
     airEl.innerHTML = `
       <div class="info-block" style="margin-bottom:16px;">
-        <div class="info-block-title">🌫️ ${isEN_a?'Air Quality (nearest station)':'댐 인근 대기질'} <span class="en-sub">${isEN_a?'AirKorea measured':'에어코리아 실측'}</span></div>
+        <div class="info-block-title">🌫️ ${isEN_a?'Air Quality':'댐 인근 대기질'} <span class="en-sub">${srcTag}</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${cards}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:8px;">${station}${dtime}${nc?` · ${isEN_a?'near':'기준 도시'} ${nc.name}`:''}</div>
       </div>`;
@@ -14571,6 +14583,26 @@ async function fetchKmaWeather(lat, lon) {
   };
 }
 
+// 🌫️ Open-Meteo 대기질 — 키·프록시 불필요, 브라우저 CORS 허용 (에어코리아 실패 시 폴백)
+async function fetchOpenMeteoAir(lat, lon) {
+  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}`
+    + `&current=pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide&timezone=Asia%2FSeoul`;
+  const r = await fetchTimeout(url, 8000);
+  if (!r.ok) throw new Error('OpenMeteoAir HTTP ' + r.status);
+  const j = await r.json();
+  if (j && j.error) throw new Error('OpenMeteoAir: ' + (j.reason || 'error'));
+  const c = j.current || {};
+  const PF = (typeof PPM_FACTOR !== 'undefined') ? PPM_FACTOR : { o3:0.0005094, co:0.000873, no2:0.000532 };
+  return {
+    pm10: c.pm10  != null ? c.pm10  : null,
+    pm25: c.pm2_5 != null ? c.pm2_5 : null,
+    o3:   c.ozone != null ? c.ozone * PF.o3  : null,
+    no2:  c.nitrogen_dioxide != null ? c.nitrogen_dioxide * PF.no2 : null,
+    co:   c.carbon_monoxide  != null ? c.carbon_monoxide  * PF.co  : null,
+    stationName: '', dataTime: '', source: 'openmeteo',
+  };
+}
+
 async function loadWeather(force) {
   if (!ensureWeatherPanel()) return;
   const owmKey = _getOwmKey();
@@ -14628,6 +14660,14 @@ async function loadWeather(force) {
         airSource = 'owm';
       }
     } catch(e) { console.warn('[weather] OWM air fallback failed:', e); }
+  }
+  if (!airData || (airData.pm25 == null && airData.pm10 == null)) {
+    // 최종 폴백: Open-Meteo 대기질 (키·프록시 불필요)
+    try {
+      const { lat, lon } = WEATHER_LOC;
+      airData = await fetchOpenMeteoAir(lat, lon);
+      airSource = 'openmeteo';
+    } catch(e) { console.warn('[weather] Open-Meteo air fallback failed:', e); }
   }
 
   // ─── 3) 결과 렌더링 ───
@@ -14721,6 +14761,8 @@ function renderWeatherData(d, isMock) {
       : (isEN_src ? '기상청(KMA) 모델' : '기상청(KMA) 모델');
     if (d.airSource === 'airkorea') {
       sourceEl.innerHTML = `날씨: ${wxName} · 대기질: 에어코리아 (실측)`;
+    } else if (d.airSource === 'openmeteo') {
+      sourceEl.innerHTML = `날씨: ${wxName} · 대기질: Open-Meteo (모델값)`;
     } else if (d.airSource === 'owm') {
       sourceEl.innerHTML = `날씨: ${wxName} · 대기질: OpenWeatherMap (폴백)`;
     } else {
