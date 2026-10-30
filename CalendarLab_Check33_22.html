@@ -2589,7 +2589,7 @@ canvas{max-width:100%;height:auto;}
         <span style="font-weight:800;color:var(--text2);letter-spacing:0.5px;">SJL0108</span>
       </div>
       <div style="color:var(--text2);">교육용 달력 연구 플랫폼</div>
-      <div style="font-size:11px;color:var(--text3);letter-spacing:0.3px;">Calendar Lab v4.0 · r22</div>
+      <div style="font-size:11px;color:var(--text3);letter-spacing:0.3px;">Calendar Lab v4.0 · r23</div>
     </div>
   </div>
 </div>
@@ -9473,11 +9473,18 @@ function getMemoKey(dateStr){ return 'clmemo_'+dateStr; }
 // ★ 저장된 메모 문자열 해석: 새 형식 {t,c} JSON 또는 예전 형식(순수 텍스트) 모두 지원
 function parseMemoRaw(raw){
   if(raw==null) return null;
-  try{
-    const p=JSON.parse(raw);
-    if(p && typeof p==='object' && typeof p.t==='string') return {t:p.t, c:p.c||''};
-  }catch(e){}
-  return {t:raw, c:''}; // 예전 형식: 순수 텍스트, 색상 없음
+  let t=raw, c='';
+  // ★ 이중/삼중 포장 자동 해제: 과거 버그로 {t,c} 상자가 겹겹이 씌워진 경우를 한 겹씩 벗긴다.
+  //   앱 고유 형식 {t:문자열, c:문자열}일 때만 벗기므로, 사용자가 실제로 쓴 글자는 건드리지 않는다.
+  for(let i=0;i<8;i++){ // 무한루프 방지(최대 8겹)
+    let p=null;
+    try{ p=JSON.parse(t); }catch(e){ break; } // 더 이상 JSON이 아니면 = 진짜 글자 → 멈춤
+    if(p && typeof p==='object' && typeof p.t==='string'){
+      if(c==='' && typeof p.c==='string') c=p.c; // 가장 바깥의 색을 보존
+      t=p.t; // 한 겹 벗기고 다시 검사
+    } else break;
+  }
+  return {t:t, c:c};
 }
 
 function memoDateStr(y,m,d){
@@ -10179,9 +10186,68 @@ function useGeolocation(){
 
 
 // ═══════════════════════════════════════════════════
+// 🔧 일회성 데이터 청소 (r23) — 과거 버그로 이중 포장된 메모·체크를 원래대로 복원
+//   · 메모(clmemo_*): {t,c} 상자가 겹겹이 씌워진 것을 벗겨 원래 글자만 남김
+//   · 체크(clchk_*):  값이 JSON 문자열로 한 번 더 감싸진 것을 벗김
+//   여러 번 실행해도 안전(이미 정상인 건 그대로 통과). 디자인·색상·내용 변경 없음.
+// ═══════════════════════════════════════════════════
+function cleanupWrappedData(){
+  let fixedMemo=0, fixedChk=0;
+  try{
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && (k.startsWith('clmemo_')||k.startsWith('clchk_'))) keys.push(k);
+    }
+    keys.forEach(k=>{
+      let raw;
+      try{ raw=localStorage.getItem(k); }catch(e){ return; }
+      if(raw==null) return;
+
+      if(k.startsWith('clmemo_')){
+        // parseMemoRaw가 이미 재귀적으로 모든 겹을 벗김
+        const data=parseMemoRaw(raw);
+        if(!data) return;
+        const clean=(data.t && data.t.trim())
+          ? JSON.stringify({t:data.t, c:data.c||''})
+          : null;
+        if(clean===null){
+          // 내용이 빈 메모는 키 제거
+          if(raw!=='') { try{ localStorage.removeItem(k); fixedMemo++; }catch(e){} }
+        } else if(clean!==raw){
+          try{ localStorage.setItem(k, clean); fixedMemo++; }catch(e){}
+        }
+      } else { // clchk_
+        // 체크 값이 JSON 문자열로 겹겹이 감싸진 경우 벗김 → 진짜 객체({s:...} 또는 {v:...})까지
+        let t=raw, unwrapped=false;
+        for(let i=0;i<8;i++){
+          if(typeof t!=='string') break;
+          let p=null;
+          try{ p=JSON.parse(t); }catch(e){ break; }
+          if(typeof p==='string'){ t=p; unwrapped=true; continue; } // 문자열이 또 나오면 한 겹 더
+          // 객체가 나왔으면: 유효한 체크 형식인지 확인하고 멈춤
+          if(p && typeof p==='object' && (Array.isArray(p.s) || CHK_TYPES[p.v])){
+            const norm=JSON.stringify(p);
+            if(unwrapped || norm!==raw){
+              try{ localStorage.setItem(k, norm); fixedChk++; }catch(e){}
+            }
+          }
+          break;
+        }
+      }
+    });
+  }catch(e){}
+  if(fixedMemo+fixedChk>0){
+    try{ if(typeof showToast==='function') showToast(`🔧 기록 복원: 메모 ${fixedMemo}건 · 체크 ${fixedChk}건`); }catch(e){}
+  }
+}
+
+
+// ═══════════════════════════════════════════════════
 // ★ 초기화 (모든 선언 완료 후 실행)
 // ═══════════════════════════════════════════════════
 (function(){
+  cleanupWrappedData(); // ← 가장 먼저: 과거 이중포장 데이터 복원
   showToday();
   drawAll();
   initDiff();
